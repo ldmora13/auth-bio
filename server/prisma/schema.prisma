@@ -1,0 +1,78 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  ADVISOR
+  CLIENT
+}
+
+enum DocumentType {
+  CC
+  DNI
+  PASSPORT
+  OTHER
+}
+
+enum BiometricType {
+  OCULAR
+  FACIAL
+  DACTILAR
+}
+
+model User {
+  id              String          @id @default(uuid())
+  email           String          @unique
+  password        String?
+  name            String
+  role            Role            @default(CLIENT)
+  address         String?
+  documentType    DocumentType?
+  documentNumber  String?
+  company         String?         // Only for ADVISOR
+  biometricType   BiometricType?  // Only for CLIENT
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  // Relación jerárquica: quién creó a este usuario (Admin -> Advisor -> Client)
+  createdById String?
+  createdBy   User?   @relation("UserCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  createdUsers User[]  @relation("UserCreator")
+
+  // Relaciones restantes
+  sessions  Session[]
+  auditLogs AuditLog[]
+
+  @@index([createdById])
+  @@index([role])
+}
+
+model Session {
+  id        String   @id
+  userId    String
+  expiresAt DateTime
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  action    String
+  entity    String
+  entityId  String
+  details   String?
+  createdAt DateTime @default(now())
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([entity, entityId])
+}
