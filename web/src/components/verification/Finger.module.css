@@ -1,0 +1,192 @@
+.card {
+  --local-accent: var(--bio-scan);
+  width: 100%;
+  max-width: 420px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 250, 252, 0.98) 100%);
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  border-radius: 28px;
+  padding: 28px 24px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  font-family: var(--bio-font-body);
+  color: var(--bio-text-primary);
+  box-sizing: border-box;
+  box-shadow: 0 18px 50px rgba(15, 23, 42, 0.08);
+}
+
+.card[data-phase="scanning"] {
+  --local-accent: var(--bio-scan);
+}
+.card[data-phase="success"] {
+  --local-accent: var(--bio-ok);
+}
+.card[data-phase="error"] {
+  --local-accent: var(--bio-err);
+}
+
+.eyebrow {
+  font-family: var(--bio-font-mono);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--bio-text-muted);
+  align-self: flex-start;
+}
+
+.pad {
+  position: relative;
+  width: 184px;
+  height: 184px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: none;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.96) 0%, rgba(226, 232, 240, 0.9) 100%);
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  transition: box-shadow 320ms ease, border-color 320ms ease, transform 320ms ease;
+}
+
+.pad[data-phase="idle"]:hover,
+.pad[data-phase="idle"]:focus-visible {
+  border-color: rgba(37, 99, 235, 0.35);
+  box-shadow: 0 0 0 8px rgba(37, 99, 235, 0.08);
+  transform: translateY(-1px);
+}
+
+.pad[data-phase="scanning"] {
+  border-color: var(--local-accent);
+  box-shadow: 0 0 0 10px rgba(37, 99, 235, 0.06), 0 0 28px rgba(37, 99, 235, 0.18);
+}
+
+.pad[data-phase="success"] {
+  border-color: var(--local-accent);
+  box-shadow: 0 0 0 10px rgba(22, 163, 74, 0.06), 0 0 28px rgba(22, 163, 74, 0.14);
+}
+
+.pad[data-phase="error"] {
+  border-color: var(--local-accent);
+  box-shadow: 0 0 0 10px rgba(220, 38, 38, 0.06), 0 0 28px rgba(220, 38, 38, 0.14);
+  animation: shake 420ms ease;
+}
+
+.pad:focus-visible {
+  outline: 2px solid var(--bio-scan);
+  outline-offset: 4px;
+}
+
+.ridges {
+  width: 96px;
+  height: 96px;
+  overflow: visible;
+}
+
+.ridgePath {
+  fill: none;
+  stroke: var(--bio-text-faint);
+  stroke-width: 3;
+  stroke-linecap: round;
+  transition: stroke 280ms ease, opacity 280ms ease;
+}
+
+/* Cada anillo se ilumina en secuencia mientras avanza el progreso,
+   imitando una lectura ridge-by-ridge en vez de un relleno genérico. */
+.pad[data-phase="scanning"] .ridgePath {
+  stroke: var(--bio-text-faint);
+}
+
+.ridgeLit {
+  stroke: var(--local-accent) !important;
+  opacity: 1;
+  filter: drop-shadow(0 0 3px var(--local-accent));
+}
+
+.pad[data-phase="success"] .ridgePath,
+.pad[data-phase="error"] .ridgePath {
+  stroke: var(--local-accent);
+}
+
+.progressRing {
+  position: absolute;
+  inset: 0;
+  transform: rotate(-90deg);
+}
+
+.progressTrack {
+  fill: none;
+  stroke: rgba(148, 163, 184, 0.3);
+  stroke-width: 2;
+}
+
+.progressValue {
+  fill: none;
+  stroke: var(--local-accent);
+  stroke-width: 2;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 80ms linear;
+}
+
+.status {
+  text-align: center;
+  min-height: 48px;
+}
+
+.statusTitle {
+  font-family: var(--bio-font-display);
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 2px;
+  letter-spacing: -0.01em;
+}
+
+.statusSub {
+  font-size: 13px;
+  color: var(--bio-text-muted);
+  margin: 0;
+}
+
+.retry {
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  background: transparent;
+  color: var(--bio-text-primary);
+  font-family: var(--bio-font-body);
+  font-size: 13px;
+  font-weight: 500;
+  padding: var(--bio-space-2) var(--bio-space-4);
+  border-radius: var(--bio-radius-sm);
+  cursor: pointer;
+  transition: border-color 200ms ease, background 200ms ease;
+}
+
+.retry:hover {
+  border-color: rgba(37, 99, 235, 0.32);
+  background: rgba(37, 99, 235, 0.08);
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-6px); }
+  40% { transform: translateX(5px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(3px); }
+}
+
+@media (max-width: 380px) {
+  .pad {
+    width: 152px;
+    height: 152px;
+  }
+  .ridges {
+    width: 88px;
+    height: 88px;
+  }
+
+  .card {
+    padding: 24px 16px 20px;
+  }
+}

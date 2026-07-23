@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 
 type DocumentType = 'CC' | 'DNI' | 'PASSPORT' | 'OTHER';
@@ -33,13 +34,13 @@ const initialFieldErrors = {
 const stripSpaces = (value: string) => value.replace(/\s+/g, '');
 
 export default function Login() {
+  const navigate = useNavigate();
   const [documentType, setDocumentType] = useState<DocumentType | ''>('');
   const [documentNumber, setDocumentNumber] = useState('');
   const [fieldErrors, setFieldErrors] = useState(initialFieldErrors);
   const [formError, setFormError] = useState('');
   const [loading, setLoading] = useState(false);
   const [profile, setProfile] = useState<ClientProfile | null>(null);
-  const [confirmed, setConfirmed] = useState(false);
 
   useEffect(() => {
     if (profile) {
@@ -75,7 +76,6 @@ export default function Login() {
     setDocumentType(nextValue);
     updateFieldError('documentType', nextValue);
     setFormError('');
-    setConfirmed(false);
   };
 
   const handleDocumentNumberChange = (value: string) => {
@@ -83,7 +83,6 @@ export default function Login() {
     setDocumentNumber(nextValue);
     updateFieldError('documentNumber', nextValue);
     setFormError('');
-    setConfirmed(false);
   };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -102,7 +101,6 @@ export default function Login() {
 
     setLoading(true);
     setFormError('');
-    setConfirmed(false);
 
     try {
       const { data } = await api.post<{ user: ClientProfile }>('/auth/client-verify', {
@@ -123,14 +121,17 @@ export default function Login() {
   };
 
   const handleConfirm = () => {
-    setConfirmed(true);
+    if (profile?.biometricType) {
+      localStorage.setItem('clientBiometricType', profile.biometricType);
+    }
+
+    navigate('/verification', {
+      state: {
+        biometricType: profile?.biometricType ?? null,
+      },
+    });
   };
 
-  const handleBack = () => {
-    setProfile(null);
-    setFormError('');
-    setConfirmed(false);
-  };
 
   return (
     <main className="min-h-screen bg-slate-100 px-4 py-8 text-slate-900 sm:px-6 lg:px-8">
@@ -248,11 +249,9 @@ export default function Login() {
                 </div>
               </dl>
 
-              {confirmed ? (
-                <p className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-800" role="status">
-                  Gracias. Sus datos quedaron confirmados.
-                </p>
-              ) : null}
+              <span className="block text-sm font-semibold text-slate-700">
+                Si alguno de estos datos es incorrecto o no corresponden a usted, por favor comuníquese con nuestro equipo de soporte.
+              </span>
 
               <div className="flex flex-col gap-3 sm:flex-row">
                 <button
@@ -262,13 +261,6 @@ export default function Login() {
                   onClick={handleConfirm}
                 >
                   Verificar mis datos
-                </button>
-                <button
-                  className="inline-flex h-12 min-w-36 items-center justify-center rounded-xl border border-slate-300 bg-white px-5 text-base font-semibold text-slate-800 shadow-sm transition hover:bg-slate-50 focus:outline-none focus:ring-4 focus:ring-slate-200"
-                  type="button"
-                  onClick={handleBack}
-                >
-                  Volver
                 </button>
               </div>
             </section>

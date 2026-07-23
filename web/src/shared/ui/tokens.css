@@ -1,0 +1,50 @@
+
+:root {
+  /* Superficies */
+  --bio-bg-deep: #edf2f7;
+  --bio-bg-panel: #ffffff;
+  --bio-bg-panel-raised: #f8fafc;
+  --bio-hairline: rgba(148, 163, 184, 0.28);
+
+  /* Texto */
+  --bio-text-primary: #0f172a;
+  --bio-text-muted: #475569;
+  --bio-text-faint: #94a3b8;
+
+  /* Estado: leyendo / en progreso */
+  --bio-scan: #2563eb;
+  --bio-scan-dim: rgba(37, 99, 235, 0.10);
+  --bio-scan-glow: rgba(37, 99, 235, 0.28);
+
+  /* Estado: éxito */
+  --bio-ok: #16a34a;
+  --bio-ok-dim: rgba(22, 163, 74, 0.10);
+
+  /* Estado: error / rechazo */
+  --bio-err: #dc2626;
+  --bio-err-dim: rgba(220, 38, 38, 0.10);
+
+  /* Tipografía */
+  --bio-font-display: "Space Grotesk", "Segoe UI", sans-serif;
+  --bio-font-body: "Inter", "Segoe UI", sans-serif;
+  --bio-font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  /* Ritmo */
+  --bio-radius-lg: 20px;
+  --bio-radius-md: 12px;
+  --bio-radius-sm: 8px;
+  --bio-space-1: 4px;
+  --bio-space-2: 8px;
+  --bio-space-3: 12px;
+  --bio-space-4: 16px;
+  --bio-space-5: 24px;
+  --bio-space-6: 32px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
