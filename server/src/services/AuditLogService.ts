@@ -5,7 +5,7 @@ export class AuditLogService {
         action: string;
         entity: string;
         entityId: string;
-        userId: string;
+        userId?: string | null;
         details?: any;
     }) {
         try {
@@ -14,7 +14,7 @@ export class AuditLogService {
                     action: data.action,
                     entity: data.entity,
                     entityId: data.entityId,
-                    userId: data.userId,
+                    userId: data.userId ?? null,
                     details: data.details ? JSON.stringify(data.details) : null
                 }
             });

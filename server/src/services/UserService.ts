@@ -57,6 +57,10 @@ export class UserService {
         return this.userRepository.findAll(where);
     }
 
+    async findClientByDocument(documentType: DocumentType, documentNumber: string): Promise<User | null> {
+        return this.userRepository.findByDocument(documentType, documentNumber);
+    }
+
     async updateUser(id: string, data: Prisma.UserUpdateInput): Promise<User> {
         return this.userRepository.update(id, data);
     }

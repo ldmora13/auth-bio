@@ -13,6 +13,20 @@ export class AuthService {
         this.userRepository = new UserRepository();
     }
 
+    async signup(data: { email: string; password: string; name: string; role?: 'CLIENT' }) {
+        const user = await this.userService.createUser({
+            email: data.email,
+            password: data.password,
+            name: data.name,
+            role: data.role ?? 'CLIENT',
+        });
+
+        const session = await lucia.createSession(user.id, {});
+        const sessionCookie = lucia.createSessionCookie(session.id);
+
+        return { user, sessionCookie };
+    }
+
 
     async login(data: { email: string; password: string }) {
         const user = await this.userRepository.findByEmail(data.email);

@@ -71,3 +71,10 @@ export const getUsersSchema = registry.register('GetUsers', z.object({
         role: z.enum(['ADMIN', 'ADVISOR', 'CLIENT']).optional(),
     }),
 }));
+
+export const clientVerificationSchema = registry.register('ClientVerification', z.object({
+    body: z.object({
+        documentType: z.enum(['CC', 'DNI', 'PASSPORT', 'OTHER']).openapi({ example: 'CC' }),
+        documentNumber: z.string().trim().regex(/^[0-9]+$/, 'Document number must contain only numbers').min(1, 'Document number is required').openapi({ example: '12345678' }),
+    }),
+}));

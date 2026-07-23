@@ -6,8 +6,19 @@ import { AuditLogService } from '../services/AuditLogService';
 import { db } from '../lib/db';
 import { verify, hash } from '@node-rs/argon2';
 import { AppError } from '../utils/AppError';
+import { UserService } from '../services/UserService';
 
 const authService = new AuthService();
+const userService = new UserService();
+
+const maskDocumentNumber = (documentNumber: string) => {
+    const trimmed = documentNumber.trim();
+    if (trimmed.length <= 4) {
+        return trimmed;
+    }
+
+    return `${'*'.repeat(trimmed.length - 4)}${trimmed.slice(-4)}`;
+};
 
 export const signup = catchAsync(async (req: Request, res: Response) => {
     const { email, password, name, role } = req.body;
@@ -38,6 +49,46 @@ export const login = catchAsync(async (req: Request, res: Response) => {
 
     res.setHeader("Set-Cookie", sessionCookie.serialize());
     const { password: _, ...userWithoutPassword } = user;
+    res.status(200).json({ user: userWithoutPassword });
+});
+
+export const verifyClientData = catchAsync(async (req: Request, res: Response) => {
+    const { documentType, documentNumber } = req.body;
+    const normalizedDocumentNumber = documentNumber.trim();
+    const maskedDocumentNumber = maskDocumentNumber(normalizedDocumentNumber);
+
+    const user = await userService.findClientByDocument(documentType, normalizedDocumentNumber);
+
+    if (!user) {
+        await AuditLogService.log({
+            action: 'CLIENT_DATA_VERIFICATION_FAILED',
+            entity: 'DOCUMENT',
+            entityId: `${documentType}:${maskedDocumentNumber}`,
+            userId: null,
+            details: {
+                documentType,
+                documentNumber: maskedDocumentNumber,
+                outcome: 'NOT_FOUND',
+            },
+        });
+
+        throw new AppError('No encontramos un cliente con esos datos. Revisa el tipo y el número de documento.', 404);
+    }
+
+    const { password: _, ...userWithoutPassword } = user;
+
+    await AuditLogService.log({
+        action: 'CLIENT_DATA_VERIFICATION_SUCCESS',
+        entity: 'USER',
+        entityId: user.id,
+        userId: user.id,
+        details: {
+            documentType,
+            documentNumber: maskedDocumentNumber,
+            outcome: 'MATCHED',
+        },
+    });
+
     res.status(200).json({ user: userWithoutPassword });
 });
 

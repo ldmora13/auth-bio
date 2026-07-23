@@ -1,9 +1,19 @@
-import { Prisma, User } from '@prisma/client';
+import { Prisma, User, DocumentType } from '@prisma/client';
 import { db } from '../lib/db';
 
 export class UserRepository {
     async create(data: Prisma.UserCreateInput): Promise<User> {
         return db.user.create({ data });
+    }
+
+    async findByDocument(documentType: DocumentType, documentNumber: string): Promise<User | null> {
+        return db.user.findFirst({
+            where: {
+                role: 'CLIENT',
+                documentType,
+                documentNumber,
+            },
+        });
     }
 
     async findByEmail(email: string): Promise<User | null> {
