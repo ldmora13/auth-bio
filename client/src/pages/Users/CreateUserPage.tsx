@@ -111,6 +111,18 @@ export default function CreateUserPage() {
 
                 <form onSubmit={handleSubmit} className="space-y-4">
                     {/* Basic Info */}
+                    <div>
+                        <label className="block text-sm font-medium text-slate-300 mb-2">Role</label>
+                        <select
+                            name="role"
+                            value={formData.role}
+                            onChange={handleChange}
+                            className="w-1/2 px-4 py-2 rounded-xl bg-slate-900/50 border border-slate-700 text-white focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                        >
+                            {canCreateAdvisor(currentUser.role) && <option value="ADVISOR">Advisor</option>}
+                            <option value="CLIENT">Client</option>
+                        </select>
+                    </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="md:col-span-2">
                             <label className="block text-sm font-medium text-slate-300 mb-2">Full Name</label>
@@ -179,18 +191,6 @@ export default function CreateUserPage() {
                                 placeholder="Enter document number"
                                 error={errors.documentNumber}
                             />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-slate-300 mb-2">Role</label>
-                            <select
-                                name="role"
-                                value={formData.role}
-                                onChange={handleChange}
-                                className="w-full px-4 py-2 rounded-xl bg-slate-900/50 border border-slate-700 text-white focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                            >
-                                {canCreateAdvisor(currentUser.role) && <option value="ADVISOR">Advisor</option>}
-                                <option value="CLIENT">Client</option>
-                            </select>
                         </div>
                     </div>
 
