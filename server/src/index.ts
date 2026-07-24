@@ -20,6 +20,7 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS
 import authRoutes from './routes/auth';
 import userRoutes from './routes/users';
 import statsRoutes from './routes/stats';
+import companyRoutes from './routes/companies';
 import cookieParser from 'cookie-parser';
 import { apiLimiter, authLimiter } from './middlewares/rateLimit';
 import { AppError } from './utils/AppError';
@@ -47,11 +48,12 @@ app.use('/api/auth/login', authLimiter);
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/stats', statsRoutes);
+app.use('/api/companies', companyRoutes);
 
 app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(generateOpenApiSpec()));
 
 app.get('/', (req: Request, res: Response) => {
-    res.send('New Horizons Immigration API');
+    res.send('Biometrics API');
 });
 
 // Error handler global — captura todos los errores de catchAsync y otros

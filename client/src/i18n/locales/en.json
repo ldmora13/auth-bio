@@ -30,7 +30,7 @@
         "messages": "Messages"
     },
     "dashboard": {
-        "welcome": "Welcome to New Horizons",
+        "welcome": "Welcome to Biometrics",
         "hello": "Hello",
         "next_action": "Next Action",
         "check_status": "Check Status",
@@ -111,7 +111,7 @@
         "description": "Manage your processes to work abroad",
         "create": {
             "title": "New Service Request",
-            "subtitle": "Start your immigration process with New Horizons.",
+            "subtitle": "Start your immigration process with Biometrics.",
             "back": "Back to My Cases",
             "submit": "Start Process",
             "submitting": "Starting...",

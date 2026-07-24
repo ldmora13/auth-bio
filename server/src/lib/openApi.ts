@@ -20,9 +20,9 @@ export const generateOpenApiSpec = () => {
     return generator.generateDocument({
         openapi: '3.0.0',
         info: {
-            title: 'Advisory Tickets API',
+            title: 'Biometrics API',
             version: '1.0.0',
-            description: 'API documentation for the Advisory Tickets System (New Horizons)',
+            description: 'API documentation for the Biometrics System (Biometrics)',
         },
         servers: [
             {

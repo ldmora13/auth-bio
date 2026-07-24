@@ -55,7 +55,7 @@ export const EmailService = {
         email: string;
         name: string;
         tempPassword: string;
-        company: string;
+        companyName?: string | null;
         portalUrl: string;
     }) => {
         const subject = 'Credenciales de acceso a New Horizons';
@@ -63,7 +63,7 @@ export const EmailService = {
             <div style="font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: 0 auto;">
                 <h2>Bienvenido(a), ${payload.name}</h2>
                 <p>Tu registro como advisor se completó correctamente.</p>
-                <p><strong>Empresa asociada:</strong> ${payload.company}</p>
+                ${payload.companyName ? `<p><strong>Empresa asociada:</strong> ${payload.companyName}</p>` : '<p><strong>Empresa asociada:</strong> pendiente de asignación</p>'}
 
                 <div style="background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 8px; padding: 16px; margin: 18px 0;">
                     <p style="margin: 4px 0;"><strong>Usuario:</strong> ${payload.email}</p>
@@ -78,29 +78,6 @@ export const EmailService = {
                 </ol>
 
                 <p>Si no reconoces este registro, contacta al administrador inmediatamente.</p>
-            </div>
-        `;
-
-        return EmailService.sendEmailWithRetry({
-            to: payload.email,
-            subject,
-            html,
-        });
-    },
-
-    sendClientRegistrationNotification: async (payload: {
-        email: string;
-        name: string;
-        portalUrl: string;
-    }) => {
-        const subject = 'Confirmación de creación de cuenta';
-        const html = `
-            <div style="font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: 0 auto;">
-                <h2>Hola, ${payload.name}</h2>
-                <p>Tu cuenta fue creada exitosamente.</p>
-                <p>Para ingresar, utiliza el portal correspondiente:</p>
-                <p><a href="${payload.portalUrl}">${payload.portalUrl}</a></p>
-                <p>Este correo no contiene credenciales de acceso, ya que el inicio de sesión se gestiona desde el portal externo.</p>
             </div>
         `;
 

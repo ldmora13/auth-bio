@@ -1,5 +1,5 @@
 import api from '../lib/api';
-import type { DocumentType, User } from '../types/auth';
+import type { DocumentType, Empresa, User } from '../types/auth';
 
 export interface CreateUserData {
     email: string;
@@ -9,8 +9,40 @@ export interface CreateUserData {
     documentType: DocumentType;
     documentNumber: string;
     role: 'CLIENT' | 'ADVISOR';
-    company?: string;
+    empresaId?: string;
     biometricType?: 'OCULAR' | 'FACIAL' | 'DACTILAR';
+}
+
+export interface CompanyListResponse {
+    companies: Empresa[];
+}
+
+export interface CompanyDetailResponse {
+    company: Empresa;
+}
+
+export interface CompanyAuditLog {
+    id: number;
+    action: string;
+    entity: string;
+    entityId: string;
+    details: string | null;
+    createdAt: string;
+    user?: {
+        id: string;
+        name: string;
+        email: string;
+        role: 'CLIENT' | 'ADMIN' | 'ADVISOR';
+    } | null;
+}
+
+export interface AvailableAdvisor {
+    id: string;
+    email: string;
+    name: string;
+    role: 'ADVISOR';
+    empresaId: string | null;
+    createdAt: string;
 }
 
 export const UserService = {
@@ -25,9 +57,49 @@ export const UserService = {
         return data.user;
     },
 
-    update: async (id: string, updates: Partial<Pick<User, 'name' | 'role' | 'address' | 'documentType' | 'documentNumber' | 'company' | 'biometricType'>>) => {
+    update: async (id: string, updates: Partial<Pick<User, 'name' | 'role' | 'address' | 'documentType' | 'documentNumber' | 'empresaId' | 'biometricType'>>) => {
         const { data } = await api.patch<{ user: User }>(`/users/${id}`, updates);
         return data.user;
+    },
+
+    remove: async (id: string) => {
+        const { data } = await api.delete<{ user: User }>(`/users/${id}`);
+        return data.user;
+    },
+
+    getCompanies: async () => {
+        const { data } = await api.get<CompanyListResponse>('/companies');
+        return data.companies;
+    },
+
+    getCompany: async (companyId: string) => {
+        const { data } = await api.get<CompanyDetailResponse>(`/companies/${companyId}`);
+        return data.company;
+    },
+
+    getCompanyAuditLogs: async (companyId: string) => {
+        const { data } = await api.get<{ auditLogs: CompanyAuditLog[] }>(`/companies/${companyId}/audit-logs`);
+        return data.auditLogs;
+    },
+
+    createCompany: async (nombre: string) => {
+        const { data } = await api.post<{ company: Empresa }>('/companies', { nombre });
+        return data.company;
+    },
+
+    getAvailableAdvisors: async () => {
+        const { data } = await api.get<{ advisors: AvailableAdvisor[] }>('/companies/available-advisors');
+        return data.advisors;
+    },
+
+    assignAdvisor: async (companyId: string, advisorId: string) => {
+        const { data } = await api.patch<{ advisor: User }>(`/companies/${companyId}/advisors/${advisorId}`);
+        return data.advisor;
+    },
+
+    unassignAdvisor: async (companyId: string, advisorId: string) => {
+        const { data } = await api.delete<{ advisor: User }>(`/companies/${companyId}/advisors/${advisorId}`);
+        return data.advisor;
     },
 
     loginAs: async (userId: string) => {

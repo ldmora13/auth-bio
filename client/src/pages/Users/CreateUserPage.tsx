@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { UserService, type CreateUserData } from '../../services/userService';
 import type { DocumentType } from '../../types/auth';
@@ -12,6 +12,8 @@ import { ArrowLeft } from 'lucide-react';
 export default function CreateUserPage() {
     const { user: currentUser } = useAuth();
     const navigate = useNavigate();
+    const location = useLocation();
+    const locationState = (location.state ?? {}) as { role?: 'CLIENT' | 'ADVISOR'; empresaId?: string };
 
     const [formData, setFormData] = useState<CreateUserData>({
         email: '',
@@ -19,8 +21,10 @@ export default function CreateUserPage() {
         address: '',
         documentType: 'CC',
         documentNumber: '',
-        role: 'CLIENT',
+        role: locationState.role ?? 'CLIENT',
+        empresaId: locationState.empresaId,
     });
+    const [companies, setCompanies] = useState<{ id: string; nombre: string }[]>([]);
 
     const [loading, setLoading] = useState(false);
     const [errors, setErrors] = useState<Partial<Record<keyof CreateUserData, string>>>({});
@@ -28,7 +32,10 @@ export default function CreateUserPage() {
     useEffect(() => {
         if (!currentUser || !canAccessUsersPage(currentUser.role)) {
             navigate('/login');
+            return;
         }
+
+        void UserService.getCompanies().then(setCompanies).catch(() => setCompanies([]));
     }, [currentUser, navigate]);
 
     if (!currentUser || !canAccessUsersPage(currentUser.role)) {
@@ -57,7 +64,8 @@ export default function CreateUserPage() {
         if (!formData.name) newErrors.name = 'Name is required';
         if (!formData.address) newErrors.address = 'Address is required';
         if (!formData.documentNumber) newErrors.documentNumber = 'Document number is required';
-        if (formData.role === 'ADVISOR' && !formData.company) newErrors.company = 'Company is required for advisors';
+        if (formData.role === 'CLIENT' && currentUser?.role === 'ADMIN' && !formData.empresaId) newErrors.empresaId = 'Company is required for clients';
+        if (formData.role === 'ADVISOR' && currentUser?.role === 'ADMIN' && !formData.empresaId) newErrors.empresaId = 'Company is required for advisors';
         if (formData.role === 'CLIENT' && !formData.biometricType) newErrors.biometricType = 'Biometric type is required for clients';
 
         setErrors(newErrors);
@@ -146,6 +154,24 @@ export default function CreateUserPage() {
                             />
                         </div>
                         {formData.role === 'ADVISOR' && (
+                            <div>
+                                <label className="block text-sm font-medium text-slate-300 mb-2">Company</label>
+                                <select
+                                    name="empresaId"
+                                    value={formData.empresaId || ''}
+                                    onChange={(e) => setFormData((prev) => ({ ...prev, empresaId: e.target.value }))}
+                                    className="w-full px-4 py-2 rounded-xl bg-slate-900/50 border border-slate-700 text-white focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                                >
+                                    <option value="">Select company</option>
+                                    {companies.map((company) => (
+                                        <option key={company.id} value={company.id}>{company.nombre}</option>
+                                    ))}
+                                </select>
+                                {errors.empresaId && <p className="text-red-400 text-sm mt-1">{errors.empresaId}</p>}
+                            </div>
+                        )}
+
+                        {formData.role === 'ADVISOR' && (
                             <div className="md:col-span-2">
                                 <label className="block text-sm font-medium text-slate-300 mb-2">Temporary Password</label>
                                 <Input
@@ -195,16 +221,21 @@ export default function CreateUserPage() {
                     </div>
 
                     {/* Conditional Fields */}
-                    {formData.role === 'ADVISOR' && (
+                    {formData.role === 'CLIENT' && currentUser?.role === 'ADMIN' && (
                         <div>
                             <label className="block text-sm font-medium text-slate-300 mb-2">Company</label>
-                            <Input
-                                name="company"
-                                value={formData.company || ''}
-                                onChange={handleChange}
-                                placeholder="Enter company name"
-                                error={errors.company}
-                            />
+                            <select
+                                name="empresaId"
+                                value={formData.empresaId || ''}
+                                onChange={(e) => setFormData((prev) => ({ ...prev, empresaId: e.target.value }))}
+                                className="w-full px-4 py-2 rounded-xl bg-slate-900/50 border border-slate-700 text-white focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                            >
+                                <option value="">Select company</option>
+                                {companies.map((company) => (
+                                    <option key={company.id} value={company.id}>{company.nombre}</option>
+                                ))}
+                            </select>
+                            {errors.empresaId && <p className="text-red-400 text-sm mt-1">{errors.empresaId}</p>}
                         </div>
                     )}
 

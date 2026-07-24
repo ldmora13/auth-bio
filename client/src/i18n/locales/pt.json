@@ -29,7 +29,7 @@
         "messages": "Mensagens"
     },
     "dashboard": {
-        "welcome": "Bem-vindo ao New Horizons",
+        "welcome": "Bem-vindo ao Biometrics",
         "hello": "Olá",
         "next_action": "Próxima etapa",
         "check_status": "Verificar status",
@@ -110,7 +110,7 @@
         "description": "Gerencie seus processos para trabalhar fora do país.",
         "create": {
             "title": "Nova Solicitação de Serviço",
-            "subtitle": "Inicie seu processo migratório com a New Horizons descrevendo seu caso.",
+            "subtitle": "Inicie seu processo migratório com a Biometrics descrevendo seu caso.",
             "back": "Voltar para Meus Processos",
             "submit": "Iniciar Processo",
             "submitting": "Iniciando...",

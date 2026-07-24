@@ -5,6 +5,7 @@ import { Users, AlertCircle, ArrowRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useStats } from '../features/dashboard/hooks/useStats';
 import { motion } from 'framer-motion';
+import { canManageCompanies } from '../lib/roles';
 
 // ————— MAIN DASHBOARD —————
 export default function Dashboard() {
@@ -47,13 +48,26 @@ export default function Dashboard() {
                     </h1>
                     <p className="text-slate-400 mt-1">
                         {user?.name} · {user?.role}
-                        {user?.role === 'ADVISOR' && user?.company && (
+                        {user?.role === 'ADVISOR' && user?.empresa?.nombre && (
                             <span className="ml-2 px-3 py-1 bg-teal-500/10 text-teal-400 rounded-full text-sm">
-                                {user.company}
+                                {user.empresa.nombre}
                             </span>
                         )}
                     </p>
                 </motion.div>
+
+                {user?.role === 'ADVISOR' && user.empresa?.nombre && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.05 }}
+                        className="glass rounded-3xl p-6 border border-teal-500/20 bg-teal-500/5"
+                    >
+                        <p className="text-xs uppercase tracking-[0.25em] text-teal-300/80">Empresa asignada</p>
+                        <h2 className="mt-2 text-2xl font-semibold text-white">{user.empresa.nombre}</h2>
+                        <p className="mt-1 text-sm text-slate-300">Tu acceso y gestión de clientes se limitan a esta organización.</p>
+                    </motion.div>
+                )}
 
                 {/* Stats Card */}
                 <motion.div
@@ -76,7 +90,7 @@ export default function Dashboard() {
                             to="/users"
                             className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-teal-500/10 border border-teal-500/30 text-teal-400 hover:bg-teal-500/20 hover:border-teal-500/50 transition-all font-medium"
                         >
-                            Gestionar usuarios
+                            {canManageCompanies(user?.role) ? 'Gestionar usuarios' : 'Gestionar clientes'}
                             <ArrowRight className="w-5 h-5" />
                         </Link>
                     </div>

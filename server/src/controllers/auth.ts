@@ -128,7 +128,19 @@ export const getMe = catchAsync(async (req: Request, res: Response) => {
         res.setHeader("Set-Cookie", sessionCookie.serialize());
     }
 
-    const { password: _, ...userWithoutPassword } = user as any;
+    const fullUser = await db.user.findUnique({
+        where: { id: user.id },
+        include: { empresa: true }
+    });
+
+    if (!fullUser) {
+        const sessionCookie = lucia.createBlankSessionCookie();
+        res.setHeader("Set-Cookie", sessionCookie.serialize());
+        res.status(401).json({ error: "Unauthorized" });
+        return;
+    }
+
+    const { password: _, ...userWithoutPassword } = fullUser as any;
     res.status(200).json({ user: userWithoutPassword });
 });
 

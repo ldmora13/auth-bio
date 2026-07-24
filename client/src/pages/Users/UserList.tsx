@@ -36,7 +36,8 @@ export default function UserList() {
 
     async function loadUsers() {
         try {
-            const data = await UserService.getAll();
+            const roleFilter = currentUser?.role === 'ADVISOR' ? 'CLIENT' : undefined;
+            const data = await UserService.getAll(roleFilter);
             setUsers(data);
         } catch (error) {
             console.error('Error loading users', error);
@@ -71,7 +72,7 @@ export default function UserList() {
                 <Link to="/users/create">
                     <Button className="w-auto shadow-lg shadow-teal-500/20 hover:shadow-teal-500/30 transition-all">
                         <Plus className="w-5 h-5" />
-                        {t('users.create_new')}
+                        {currentUser.role === 'ADVISOR' ? 'Crear cliente' : t('users.create_new')}
                     </Button>
                 </Link>
             </div>
@@ -94,6 +95,7 @@ export default function UserList() {
                                     <th className="px-6 py-4 text-left text-sm font-semibold text-slate-300">{t('common.user')}</th>
                                     <th className="px-6 py-4 text-left text-sm font-semibold text-slate-300">{t('auth.fields.email')}</th>
                                     <th className="px-6 py-4 text-left text-sm font-semibold text-slate-300">{t('common.role')}</th>
+                                    <th className='px-6 py-4 text-left text-sm font-semibold text-slate-300'>Company</th>
                                     <th className="px-6 py-4 text-left text-sm font-semibold text-slate-300">{t('common.date')}</th>
                                     {isAdminOnly(currentUser.role) && (
                                         <th className="px-6 py-4 text-left text-sm font-semibold text-slate-300">{t('common.actions')}</th>
@@ -121,6 +123,9 @@ export default function UserList() {
                                                     <RoleIcon className="w-3.5 h-3.5" />
                                                     {t(`roles.${user.role}`)}
                                                 </span>
+                                            </td>
+                                            <td className="px-6 py-4 text-slate-400">
+                                                {user.empresa?.nombre || 'N/A'}
                                             </td>
                                             <td className="px-6 py-4 text-slate-400 text-sm">
                                                 {new Date(user.createdAt).toLocaleDateString()}

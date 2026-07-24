@@ -6,7 +6,8 @@ import { Toaster } from 'react-hot-toast';
 import UserList from './pages/Users/UserList';
 import CreateUserPage from './pages/Users/CreateUserPage';
 import ProfilePage from './pages/Profile/ProfilePage';
-import { canAccessUsersPage } from './lib/roles';
+import CompanyManagementPage from './pages/Companies/CompanyManagementPage';
+import { canAccessCompanies, canAccessUsersPage } from './lib/roles';
 
 function ProtectedRoute() {
   const { user, loading } = useAuth();
@@ -44,6 +45,24 @@ function UserCreateRoute() {
   return <Outlet />;
 }
 
+function CompanyManagementRoute() {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#313e52' }}>
+        <div className="w-8 h-8 border-4 border-teal-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (!user || !canAccessCompanies(user.role)) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return <Outlet />;
+}
+
 function PublicRoute() {
   const { user, loading } = useAuth();
 
@@ -68,6 +87,11 @@ function AppRoutes() {
 
       <Route element={<UserCreateRoute />}>
         <Route path="/users/create" element={<CreateUserPage />} />
+      </Route>
+
+      <Route element={<CompanyManagementRoute />}>
+        <Route path="/companies" element={<CompanyManagementPage />} />
+        <Route path="/companies/:id" element={<CompanyManagementPage />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/dashboard" replace />} />

@@ -8,10 +8,25 @@ export interface User {
     address?: string;
     documentType?: DocumentType;
     documentNumber?: string;
-    company?: string;
+    empresaId?: string | null;
+    empresa?: {
+        id: string;
+        nombre: string;
+    } | null;
     biometricType?: 'OCULAR' | 'FACIAL' | 'DACTILAR';
     createdAt: string;
     updatedAt: string;
+}
+
+export interface Empresa {
+    id: string;
+    nombre: string;
+    createdAt: string;
+    updatedAt: string;
+    advisorCount?: number;
+    clientCount?: number;
+    advisors?: User[];
+    clients?: User[];
 }
 
 export interface AuthResponse {

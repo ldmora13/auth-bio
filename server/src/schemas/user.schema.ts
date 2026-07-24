@@ -13,17 +13,8 @@ export const createUserSchema = registry.register('CreateUser', z.object({
         documentType: z.enum(['CC', 'DNI', 'PASSPORT', 'OTHER']).openapi({ example: 'CC' }),
         documentNumber: z.string().min(1, 'Document number is required').openapi({ example: '12345678' }),
         role: z.enum(['ADVISOR', 'CLIENT']).openapi({ example: 'CLIENT' }),
-        // Conditional fields
-        company: z.string().min(1, 'Company is required for advisors').optional(),
+        empresaId: z.string().uuid().optional().openapi({ example: 'cuid-or-uuid' }),
         biometricType: z.enum(['OCULAR', 'FACIAL', 'DACTILAR']).optional(),
-    }).refine((data) => {
-        if (data.role === 'ADVISOR' && !data.company) {
-            return false;
-        }
-        return true;
-    }, {
-        message: 'Company is required for advisors',
-        path: ['company'],
     }).refine((data) => {
         if (data.role === 'CLIENT' && !data.biometricType) {
             return false;
@@ -58,7 +49,7 @@ export const updateUserSchema = registry.register('UpdateUser', z.object({
         address: z.string().min(1, 'Address is required').optional().openapi({ example: '123 Main St, Anytown, USA' }),
         documentType: z.enum(['CC', 'DNI', 'PASSPORT', 'OTHER']).optional().openapi({ example: 'CC' }),
         documentNumber: z.string().min(1, 'Document number is required').optional().openapi({ example: '12345678' }),
-        company: z.string().min(1, 'Company is required for advisors').optional(),
+        empresaId: z.string().uuid().nullable().optional().openapi({ example: 'cuid-or-uuid' }),
         biometricType: z.enum(['OCULAR', 'FACIAL', 'DACTILAR']).optional(),
     }),
     params: z.object({
@@ -69,6 +60,32 @@ export const updateUserSchema = registry.register('UpdateUser', z.object({
 export const getUsersSchema = registry.register('GetUsers', z.object({
     query: z.object({
         role: z.enum(['ADMIN', 'ADVISOR', 'CLIENT']).optional(),
+    }),
+}));
+
+export const userIdParamSchema = registry.register('UserIdParam', z.object({
+    params: z.object({
+        id: z.string().openapi({ example: 'cm6...' }),
+    }),
+}));
+
+export const createCompanySchema = registry.register('CreateCompany', z.object({
+    body: z.object({
+        nombre: z.string().min(1, 'Company name is required').openapi({ example: 'Alpha Consulting' }),
+    }),
+}));
+
+export const assignAdvisorSchema = registry.register('AssignAdvisor', z.object({
+    params: z.object({
+        id: z.string().openapi({ example: 'cuid-or-uuid' }),
+        advisorId: z.string().openapi({ example: 'cuid-or-uuid' }),
+    }),
+}));
+
+export const unassignAdvisorSchema = registry.register('UnassignAdvisor', z.object({
+    params: z.object({
+        id: z.string().openapi({ example: 'cuid-or-uuid' }),
+        advisorId: z.string().openapi({ example: 'cuid-or-uuid' }),
     }),
 }));
 

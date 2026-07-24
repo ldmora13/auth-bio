@@ -13,8 +13,9 @@ import {
   ChevronRight,
   Users,
   User,
+  Building2,
 } from 'lucide-react';
-import { canAccessUsersPage } from '../lib/roles';
+import { canAccessCompanies, canAccessUsersPage } from '../lib/roles';
 import { clsx } from 'clsx';
 import Footer from './Footer';
 import LanguageSelector from './LanguageSelector';
@@ -46,6 +47,7 @@ export default function Layout({ children }: { children: ReactNode }) {
   const navItems = [
     ...baseNavItems,
     ...(user && canAccessUsersPage(user.role) ? [{ label: t('nav.users'), icon: Users, path: '/users' }] : []),
+    ...(user && canAccessCompanies(user.role) ? [{ label: user.role === 'ADVISOR' ? 'Mi empresa' : 'Empresas', icon: Building2, path: '/companies' }] : []),
   ];
 
   return (
@@ -66,7 +68,7 @@ export default function Layout({ children }: { children: ReactNode }) {
             </div>
             {isSidebarOpen && (
               <h1 className="font-bold text-white text-lg overflow-hidden whitespace-nowrap tracking-tight">
-                New Horizons
+                Biometrics
               </h1>
             )}
           </div>
@@ -129,6 +131,9 @@ export default function Layout({ children }: { children: ReactNode }) {
                   <div className="flex flex-col items-start min-w-0 ml-2">
                     <span className="text-sm font-medium text-slate-200 truncate max-w-30">{user.name}</span>
                     <span className="text-xs text-slate-500">{user.role}</span>
+                    {user.role === 'ADVISOR' && user.empresa?.nombre && (
+                      <span className="text-[11px] text-teal-400 truncate max-w-30">{user.empresa.nombre}</span>
+                    )}
                   </div>
                 )}
               </HMenu.Button>
@@ -183,7 +188,7 @@ export default function Layout({ children }: { children: ReactNode }) {
 
       {/* Main Content */}
       <main className="flex-1 min-w-0 h-screen overflow-auto flex flex-col">
-        <header className="h-16 border-b border-white/10 bg-white/5 backdrop-blur-xl flex items-center py-4 px-6 lg:hidden flex top-0 z-40">
+        <header className="h-16 border-b border-white/10 bg-white/5 backdrop-blur-xl items-center py-4 px-6 lg:hidden flex top-0 z-40">
           <button onClick={() => setIsSidebarOpen(true)}>
             <Menu className="w-6 h-6 text-slate-300" />
           </button>

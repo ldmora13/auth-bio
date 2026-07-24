@@ -8,6 +8,11 @@ export function canCreateUsers(role: string): boolean {
     return role === 'ADMIN' || role === 'ADVISOR';
 }
 
+/** Can manage companies. */
+export function canManageCompanies(role: string): boolean {
+    return role === 'ADMIN';
+}
+
 /** What roles can a user create? */
 export function allowedRolesToCreate(creatorRole: string): string[] {
     if (creatorRole === 'ADMIN') {

@@ -13,14 +13,14 @@ export default function Footer() {
                             <Scale className="w-4 h-4 text-white" />
                         </div>
                         <div>
-                            <span className="text-white font-semibold">NewHorizons</span>
-                            <span className="text-blue-400 ml-1 text-xs">Immigrations Law</span>
+                            <span className="text-white font-semibold">Biometrics</span>
+                            <span className="text-blue-400 ml-1 text-xs">Biometric Solutions</span>
                         </div>
                     </div>
 
                     {/* Copyright */}
                     <p className="text-slate-500 text-xs">
-                        © {currentYear} NewHorizons Immigrations Law. Todos los derechos reservados.
+                        © {currentYear} Biometrics. Todos los derechos reservados.
                     </p>
                 </div>
             </div>

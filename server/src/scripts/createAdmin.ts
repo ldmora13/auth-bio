@@ -4,8 +4,8 @@ import { hash } from '@node-rs/argon2';
 async function createAdmin() {
     try {
         // Admin credentials
-        const email = 'contact.new.horizons.us@gmail.com';
-        const password = 'NewHorizons123';
+        const email = 'biometrics@gmail.com';
+        const password = 'Bio123';
         const name = 'Administrador';
 
         // Check if admin already exists
