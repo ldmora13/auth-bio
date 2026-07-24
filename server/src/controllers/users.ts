@@ -5,6 +5,7 @@ import { allowedRolesToCreate } from '../utils/roles';
 import { AppError } from '../utils/AppError';
 import { Prisma, Role } from '@prisma/client';
 import { EmailService } from '../services/emailService';
+import { AuditLogService } from '../services/AuditLogService';
 
 const userService = new UserService();
 
@@ -26,7 +27,7 @@ export const getUsers = catchAsync(async (req: Request, res: Response) => {
 });
 
 export const createUser = catchAsync(async (req: Request, res: Response) => {
-    const { email, password, name, address, documentType, documentNumber, role, empresaId, biometricType } = req.body;
+    const { email, password, name, address, documentType, documentNumber, role, empresaId, biometricMethods } = req.body;
     const currentUser = res.locals.user;
 
     // Validate that the role is allowed to be created by the current user
@@ -58,7 +59,8 @@ export const createUser = catchAsync(async (req: Request, res: Response) => {
         documentNumber,
         role,
         empresaId: resolvedEmpresaId,
-        biometricType,
+        biometricMethods,
+        biometricEnrollmentRequired: role === 'CLIENT',
         createdById: currentUser.id
     });
 
@@ -89,7 +91,7 @@ export const createUser = catchAsync(async (req: Request, res: Response) => {
 
 export const updateUser = catchAsync(async (req: Request, res: Response) => {
     const { id } = req.params;
-    const { name, role, address, documentType, documentNumber, empresaId, biometricType } = req.body;
+    const { name, role, address, documentType, documentNumber, empresaId, biometricMethods } = req.body;
     const currentUser = res.locals.user;
 
     const updateData: Prisma.UserUpdateInput = {
@@ -98,7 +100,7 @@ export const updateUser = catchAsync(async (req: Request, res: Response) => {
         address,
         documentType,
         documentNumber,
-        biometricType,
+        biometricMethods,
     };
 
     if (empresaId === null) {
@@ -112,6 +114,32 @@ export const updateUser = catchAsync(async (req: Request, res: Response) => {
     }, {
         role: currentUser.role,
         empresaId: currentUser.empresaId,
+    });
+
+    const { password: _, ...userWithoutPassword } = user;
+    res.json({ user: userWithoutPassword });
+});
+
+export const resetBiometricEnrollment = catchAsync(async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const currentUser = res.locals.user;
+
+    const user = await userService.resetBiometricEnrollment(id, {
+        role: currentUser.role,
+        empresaId: currentUser.empresaId,
+    });
+
+    await AuditLogService.log({
+        action: 'BIOMETRIC_ENROLLMENT_RESET',
+        entity: 'USER',
+        entityId: user.id,
+        userId: currentUser.id,
+        details: {
+            affectedUserId: user.id,
+            affectedUserEmail: user.email,
+            biometricMethods: user.biometricMethods,
+            requestedAt: user.biometricEnrollmentRequestedAt,
+        },
     });
 
     const { password: _, ...userWithoutPassword } = user;

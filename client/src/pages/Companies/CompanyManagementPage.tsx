@@ -36,7 +36,6 @@ type ClientDraft = {
     address: string;
     documentType: 'CC' | 'DNI' | 'PASSPORT' | 'OTHER';
     documentNumber: string;
-    biometricType: 'OCULAR' | 'FACIAL' | 'DACTILAR' | '';
 };
 
 const COMPANY_PAGE_SIZE = 6;
@@ -136,9 +135,8 @@ export default function CompanyManagementPage() {
         address: '',
         documentType: 'CC',
         documentNumber: '',
-        biometricType: '',
     });
-    const [clientErrors, setClientErrors] = useState<Partial<Record<'name' | 'address' | 'documentNumber' | 'biometricType', string>>>({});
+    const [clientErrors, setClientErrors] = useState<Partial<Record<'name' | 'address' | 'documentNumber', string>>>({});
 
     useEffect(() => {
         if (!user || !canAccessCompanies(user.role)) {
@@ -307,14 +305,13 @@ export default function CompanyManagementPage() {
             address: client.address ?? '',
             documentType: client.documentType ?? 'CC',
             documentNumber: client.documentNumber ?? '',
-            biometricType: client.biometricType ?? '',
         });
         setClientErrors({});
         setClientModalOpen(true);
     }
 
     function validateClientDraft(draft: ClientDraft) {
-        const nextErrors: Partial<Record<'name' | 'address' | 'documentNumber' | 'biometricType', string>> = {};
+        const nextErrors: Partial<Record<'name' | 'address' | 'documentNumber', string>> = {};
 
         if (!draft.name.trim()) nextErrors.name = 'El nombre es obligatorio';
         if (!draft.address.trim()) nextErrors.address = 'La dirección es obligatoria';
@@ -327,7 +324,7 @@ export default function CompanyManagementPage() {
     function updateClientDraft(field: keyof ClientDraft, value: string) {
         setClientDraft((current) => ({ ...current, [field]: value }));
 
-        if (field === 'name' || field === 'address' || field === 'documentNumber' || field === 'biometricType') {
+        if (field === 'name' || field === 'address' || field === 'documentNumber') {
             setClientErrors((current) => ({ ...current, [field]: undefined }));
         }
     }
@@ -342,7 +339,6 @@ export default function CompanyManagementPage() {
                 address: clientDraft.address.trim(),
                 documentType: clientDraft.documentType,
                 documentNumber: clientDraft.documentNumber.trim(),
-                biometricType: clientDraft.biometricType || undefined,
             });
 
             toast.success('Cliente actualizado');
@@ -705,7 +701,7 @@ export default function CompanyManagementPage() {
                         <div className="flex gap-2">
                             <Button variant="outline" className="h-9 w-auto px-3 text-xs" onClick={() => downloadCsv(`${currentCompany.nombre}-clientes.csv`, [
                                 ['Nombre', 'Email', 'Documento', 'Tipo documento', 'Biometría', 'Creado'],
-                                ...(currentCompany.clients || []).map((client) => [client.name, client.email, client.documentNumber ?? '', client.documentType ?? '', client.biometricType ?? '', formatDate(client.createdAt)]),
+                                ...(currentCompany.clients || []).map((client) => [client.name, client.email, client.documentNumber ?? '', client.documentType ?? '', 'N/D', formatDate(client.createdAt)]),
                             ])}>
                                 <Download className="h-4 w-4" />
                                 Exportar
@@ -741,7 +737,8 @@ export default function CompanyManagementPage() {
                                     <div>
                                         <p className="font-medium text-white">{client.name}</p>
                                         <p className="text-sm text-slate-400">{client.email}</p>
-                                        <p className="mt-1 text-xs text-slate-500">{client.documentType ?? 'N/D'} · {client.documentNumber ?? 'N/D'} · Alta {formatDate(client.createdAt)}</p>
+                                        <p className="mt-1 text-xs text-slate-500">{client.documentType ?? 'N/D'} · {client.documentNumber ?? 'N/D'}</p>
+                                        <p className="mt-1 text-[11px] uppercase tracking-[0.22em] text-slate-500">Alta {formatDate(client.createdAt)}</p>
                                     </div>
 
                                     <Menu as="div" className="relative inline-block text-left">
@@ -796,18 +793,6 @@ export default function CompanyManagementPage() {
                                                         >
                                                             <Filter className="h-4 w-4" />
                                                             Cambiar estado
-                                                        </button>
-                                                    )}
-                                                </Menu.Item>
-                                                <Menu.Item>
-                                                    {({ active }) => (
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => toast('Generación de reportes pendiente de integración')}
-                                                            className={`flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm ${active ? 'bg-white/10 text-white' : 'text-slate-300'}`}
-                                                        >
-                                                            <Download className="h-4 w-4" />
-                                                            Generar reporte
                                                         </button>
                                                     )}
                                                 </Menu.Item>
@@ -1056,20 +1041,6 @@ export default function CompanyManagementPage() {
                                         <div>
                                             <label className="mb-2 block text-sm text-slate-300">Dirección</label>
                                             <Input value={clientDraft.address} onChange={(e) => updateClientDraft('address', e.target.value)} error={clientErrors.address} />
-                                        </div>
-                                        <div>
-                                            <label className="mb-2 block text-sm text-slate-300">Biometría</label>
-                                            <select
-                                                value={clientDraft.biometricType}
-                                                onChange={(e) => updateClientDraft('biometricType', e.target.value)}
-                                                className="h-11 w-full rounded-lg border border-white/20 bg-white/5 px-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-500/50"
-                                            >
-                                                <option value="">Sin cambios</option>
-                                                <option value="OCULAR">Ocular</option>
-                                                <option value="FACIAL">Facial</option>
-                                                <option value="DACTILAR">Dactilar</option>
-                                            </select>
-                                            {clientErrors.biometricType && <p className="mt-1 text-xs text-red-400">{clientErrors.biometricType}</p>}
                                         </div>
                                         <div>
                                             <label className="mb-2 block text-sm text-slate-300">Tipo de documento</label>

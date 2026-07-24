@@ -1,7 +1,7 @@
 .card {
   --local-accent: var(--bio-scan);
   width: 100%;
-  max-width: 420px;
+  max-width: 980px;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 250, 252, 0.98) 100%);
   border: 1px solid rgba(148, 163, 184, 0.24);
   border-radius: 28px;
@@ -14,6 +14,215 @@
   color: var(--bio-text-primary);
   box-sizing: border-box;
   box-shadow: 0 18px 50px rgba(15, 23, 42, 0.08);
+}
+
+.header {
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.title {
+  font-family: var(--bio-font-display);
+  font-size: 22px;
+  line-height: 1.1;
+  margin: 6px 0 6px;
+  letter-spacing: -0.02em;
+  color: var(--bio-text-primary);
+}
+
+.description {
+  margin: 0;
+  color: var(--bio-text-muted);
+  font-size: 13px;
+  max-width: 54ch;
+}
+
+.pill {
+  flex-shrink: 0;
+  border-radius: 999px;
+  border: 1px solid rgba(37, 99, 235, 0.18);
+  background: rgba(37, 99, 235, 0.08);
+  color: var(--bio-scan);
+  font-family: var(--bio-font-mono);
+  font-size: 12px;
+  padding: 8px 12px;
+}
+
+.handsGrid {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.handCard {
+  position: relative;
+  border-radius: 24px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.8) 0%, rgba(241, 245, 249, 0.96) 100%);
+  min-height: 354px;
+  overflow: hidden;
+  padding: 18px 16px 16px;
+}
+
+.handHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 12px;
+}
+
+.handEyebrow {
+  font-family: var(--bio-font-mono);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--bio-text-muted);
+}
+
+.handSub {
+  color: var(--bio-text-faint);
+  font-size: 12px;
+}
+
+.handCanvas {
+  position: relative;
+  height: 286px;
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at 50% 36%, rgba(255, 255, 255, 0.88) 0%, rgba(226, 232, 240, 0.25) 58%, rgba(226, 232, 240, 0) 74%),
+    linear-gradient(180deg, rgba(248, 250, 252, 0.92) 0%, rgba(226, 232, 240, 0.78) 100%);
+  border: 1px solid rgba(148, 163, 184, 0.14);
+}
+
+.palm {
+  position: absolute;
+  left: 50%;
+  bottom: 36px;
+  width: 176px;
+  height: 160px;
+  transform: translateX(-50%);
+  border-radius: 38% 38% 30% 30%;
+  background: linear-gradient(180deg, rgba(226, 232, 240, 0.85), rgba(255, 255, 255, 0.8));
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  box-shadow: inset 0 -18px 24px rgba(148, 163, 184, 0.12);
+}
+
+.fingerSlot {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  border-radius: 18px;
+  border: 2px solid rgba(148, 163, 184, 0.34);
+  background: rgba(255, 255, 255, 0.56);
+  padding: 10px 8px 8px;
+  color: var(--bio-text-primary);
+  cursor: default;
+  transition: transform 220ms ease, border-color 220ms ease, box-shadow 220ms ease, background 220ms ease;
+}
+
+.fingerSlot[data-side="left"][data-position="thumb"] { left: 24px; top: 172px; width: 72px; height: 86px; transform: rotate(-18deg); }
+.fingerSlot[data-side="left"][data-position="index"] { left: 88px; top: 82px; width: 62px; height: 124px; }
+.fingerSlot[data-side="left"][data-position="middle"] { left: 155px; top: 58px; width: 64px; height: 138px; }
+.fingerSlot[data-side="left"][data-position="ring"] { left: 223px; top: 82px; width: 60px; height: 124px; }
+.fingerSlot[data-side="left"][data-position="pinky"] { left: 284px; top: 112px; width: 52px; height: 102px; transform: rotate(8deg); }
+
+.fingerSlot[data-side="right"][data-position="thumb"] { right: 24px; top: 172px; width: 72px; height: 86px; transform: rotate(18deg); }
+.fingerSlot[data-side="right"][data-position="index"] { right: 88px; top: 82px; width: 62px; height: 124px; }
+.fingerSlot[data-side="right"][data-position="middle"] { right: 155px; top: 58px; width: 64px; height: 138px; }
+.fingerSlot[data-side="right"][data-position="ring"] { right: 223px; top: 82px; width: 60px; height: 124px; }
+.fingerSlot[data-side="right"][data-position="pinky"] { right: 284px; top: 112px; width: 52px; height: 102px; transform: rotate(-8deg); }
+
+.fingerSlot:hover,
+.fingerSlot:focus-visible {
+  border-color: rgba(37, 99, 235, 0.2);
+  background: rgba(37, 99, 235, 0.04);
+  box-shadow: none;
+  transform: none;
+}
+
+.fingerActive {
+  border-color: var(--local-accent) !important;
+  background: rgba(37, 99, 235, 0.10);
+  box-shadow: 0 0 0 9px rgba(37, 99, 235, 0.12), 0 0 28px rgba(37, 99, 235, 0.16);
+}
+
+.fingerCompleted {
+  border-color: rgba(22, 163, 74, 0.5);
+  background: rgba(22, 163, 74, 0.08);
+}
+
+.fingerNumber {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--bio-font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  color: var(--bio-text-muted);
+}
+
+.fingerLabel {
+  font-size: 11px;
+  line-height: 1.2;
+  text-align: center;
+  font-weight: 600;
+  color: var(--bio-text-primary);
+}
+
+.focusPanel {
+  width: 100%;
+  display: none;
+}
+
+.focusLabel {
+  font-family: var(--bio-font-mono);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--bio-text-muted);
+}
+
+.readerPanel {
+  width: 100%;
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+  padding-top: 2px;
+}
+
+.readerMeta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
+}
+
+.readerFinger {
+  font-family: var(--bio-font-display);
+  font-size: 16px;
+  line-height: 1.1;
+  color: var(--bio-text-primary);
+}
+
+.readerHint {
+  margin: 0;
+  max-width: 32ch;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--bio-text-muted);
 }
 
 .card[data-phase="scanning"] {
@@ -37,9 +246,9 @@
 
 .pad {
   position: relative;
-  width: 184px;
-  height: 184px;
-  border-radius: 50%;
+  width: min(100%, 230px);
+  height: 230px;
+  border-radius: 34px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -47,15 +256,16 @@
   -webkit-tap-highlight-color: transparent;
   touch-action: none;
   background:
-    radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.96) 0%, rgba(226, 232, 240, 0.9) 100%);
+    radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.98) 0%, rgba(226, 232, 240, 0.96) 100%);
   border: 1px solid rgba(148, 163, 184, 0.24);
-  transition: box-shadow 320ms ease, border-color 320ms ease, transform 320ms ease;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  transition: box-shadow 320ms ease, border-color 320ms ease, transform 320ms ease, background 320ms ease;
 }
 
 .pad[data-phase="idle"]:hover,
 .pad[data-phase="idle"]:focus-visible {
   border-color: rgba(37, 99, 235, 0.35);
-  box-shadow: 0 0 0 8px rgba(37, 99, 235, 0.08);
+  box-shadow: 0 0 0 8px rgba(37, 99, 235, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.92);
   transform: translateY(-1px);
 }
 
@@ -81,15 +291,17 @@
 }
 
 .ridges {
-  width: 96px;
-  height: 96px;
+  position: relative;
+  z-index: 1;
+  width: 112px;
+  height: 112px;
   overflow: visible;
 }
 
 .ridgePath {
   fill: none;
   stroke: var(--bio-text-faint);
-  stroke-width: 3;
+  stroke-width: 2.75;
   stroke-linecap: round;
   transition: stroke 280ms ease, opacity 280ms ease;
 }
@@ -113,7 +325,7 @@
 
 .progressRing {
   position: absolute;
-  inset: 0;
+  inset: 18px;
   transform: rotate(-90deg);
 }
 
@@ -177,16 +389,57 @@
 }
 
 @media (max-width: 380px) {
-  .pad {
-    width: 152px;
-    height: 152px;
+  .card {
+    padding: 22px 16px 18px;
   }
-  .ridges {
-    width: 88px;
-    height: 88px;
+  .handsGrid {
+    grid-template-columns: 1fr;
   }
 
-  .card {
-    padding: 24px 16px 20px;
+  .handCard {
+    min-height: 332px;
+  }
+
+  .handCanvas {
+    height: 270px;
+  }
+
+  .pad {
+    width: min(100%, 208px);
+    height: 208px;
+  }
+
+  .progressRing {
+    inset: 14px;
+  }
+
+  .fingerSlot[data-side="left"][data-position="thumb"],
+  .fingerSlot[data-side="right"][data-position="thumb"] {
+    width: 64px;
+    height: 80px;
+  }
+
+  .fingerSlot[data-side="left"][data-position="index"],
+  .fingerSlot[data-side="right"][data-position="index"] {
+    width: 56px;
+    height: 116px;
+  }
+
+  .fingerSlot[data-side="left"][data-position="middle"],
+  .fingerSlot[data-side="right"][data-position="middle"] {
+    width: 58px;
+    height: 126px;
+  }
+
+  .fingerSlot[data-side="left"][data-position="ring"],
+  .fingerSlot[data-side="right"][data-position="ring"] {
+    width: 54px;
+    height: 114px;
+  }
+
+  .fingerSlot[data-side="left"][data-position="pinky"],
+  .fingerSlot[data-side="right"][data-position="pinky"] {
+    width: 46px;
+    height: 96px;
   }
 }

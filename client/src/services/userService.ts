@@ -10,7 +10,7 @@ export interface CreateUserData {
     documentNumber: string;
     role: 'CLIENT' | 'ADVISOR';
     empresaId?: string;
-    biometricType?: 'OCULAR' | 'FACIAL' | 'DACTILAR';
+    biometricMethods?: Array<'OCULAR' | 'FACIAL' | 'DACTILAR'>;
 }
 
 export interface CompanyListResponse {
@@ -57,7 +57,7 @@ export const UserService = {
         return data.user;
     },
 
-    update: async (id: string, updates: Partial<Pick<User, 'name' | 'role' | 'address' | 'documentType' | 'documentNumber' | 'empresaId' | 'biometricType'>>) => {
+    update: async (id: string, updates: Partial<Pick<User, 'name' | 'role' | 'address' | 'documentType' | 'documentNumber' | 'empresaId'>>) => {
         const { data } = await api.patch<{ user: User }>(`/users/${id}`, updates);
         return data.user;
     },

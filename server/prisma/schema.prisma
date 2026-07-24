@@ -25,6 +25,12 @@ enum BiometricType {
   DACTILAR
 }
 
+enum BiometricMethod {
+  DACTILAR
+  FACIAL
+  OCULAR
+}
+
 model Empresa {
   id        String   @id @default(uuid())
   nombre    String   @unique
@@ -46,6 +52,10 @@ model User {
   documentType    DocumentType?
   documentNumber  String?
   biometricType   BiometricType?  // Only for CLIENT
+  biometricMethods String[]        @default([])
+  biometricEnrollmentRequired Boolean @default(false)
+  biometricEnrollmentCompletedAt DateTime?
+  biometricEnrollmentRequestedAt DateTime?
   empresaId       String?
   empresa         Empresa?        @relation(fields: [empresaId], references: [id], onDelete: SetNull)
   createdAt       DateTime        @default(now())

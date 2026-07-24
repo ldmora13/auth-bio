@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { useCamera } from "../../shared/hooks/useCamera";
 import { CameraStage } from "../../shared/ui/CameraStage";
 import type { BaseBiometricProps } from "../../shared/biometricTypes";
@@ -18,6 +18,8 @@ export function IrisSimulator({
   disabled = false,
 }: IrisSimulatorProps) {
   const { videoRef, status: cameraStatus, errorMessage, requestCamera } = useCamera();
+  const maskId = useId().replace(/:/g, "");
+  const clipId = useId().replace(/:/g, "");
 
   const [phase, setPhase] = useState<IrisPhase>("aligning");
   const [progress, setProgress] = useState(0);
@@ -99,6 +101,18 @@ export function IrisSimulator({
       onRetry={handleManualRetry}
       overlay={
         <svg className={styles.overlaySvg} viewBox="0 0 220 120" aria-hidden="true">
+          <defs>
+            <mask id={maskId}>
+              <rect width="220" height="120" fill="white" />
+              <ellipse cx="58" cy="60" rx="38" ry="22" fill="black" />
+              <ellipse cx="162" cy="60" rx="38" ry="22" fill="black" />
+            </mask>
+            <clipPath id={clipId}>
+              <rect x="10" y="20" width="200" height="80" />
+            </clipPath>
+          </defs>
+
+          <rect width="220" height="120" fill="rgba(15, 23, 42, 0.68)" mask={`url(#${maskId})`} />
           <line className={styles.bridge} x1="98" y1="60" x2="122" y2="60" />
 
           {/* Ojo izquierdo */}
@@ -107,12 +121,7 @@ export function IrisSimulator({
           <EyeGuide cx={162} locked={locked} />
 
           {phase === "scanning" && (
-            <clipPath id="iris-clip">
-              <rect x="10" y="20" width="200" height="80" />
-            </clipPath>
-          )}
-          {phase === "scanning" && (
-            <g clipPath="url(#iris-clip)">
+            <g clipPath={`url(#${clipId})`}>
               <g className={styles.sweepGroup}>
                 <line className={styles.sweepLine} x1="110" y1="15" x2="110" y2="105" />
               </g>

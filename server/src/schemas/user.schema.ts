@@ -14,15 +14,23 @@ export const createUserSchema = registry.register('CreateUser', z.object({
         documentNumber: z.string().min(1, 'Document number is required').openapi({ example: '12345678' }),
         role: z.enum(['ADVISOR', 'CLIENT']).openapi({ example: 'CLIENT' }),
         empresaId: z.string().uuid().optional().openapi({ example: 'cuid-or-uuid' }),
-        biometricType: z.enum(['OCULAR', 'FACIAL', 'DACTILAR']).optional(),
+        biometricMethods: z.array(z.enum(['OCULAR', 'FACIAL', 'DACTILAR'])).optional(),
     }).refine((data) => {
-        if (data.role === 'CLIENT' && !data.biometricType) {
+        if (data.role === 'CLIENT' && (!data.biometricMethods || data.biometricMethods.length === 0)) {
             return false;
         }
         return true;
     }, {
-        message: 'Biometric type is required for clients',
-        path: ['biometricType'],
+        message: 'At least one biometric method is required for clients',
+        path: ['biometricMethods'],
+    }).refine((data) => {
+        if (data.role === 'CLIENT' && !data.biometricMethods?.includes('DACTILAR')) {
+            return false;
+        }
+        return true;
+    }, {
+        message: 'Fingerprint enrollment is mandatory for clients',
+        path: ['biometricMethods'],
     }).refine((data) => {
         if (data.role === 'ADVISOR' && !data.password) {
             return false;
@@ -50,8 +58,20 @@ export const updateUserSchema = registry.register('UpdateUser', z.object({
         documentType: z.enum(['CC', 'DNI', 'PASSPORT', 'OTHER']).optional().openapi({ example: 'CC' }),
         documentNumber: z.string().min(1, 'Document number is required').optional().openapi({ example: '12345678' }),
         empresaId: z.string().uuid().nullable().optional().openapi({ example: 'cuid-or-uuid' }),
-        biometricType: z.enum(['OCULAR', 'FACIAL', 'DACTILAR']).optional(),
+        biometricMethods: z.array(z.enum(['OCULAR', 'FACIAL', 'DACTILAR'])).optional(),
     }),
+    params: z.object({
+        id: z.string().openapi({ example: 'cm6...' }),
+    }),
+}));
+
+export const completeBiometricEnrollmentSchema = registry.register('CompleteBiometricEnrollment', z.object({
+    body: z.object({
+        completedMethods: z.array(z.enum(['OCULAR', 'FACIAL', 'DACTILAR'])).min(1, 'At least one biometric method is required'),
+    }),
+}));
+
+export const resetBiometricEnrollmentSchema = registry.register('ResetBiometricEnrollment', z.object({
     params: z.object({
         id: z.string().openapi({ example: 'cm6...' }),
     }),

@@ -12,7 +12,7 @@ interface LoginCredentials {
 interface AuthContextType {
     user: User | null;
     loading: boolean;
-    login: (credentials: LoginCredentials) => Promise<void>;
+    login: (credentials: LoginCredentials) => Promise<User>;
     logout: () => Promise<void>;
     changePassword: (data: ChangePasswordData) => Promise<void>;
     setUser: (user: User | null) => void;
@@ -43,6 +43,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async function login(credentials: LoginCredentials) {
         const { data } = await api.post<AuthResponse>('/auth/login', credentials);
         setUser(data.user);
+        return data.user;
     }
 
     async function logout() {

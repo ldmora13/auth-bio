@@ -13,7 +13,6 @@ export interface User {
         id: string;
         nombre: string;
     } | null;
-    biometricType?: 'OCULAR' | 'FACIAL' | 'DACTILAR';
     createdAt: string;
     updatedAt: string;
 }

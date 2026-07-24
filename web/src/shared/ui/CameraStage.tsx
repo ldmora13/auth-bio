@@ -6,7 +6,7 @@ export interface CameraStageProps {
   eyebrow: string;
   cameraStatus: CameraStatus;
   errorMessage: string | null;
-  videoRef: React.RefObject<HTMLVideoElement>;
+  videoRef: React.RefObject<HTMLVideoElement | null>;
   /** Overlay SVG/silueta dibujada sobre el video (varía por simulador). */
   overlay: ReactNode;
   onRequestCamera: () => void;

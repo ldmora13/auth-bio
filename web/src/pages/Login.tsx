@@ -2,6 +2,7 @@ import axios from 'axios';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
+import { getBiometricMethodLabel, resolveBiometricMethods, type BiometricMethod } from '../shared/biometricMethods';
 
 type DocumentType = 'CC' | 'DNI' | 'PASSPORT' | 'OTHER';
 
@@ -14,7 +15,9 @@ type ClientProfile = {
   documentType?: DocumentType | null;
   documentNumber?: string | null;
   company?: string | null;
-  biometricType?: 'OCULAR' | 'FACIAL' | 'DACTILAR' | null;
+  biometricType?: BiometricMethod | null;
+  biometricMethods?: BiometricMethod[] | null;
+  biometricEnrollmentRequired?: boolean;
   createdAt: string;
   updatedAt: string;
 };
@@ -121,13 +124,15 @@ export default function Login() {
   };
 
   const handleConfirm = () => {
-    if (profile?.biometricType) {
-      localStorage.setItem('clientBiometricType', profile.biometricType);
-    }
+    const biometricMethods = resolveBiometricMethods(profile ?? undefined);
+
+    localStorage.setItem('clientBiometricMethods', JSON.stringify(biometricMethods));
+    localStorage.setItem('clientBiometricEnrollmentRequired', String(Boolean(profile?.biometricEnrollmentRequired)));
 
     navigate('/verification', {
       state: {
-        biometricType: profile?.biometricType ?? null,
+        biometricMethods,
+        biometricEnrollmentRequired: profile?.biometricEnrollmentRequired ?? false,
       },
     });
   };
@@ -237,7 +242,15 @@ export default function Login() {
                 </div>
                 <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
                   <dt className="text-sm font-semibold text-slate-700">Tipo de biometría</dt>
-                  <dd className="mt-1 text-base font-medium text-slate-900">{profile.biometricType || 'No registrada'}</dd>
+                  <dd className="mt-1 text-base font-medium text-slate-900">
+                    {resolveBiometricMethods(profile).map(getBiometricMethodLabel).join(' · ')}
+                  </dd>
+                </div>
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+                  <dt className="text-sm font-semibold text-slate-700">Estado de registro</dt>
+                  <dd className="mt-1 text-base font-medium text-slate-900">
+                    {profile.biometricEnrollmentRequired ? 'Pendiente de completar' : 'Completado'}
+                  </dd>
                 </div>
                 <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
                   <dt className="text-sm font-semibold text-slate-700">Fecha de registro</dt>

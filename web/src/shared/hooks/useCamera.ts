@@ -9,7 +9,7 @@ interface UseCameraOptions {
 }
 
 interface UseCameraResult {
-  videoRef: React.RefObject<HTMLVideoElement>;
+  videoRef: React.RefObject<HTMLVideoElement | null>;
   status: CameraStatus;
   errorMessage: string | null;
   /** Vuelve a pedir permiso (por ejemplo tras una denegación). */

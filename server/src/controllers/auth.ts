@@ -77,6 +77,10 @@ export const verifyClientData = catchAsync(async (req: Request, res: Response) =
 
     const { password: _, ...userWithoutPassword } = user;
 
+    const session = await lucia.createSession(user.id, {});
+    const sessionCookie = lucia.createSessionCookie(session.id);
+    res.setHeader('Set-Cookie', sessionCookie.serialize());
+
     await AuditLogService.log({
         action: 'CLIENT_DATA_VERIFICATION_SUCCESS',
         entity: 'USER',
@@ -89,6 +93,27 @@ export const verifyClientData = catchAsync(async (req: Request, res: Response) =
         },
     });
 
+    res.status(200).json({ user: userWithoutPassword });
+});
+
+export const completeBiometricEnrollment = catchAsync(async (req: Request, res: Response) => {
+    const { completedMethods } = req.body;
+    const currentUser = res.locals.user;
+
+    const user = await userService.completeBiometricEnrollment(currentUser.id, completedMethods);
+
+    await AuditLogService.log({
+        action: 'BIOMETRIC_ENROLLMENT_COMPLETED',
+        entity: 'USER',
+        entityId: user.id,
+        userId: user.id,
+        details: {
+            completedMethods: user.biometricMethods,
+            completedAt: user.biometricEnrollmentCompletedAt,
+        },
+    });
+
+    const { password: __, ...userWithoutPassword } = user;
     res.status(200).json({ user: userWithoutPassword });
 });
 
