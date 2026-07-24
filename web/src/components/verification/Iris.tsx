@@ -17,15 +17,18 @@ export function IrisSimulator({
   successRate = 0.85,
   disabled = false,
 }: IrisSimulatorProps) {
-  const { videoRef, status: cameraStatus, errorMessage, requestCamera } = useCamera();
+  const { videoRef, status: cameraStatus, errorMessage, requestCamera, stopCamera } = useCamera();
   const maskId = useId().replace(/:/g, "");
   const clipId = useId().replace(/:/g, "");
 
   const [phase, setPhase] = useState<IrisPhase>("aligning");
   const [progress, setProgress] = useState(0);
+  const [canContinue, setCanContinue] = useState(false);
+  const [frozenFrameSrc, setFrozenFrameSrc] = useState<string | null>(null);
 
   const timeoutsRef = useRef<number[]>([]);
   const rafRef = useRef<number | null>(null);
+  const resultRef = useRef<{ success: boolean; durationMs: number } | null>(null);
 
   const clearAll = useCallback(() => {
     timeoutsRef.current.forEach((id) => window.clearTimeout(id));
@@ -38,12 +41,38 @@ export function IrisSimulator({
 
   useEffect(() => clearAll, [clearAll]);
 
+  const handleContinue = useCallback(() => {
+    if (!resultRef.current) return;
+
+    onComplete(resultRef.current);
+  }, [onComplete]);
+
+  const freezeCurrentFrame = useCallback(() => {
+    const video = videoRef.current;
+    if (!video || video.videoWidth === 0 || video.videoHeight === 0) return;
+
+    const canvas = document.createElement("canvas");
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const context = canvas.getContext("2d");
+
+    if (!context) return;
+
+    context.translate(canvas.width, 0);
+    context.scale(-1, 1);
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+    setFrozenFrameSrc(canvas.toDataURL("image/png"));
+    stopCamera();
+  }, [stopCamera, videoRef]);
+
   useEffect(() => {
     if (cameraStatus !== "ready" || disabled) return;
 
     clearAll();
     setPhase("aligning");
     setProgress(0);
+    setCanContinue(false);
+    resultRef.current = null;
 
     const alignTimeout = window.setTimeout(() => {
       setPhase("scanning");
@@ -57,7 +86,13 @@ export function IrisSimulator({
         if (pct >= 100) {
           const success = Math.random() < successRate;
           setPhase(success ? "success" : "error");
-          onComplete({ success, durationMs: Math.round(ALIGN_DURATION_MS + elapsed) });
+          if (success) {
+            resultRef.current = { success: true, durationMs: Math.round(ALIGN_DURATION_MS + elapsed) };
+            freezeCurrentFrame();
+            setCanContinue(true);
+          } else {
+            resultRef.current = null;
+          }
 
           if (!success) {
             const retryTimeout = window.setTimeout(() => {
@@ -82,60 +117,72 @@ export function IrisSimulator({
     clearAll();
     setPhase("aligning");
     setProgress(0);
+    setCanContinue(false);
+    resultRef.current = null;
+    setFrozenFrameSrc(null);
   }, [clearAll]);
 
   const locked = phase === "scanning" || phase === "success" || phase === "error";
   const { title, sub, tone } = getCopy(cameraStatus, phase);
 
   return (
-    <CameraStage
-      eyebrow="Verificación · Ojos"
-      cameraStatus={cameraStatus}
-      errorMessage={errorMessage}
-      videoRef={videoRef}
-      onRequestCamera={requestCamera}
-      statusTitle={title}
-      statusSub={sub}
-      statusTone={tone}
-      showRetry={cameraStatus === "ready" && phase === "error"}
-      onRetry={handleManualRetry}
-      overlay={
-        <svg className={styles.overlaySvg} viewBox="0 0 220 120" aria-hidden="true">
-          <defs>
-            <mask id={maskId}>
-              <rect width="220" height="120" fill="white" />
-              <ellipse cx="58" cy="60" rx="38" ry="22" fill="black" />
-              <ellipse cx="162" cy="60" rx="38" ry="22" fill="black" />
-            </mask>
-            <clipPath id={clipId}>
-              <rect x="10" y="20" width="200" height="80" />
-            </clipPath>
-          </defs>
+    <div className={styles.flow}>
+      <CameraStage
+        eyebrow="Verificación · Ojos"
+        cameraStatus={cameraStatus}
+        errorMessage={errorMessage}
+        videoRef={videoRef}
+        frozenFrameSrc={frozenFrameSrc}
+        onRequestCamera={requestCamera}
+        statusTitle={title}
+        statusSub={sub}
+        statusTone={tone}
+        showRetry={cameraStatus === "ready" && phase === "error"}
+        onRetry={handleManualRetry}
+        overlay={
+          <svg className={styles.overlaySvg} viewBox="0 0 220 120" aria-hidden="true">
+            <defs>
+              <mask id={maskId}>
+                <rect width="220" height="120" fill="white" />
+                <ellipse cx="58" cy="60" rx="38" ry="22" fill="black" />
+                <ellipse cx="162" cy="60" rx="38" ry="22" fill="black" />
+              </mask>
+              <clipPath id={clipId}>
+                <rect x="10" y="20" width="200" height="80" />
+              </clipPath>
+            </defs>
 
-          <rect width="220" height="120" fill="rgba(15, 23, 42, 0.68)" mask={`url(#${maskId})`} />
-          <line className={styles.bridge} x1="98" y1="60" x2="122" y2="60" />
+            <rect width="220" height="120" fill="rgba(15, 23, 42, 0.68)" mask={`url(#${maskId})`} />
+            <line className={styles.bridge} x1="98" y1="60" x2="122" y2="60" />
 
-          {/* Ojo izquierdo */}
-          <EyeGuide cx={58} locked={locked} />
-          {/* Ojo derecho */}
-          <EyeGuide cx={162} locked={locked} />
+            {/* Ojo izquierdo */}
+            <EyeGuide cx={58} locked={locked} />
+            {/* Ojo derecho */}
+            <EyeGuide cx={162} locked={locked} />
 
-          {phase === "scanning" && (
-            <g clipPath={`url(#${clipId})`}>
-              <g className={styles.sweepGroup}>
-                <line className={styles.sweepLine} x1="110" y1="15" x2="110" y2="105" />
+            {phase === "scanning" && (
+              <g clipPath={`url(#${clipId})`}>
+                <g className={styles.sweepGroup}>
+                  <line className={styles.sweepLine} x1="110" y1="15" x2="110" y2="105" />
+                </g>
               </g>
-            </g>
-          )}
-        </svg>
-      }
-    >
-      {phase === "scanning" && (
-        <div className={styles.progressTrack}>
-          <div className={styles.progressValue} style={{ width: `${progress}%` }} />
-        </div>
+            )}
+          </svg>
+        }
+      >
+        {phase === "scanning" && (
+          <div className={styles.progressTrack}>
+            <div className={styles.progressValue} style={{ width: `${progress}%` }} />
+          </div>
+        )}
+      </CameraStage>
+
+      {canContinue && (
+        <button type="button" className={styles.continue} onClick={handleContinue}>
+          Continuar
+        </button>
       )}
-    </CameraStage>
+    </div>
   );
 }
 
@@ -194,7 +241,7 @@ function getCopy(
     case "success":
       return {
         title: "Iris verificado",
-        sub: "Identidad confirmada correctamente",
+        sub: "Identidad confirmada correctamente. Pulsa continuar para seguir.",
         tone: "ok",
       };
     case "error":

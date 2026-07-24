@@ -127,17 +127,17 @@
   transition: transform 220ms ease, border-color 220ms ease, box-shadow 220ms ease, background 220ms ease;
 }
 
-.fingerSlot[data-side="left"][data-position="thumb"] { left: 24px; top: 172px; width: 72px; height: 86px; transform: rotate(-18deg); }
-.fingerSlot[data-side="left"][data-position="index"] { left: 88px; top: 82px; width: 62px; height: 124px; }
+.fingerSlot[data-side="left"][data-position="thumb"] { left: 284px; top: 172px; width: 72px; height: 86px; transform: rotate(18deg); }
+.fingerSlot[data-side="left"][data-position="index"] { left: 223px; top: 82px; width: 62px; height: 124px; }
 .fingerSlot[data-side="left"][data-position="middle"] { left: 155px; top: 58px; width: 64px; height: 138px; }
-.fingerSlot[data-side="left"][data-position="ring"] { left: 223px; top: 82px; width: 60px; height: 124px; }
-.fingerSlot[data-side="left"][data-position="pinky"] { left: 284px; top: 112px; width: 52px; height: 102px; transform: rotate(8deg); }
+.fingerSlot[data-side="left"][data-position="ring"] { left: 88px; top: 82px; width: 60px; height: 124px; }
+.fingerSlot[data-side="left"][data-position="pinky"] { left: 24px; top: 112px; width: 52px; height: 102px; transform: rotate(-8deg); }
 
-.fingerSlot[data-side="right"][data-position="thumb"] { right: 24px; top: 172px; width: 72px; height: 86px; transform: rotate(18deg); }
-.fingerSlot[data-side="right"][data-position="index"] { right: 88px; top: 82px; width: 62px; height: 124px; }
-.fingerSlot[data-side="right"][data-position="middle"] { right: 155px; top: 58px; width: 64px; height: 138px; }
-.fingerSlot[data-side="right"][data-position="ring"] { right: 223px; top: 82px; width: 60px; height: 124px; }
-.fingerSlot[data-side="right"][data-position="pinky"] { right: 284px; top: 112px; width: 52px; height: 102px; transform: rotate(-8deg); }
+.fingerSlot[data-side="right"][data-position="thumb"] { left: 24px; top: 172px; width: 72px; height: 86px; transform: rotate(-18deg); }
+.fingerSlot[data-side="right"][data-position="index"] { left: 88px; top: 82px; width: 62px; height: 124px; }
+.fingerSlot[data-side="right"][data-position="middle"] { left: 155px; top: 58px; width: 64px; height: 138px; }
+.fingerSlot[data-side="right"][data-position="ring"] { left: 223px; top: 82px; width: 60px; height: 124px; }
+.fingerSlot[data-side="right"][data-position="pinky"] { left: 284px; top: 112px; width: 52px; height: 102px; transform: rotate(8deg); }
 
 .fingerSlot:hover,
 .fingerSlot:focus-visible {
@@ -151,6 +151,12 @@
   border-color: var(--local-accent) !important;
   background: rgba(37, 99, 235, 0.10);
   box-shadow: 0 0 0 9px rgba(37, 99, 235, 0.12), 0 0 28px rgba(37, 99, 235, 0.16);
+  animation: pulseActive 1.6s ease-in-out infinite;
+}
+
+@keyframes pulseActive {
+  0%, 100% { box-shadow: 0 0 0 9px rgba(37, 99, 235, 0.12), 0 0 28px rgba(37, 99, 235, 0.16); }
+  50% { box-shadow: 0 0 0 14px rgba(37, 99, 235, 0.06), 0 0 40px rgba(37, 99, 235, 0.22); }
 }
 
 .fingerCompleted {
@@ -179,6 +185,41 @@
   text-align: center;
   font-weight: 600;
   color: var(--bio-text-primary);
+}
+
+/* ===== TOOLTIP SOBRE EL DEDO ACTIVO ===== */
+.activeFingerTooltip {
+  position: absolute;
+  z-index: 20;
+  background: var(--bio-text-primary);
+  color: #fff;
+  font-family: var(--bio-font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  padding: 6px 10px;
+  border-radius: 10px;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 260ms ease, transform 260ms ease;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);
+}
+
+.activeFingerTooltip::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: var(--bio-text-primary);
+}
+
+.activeFingerTooltip.show {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .focusPanel {
@@ -290,6 +331,72 @@
   outline-offset: 4px;
 }
 
+/* ===== INDICADOR DE DEDO SOBRE EL LECTOR ===== */
+.fingerIndicator {
+  position: absolute;
+  z-index: 10;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  transition: opacity 300ms ease, transform 300ms ease;
+}
+
+.fingerIndicator.hidden {
+  opacity: 0;
+  transform: translateY(8px) scale(0.9);
+}
+
+.fingerIndicator.visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.fingerIconBox {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: rgba(37, 99, 235, 0.10);
+  border: 2px solid rgba(37, 99, 235, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: floatFinger 2s ease-in-out infinite;
+}
+
+@keyframes floatFinger {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+.fingerIconBox svg {
+  width: 32px;
+  height: 32px;
+  color: var(--bio-scan);
+}
+
+.fingerIndicatorLabel {
+  font-family: var(--bio-font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--bio-scan);
+  background: rgba(37, 99, 235, 0.08);
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(37, 99, 235, 0.15);
+  white-space: nowrap;
+}
+
+.fingerIndicatorArrow {
+  width: 2px;
+  height: 20px;
+  background: linear-gradient(180deg, var(--bio-scan), transparent);
+  opacity: 0.4;
+}
+
 .ridges {
   position: relative;
   z-index: 1;
@@ -306,8 +413,6 @@
   transition: stroke 280ms ease, opacity 280ms ease;
 }
 
-/* Cada anillo se ilumina en secuencia mientras avanza el progreso,
-   imitando una lectura ridge-by-ridge en vez de un relleno genérico. */
 .pad[data-phase="scanning"] .ridgePath {
   stroke: var(--bio-text-faint);
 }
@@ -378,6 +483,32 @@
 .retry:hover {
   border-color: rgba(37, 99, 235, 0.32);
   background: rgba(37, 99, 235, 0.08);
+}
+
+.continue {
+  border: 1px solid rgba(15, 23, 42, 0.16);
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.98) 0%, rgba(30, 41, 59, 0.96) 100%);
+  color: #fff;
+  font-family: var(--bio-font-body);
+  font-size: 14px;
+  font-weight: 700;
+  padding: var(--bio-space-3) var(--bio-space-5);
+  border-radius: var(--bio-radius-md);
+  cursor: pointer;
+  min-width: 220px;
+  box-shadow: 0 14px 28px rgba(15, 23, 42, 0.16);
+  transition: transform 180ms ease, box-shadow 180ms ease, filter 180ms ease;
+}
+
+.continue:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 18px 34px rgba(15, 23, 42, 0.2);
+  filter: brightness(1.02);
+}
+
+.continue:focus-visible {
+  outline: 2px solid var(--bio-scan);
+  outline-offset: 4px;
 }
 
 @keyframes shake {

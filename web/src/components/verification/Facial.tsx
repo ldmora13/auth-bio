@@ -17,15 +17,18 @@ export function FacialSimulator({
   successRate = 0.85,
   disabled = false,
 }: FacialSimulatorProps) {
-  const { videoRef, status: cameraStatus, errorMessage, requestCamera } = useCamera();
+  const { videoRef, status: cameraStatus, errorMessage, requestCamera, stopCamera } = useCamera();
   const maskId = useId().replace(/:/g, "");
   const clipId = useId().replace(/:/g, "");
 
   const [phase, setPhase] = useState<FacialPhase>("aligning");
   const [progress, setProgress] = useState(0);
+  const [canContinue, setCanContinue] = useState(false);
+  const [frozenFrameSrc, setFrozenFrameSrc] = useState<string | null>(null);
 
   const timeoutsRef = useRef<number[]>([]);
   const rafRef = useRef<number | null>(null);
+  const resultRef = useRef<{ success: boolean; durationMs: number } | null>(null);
 
   const clearAll = useCallback(() => {
     timeoutsRef.current.forEach((id) => window.clearTimeout(id));
@@ -38,6 +41,30 @@ export function FacialSimulator({
 
   useEffect(() => clearAll, [clearAll]);
 
+  const handleContinue = useCallback(() => {
+    if (!resultRef.current) return;
+
+    onComplete(resultRef.current);
+  }, [onComplete]);
+
+  const freezeCurrentFrame = useCallback(() => {
+    const video = videoRef.current;
+    if (!video || video.videoWidth === 0 || video.videoHeight === 0) return;
+
+    const canvas = document.createElement("canvas");
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const context = canvas.getContext("2d");
+
+    if (!context) return;
+
+    context.translate(canvas.width, 0);
+    context.scale(-1, 1);
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+    setFrozenFrameSrc(canvas.toDataURL("image/png"));
+    stopCamera();
+  }, [stopCamera, videoRef]);
+
   // Cuando la cámara queda lista, corre la secuencia: alinear -> escanear -> resultado.
   useEffect(() => {
     if (cameraStatus !== "ready" || disabled) return;
@@ -45,6 +72,8 @@ export function FacialSimulator({
     clearAll();
     setPhase("aligning");
     setProgress(0);
+    setCanContinue(false);
+    resultRef.current = null;
 
     const alignTimeout = window.setTimeout(() => {
       setPhase("scanning");
@@ -58,7 +87,13 @@ export function FacialSimulator({
         if (pct >= 100) {
           const success = Math.random() < successRate;
           setPhase(success ? "success" : "error");
-          onComplete({ success, durationMs: Math.round(ALIGN_DURATION_MS + elapsed) });
+          if (success) {
+            resultRef.current = { success: true, durationMs: Math.round(ALIGN_DURATION_MS + elapsed) };
+            freezeCurrentFrame();
+            setCanContinue(true);
+          } else {
+            resultRef.current = null;
+          }
 
           if (!success) {
             const retryTimeout = window.setTimeout(() => {
@@ -83,6 +118,9 @@ export function FacialSimulator({
     clearAll();
     setPhase("aligning");
     setProgress(0);
+    setCanContinue(false);
+    resultRef.current = null;
+    setFrozenFrameSrc(null);
   }, [clearAll]);
 
   const locked = phase === "scanning" || phase === "success" || phase === "error";
@@ -90,52 +128,61 @@ export function FacialSimulator({
   const { title, sub, tone } = getCopy(cameraStatus, phase);
 
   return (
-    <CameraStage
-      eyebrow="Verificación · Rostro"
-      cameraStatus={cameraStatus}
-      errorMessage={errorMessage}
-      videoRef={videoRef}
-      onRequestCamera={requestCamera}
-      statusTitle={title}
-      statusSub={sub}
-      statusTone={tone}
-      showRetry={cameraStatus === "ready" && phase === "error"}
-      onRetry={handleManualRetry}
-      overlay={
-        <svg className={styles.overlaySvg} viewBox="0 0 200 240" aria-hidden="true">
-          <defs>
-            <mask id={maskId}>
-              <rect width="200" height="240" fill="white" />
-              <ellipse cx="100" cy="120" rx="58" ry="82" fill="black" />
-            </mask>
-            <clipPath id={clipId}>
-              <ellipse cx="100" cy="120" rx="58" ry="82" />
-            </clipPath>
-          </defs>
+    <div className={styles.flow}>
+      <CameraStage
+        eyebrow="Verificación · Rostro"
+        cameraStatus={cameraStatus}
+        errorMessage={errorMessage}
+        videoRef={videoRef}
+        frozenFrameSrc={frozenFrameSrc}
+        onRequestCamera={requestCamera}
+        statusTitle={title}
+        statusSub={sub}
+        statusTone={tone}
+        showRetry={cameraStatus === "ready" && phase === "error"}
+        onRetry={handleManualRetry}
+        overlay={
+          <svg className={styles.overlaySvg} viewBox="0 0 200 240" aria-hidden="true">
+            <defs>
+              <mask id={maskId}>
+                <rect width="200" height="240" fill="white" />
+                <ellipse cx="100" cy="120" rx="58" ry="82" fill="black" />
+              </mask>
+              <clipPath id={clipId}>
+                <ellipse cx="100" cy="120" rx="58" ry="82" />
+              </clipPath>
+            </defs>
 
-          <rect width="200" height="240" fill="rgba(15, 23, 42, 0.68)" mask={`url(#${maskId})`} />
+            <rect width="200" height="240" fill="rgba(15, 23, 42, 0.68)" mask={`url(#${maskId})`} />
 
-          <path className={styles.corner} data-locked={locked} d="M14 40 V16 H38" />
-          <path className={styles.corner} data-locked={locked} d="M186 40 V16 H162" />
-          <path className={styles.corner} data-locked={locked} d="M14 200 V224 H38" />
-          <path className={styles.corner} data-locked={locked} d="M186 200 V224 H162" />
+            <path className={styles.corner} data-locked={locked} d="M14 40 V16 H38" />
+            <path className={styles.corner} data-locked={locked} d="M186 40 V16 H162" />
+            <path className={styles.corner} data-locked={locked} d="M14 200 V224 H38" />
+            <path className={styles.corner} data-locked={locked} d="M186 200 V224 H162" />
 
-          <ellipse className={styles.silhouette} data-locked={locked} cx="100" cy="120" rx="58" ry="82" />
+            <ellipse className={styles.silhouette} data-locked={locked} cx="100" cy="120" rx="58" ry="82" />
 
-          {phase === "scanning" && (
-            <g clipPath={`url(#${clipId})`}>
-              <line className={styles.scanLine} x1="42" x2="158" y1="120" y2="120" />
-            </g>
-          )}
-        </svg>
-      }
-    >
-      {phase === "scanning" && (
-        <div className={styles.progressTrack}>
-          <div className={styles.progressValue} style={{ width: `${progress}%` }} />
-        </div>
+            {phase === "scanning" && (
+              <g clipPath={`url(#${clipId})`}>
+                <line className={styles.scanLine} x1="42" x2="158" y1="120" y2="120" />
+              </g>
+            )}
+          </svg>
+        }
+      >
+        {phase === "scanning" && (
+          <div className={styles.progressTrack}>
+            <div className={styles.progressValue} style={{ width: `${progress}%` }} />
+          </div>
+        )}
+      </CameraStage>
+
+      {canContinue && (
+        <button type="button" className={styles.continue} onClick={handleContinue}>
+          Continuar
+        </button>
       )}
-    </CameraStage>
+    </div>
   );
 }
 
@@ -173,7 +220,7 @@ function getCopy(
     case "success":
       return {
         title: "Rostro verificado",
-        sub: "Identidad confirmada correctamente",
+        sub: "Identidad confirmada correctamente. Pulsa continuar para seguir.",
         tone: "ok",
       };
     case "error":

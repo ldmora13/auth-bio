@@ -7,6 +7,7 @@ export interface CameraStageProps {
   cameraStatus: CameraStatus;
   errorMessage: string | null;
   videoRef: React.RefObject<HTMLVideoElement | null>;
+  frozenFrameSrc?: string | null;
   /** Overlay SVG/silueta dibujada sobre el video (varía por simulador). */
   overlay: ReactNode;
   onRequestCamera: () => void;
@@ -30,6 +31,7 @@ export function CameraStage({
   cameraStatus,
   errorMessage,
   videoRef,
+  frozenFrameSrc,
   overlay,
   onRequestCamera,
   statusTitle,
@@ -55,8 +57,12 @@ export function CameraStage({
           autoPlay
           playsInline
           muted
-          style={{ visibility: showVideo ? "visible" : "hidden" }}
+          style={{ visibility: showVideo && !frozenFrameSrc ? "visible" : "hidden" }}
         />
+
+        {showVideo && frozenFrameSrc && (
+          <img className={styles.frozenFrame} src={frozenFrameSrc} alt="Captura congelada de la verificación" />
+        )}
 
         {showVideo && <div className={styles.overlaySlot}>{overlay}</div>}
 
