@@ -16,7 +16,7 @@ export function canManageCompanies(role: string): boolean {
 /** What roles can a user create? */
 export function allowedRolesToCreate(creatorRole: string): string[] {
     if (creatorRole === 'ADMIN') {
-        return ['ADVISOR', 'CLIENT'];
+        return ['ADVISOR'];
     }
     if (creatorRole === 'ADVISOR') {
         return ['CLIENT'];

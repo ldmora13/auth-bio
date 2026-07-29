@@ -6,13 +6,17 @@ import { AppError } from '../utils/AppError';
 import { Prisma, Role } from '@prisma/client';
 import { EmailService } from '../services/emailService';
 import { AuditLogService } from '../services/AuditLogService';
+import { CompanyService } from '../services/CompanyService';
+import { persistImageDataUrl } from '../utils/imageStorage';
 
 const userService = new UserService();
+const companyService = new CompanyService();
 
 export const getUsers = catchAsync(async (req: Request, res: Response) => {
     const { role } = req.query;
     const currentUser = res.locals.user;
     const users = await userService.getUsers(role as Role | undefined, {
+        id: currentUser.id,
         role: currentUser.role,
         empresaId: currentUser.empresaId,
     });
@@ -27,13 +31,17 @@ export const getUsers = catchAsync(async (req: Request, res: Response) => {
 });
 
 export const createUser = catchAsync(async (req: Request, res: Response) => {
-    const { email, password, name, address, documentType, documentNumber, role, empresaId, biometricMethods } = req.body;
+    const { email, password, name, address, phone, birthDate, age, profilePhotoUrl, documentType, documentNumber, role, empresaId, biometricMethods } = req.body;
     const currentUser = res.locals.user;
 
     // Validate that the role is allowed to be created by the current user
     const allowedRoles = allowedRolesToCreate(currentUser.role);
     if (!allowedRoles.includes(role)) {
         throw new AppError(`You are not allowed to create users with role: ${role}`, 403);
+    }
+
+    if (currentUser.role === 'ADMIN' && role === 'CLIENT') {
+        throw new AppError('Admins cannot create clients directly. Create an advisor first.', 403);
     }
 
     let resolvedEmpresaId: string | null = empresaId ?? null;
@@ -50,11 +58,25 @@ export const createUser = catchAsync(async (req: Request, res: Response) => {
         }
     }
 
+    let resolvedProfilePhotoUrl = profilePhotoUrl;
+    if (typeof profilePhotoUrl === 'string' && profilePhotoUrl.startsWith('data:image/') && resolvedEmpresaId) {
+        const company = await companyService.getCompany(resolvedEmpresaId);
+        resolvedProfilePhotoUrl = await persistImageDataUrl({
+            dataUrl: profilePhotoUrl,
+            companyName: company.nombre,
+            filePrefix: 'profile',
+        });
+    }
+
     const user = await userService.createUser({
         email,
         password,
         name,
         address,
+        phone,
+        birthDate: birthDate ? new Date(birthDate) : null,
+        age,
+        profilePhotoUrl: resolvedProfilePhotoUrl,
         documentType,
         documentNumber,
         role,
@@ -75,6 +97,7 @@ export const createUser = catchAsync(async (req: Request, res: Response) => {
             name: user.name,
             tempPassword: password,
             companyName: user.empresa?.nombre ?? null,
+            companyLogoUrl: user.empresa?.logoUrl ?? null,
             portalUrl,
         });
 
@@ -85,19 +108,55 @@ export const createUser = catchAsync(async (req: Request, res: Response) => {
         // Clients are created silently; advisors do not trigger automatic client emails.
     }
 
+    await AuditLogService.log({
+        action: 'USER_CREATE',
+        entity: 'USER',
+        entityId: user.id,
+        userId: currentUser.id,
+        details: {
+            createdUserId: user.id,
+            createdUserRole: user.role,
+            createdByRole: currentUser.role,
+            companyId: user.empresaId,
+        },
+    });
+
     const { password: _, ...userWithoutPassword } = user;
     res.status(201).json({ user: userWithoutPassword });
 });
 
 export const updateUser = catchAsync(async (req: Request, res: Response) => {
     const { id } = req.params;
-    const { name, role, address, documentType, documentNumber, empresaId, biometricMethods } = req.body;
+    const { name, role, address, phone, birthDate, age, profilePhotoUrl, documentType, documentNumber, empresaId, biometricMethods } = req.body;
     const currentUser = res.locals.user;
+
+    let resolvedProfilePhotoUrl = profilePhotoUrl;
+    if (typeof profilePhotoUrl === 'string' && profilePhotoUrl.startsWith('data:image/')) {
+        const targetUser = await userService.getUserById(id, {
+            id: currentUser.id,
+            role: currentUser.role,
+            empresaId: currentUser.empresaId,
+        });
+
+        if (!targetUser.empresaId || !targetUser.empresa?.nombre) {
+            throw new AppError('Company is required to store profile image', 400);
+        }
+
+        resolvedProfilePhotoUrl = await persistImageDataUrl({
+            dataUrl: profilePhotoUrl,
+            companyName: targetUser.empresa.nombre,
+            filePrefix: 'profile',
+        });
+    }
 
     const updateData: Prisma.UserUpdateInput = {
         name,
         role,
         address,
+        phone,
+        birthDate: birthDate ? new Date(birthDate) : birthDate,
+        age,
+        profilePhotoUrl: resolvedProfilePhotoUrl,
         documentType,
         documentNumber,
         biometricMethods,
@@ -112,8 +171,21 @@ export const updateUser = catchAsync(async (req: Request, res: Response) => {
     const user = await userService.updateUser(id, {
         ...updateData,
     }, {
+        id: currentUser.id,
         role: currentUser.role,
         empresaId: currentUser.empresaId,
+    });
+
+    await AuditLogService.log({
+        action: 'USER_UPDATE',
+        entity: 'USER',
+        entityId: user.id,
+        userId: currentUser.id,
+        details: {
+            updatedUserId: user.id,
+            updatedUserRole: user.role,
+            updatedByRole: currentUser.role,
+        },
     });
 
     const { password: _, ...userWithoutPassword } = user;
@@ -125,6 +197,7 @@ export const resetBiometricEnrollment = catchAsync(async (req: Request, res: Res
     const currentUser = res.locals.user;
 
     const user = await userService.resetBiometricEnrollment(id, {
+        id: currentUser.id,
         role: currentUser.role,
         empresaId: currentUser.empresaId,
     });
@@ -151,6 +224,7 @@ export const getUserById = catchAsync(async (req: Request, res: Response) => {
     const currentUser = res.locals.user;
 
     const user = await userService.getUserById(id, {
+        id: currentUser.id,
         role: currentUser.role,
         empresaId: currentUser.empresaId,
     });
@@ -164,8 +238,22 @@ export const deleteUser = catchAsync(async (req: Request, res: Response) => {
     const currentUser = res.locals.user;
 
     const user = await userService.deleteUser(id, {
+        id: currentUser.id,
         role: currentUser.role,
         empresaId: currentUser.empresaId,
+    });
+
+    await AuditLogService.log({
+        action: 'USER_DELETE',
+        entity: 'USER',
+        entityId: user.id,
+        userId: currentUser.id,
+        details: {
+            deletedUserId: user.id,
+            deletedUserRole: user.role,
+            deletedByRole: currentUser.role,
+            companyId: user.empresaId,
+        },
     });
 
     const { password: _, ...userWithoutPassword } = user;

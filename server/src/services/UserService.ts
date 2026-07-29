@@ -8,6 +8,10 @@ type CreateUserInput = {
     password?: string;
     name: string;
     address?: string | null;
+    phone?: string | null;
+    birthDate?: Date | null;
+    age?: number | null;
+    profilePhotoUrl?: string | null;
     documentType?: DocumentType | null;
     documentNumber?: string | null;
     role: Role;
@@ -45,6 +49,10 @@ export class UserService {
             password: hashedPassword,
             name: data.name,
             address: data.address,
+            phone: data.phone,
+            birthDate: data.birthDate,
+            age: data.age,
+            profilePhotoUrl: data.profilePhotoUrl,
             documentType: data.documentType,
             documentNumber: data.documentNumber,
             role: data.role,
@@ -58,7 +66,7 @@ export class UserService {
         return this.userRepository.create(createData);
     }
 
-    async getUsers(role?: Role, requester?: { role: Role; empresaId?: string | null }): Promise<UserWithEmpresa[]> {
+    async getUsers(role?: Role, requester?: { id: string; role: Role; empresaId?: string | null }): Promise<UserWithEmpresa[]> {
         const where: Prisma.UserWhereInput = {};
 
         if (requester?.role === 'ADVISOR') {
@@ -72,6 +80,7 @@ export class UserService {
 
             where.role = 'CLIENT';
             where.empresaId = requester.empresaId;
+            where.createdById = requester.id;
             return this.userRepository.findAll(where);
         }
 
@@ -82,7 +91,7 @@ export class UserService {
         return this.userRepository.findAll(where);
     }
 
-    async getUserById(id: string, requester?: { role: Role; empresaId?: string | null }): Promise<UserWithEmpresa> {
+    async getUserById(id: string, requester?: { id: string; role: Role; empresaId?: string | null }): Promise<UserWithEmpresa> {
         const user = await this.userRepository.findById(id);
 
         if (!user) {
@@ -90,7 +99,7 @@ export class UserService {
         }
 
         if (requester?.role === 'ADVISOR') {
-            if (!requester.empresaId || user.role !== 'CLIENT' || user.empresaId !== requester.empresaId) {
+            if (!requester.empresaId || user.role !== 'CLIENT' || user.empresaId !== requester.empresaId || user.createdById !== requester.id) {
                 throw new AppError('Forbidden', 403);
             }
         }
@@ -105,7 +114,7 @@ export class UserService {
     async updateUser(
         id: string,
         data: Prisma.UserUpdateInput,
-        requester?: { role: Role; empresaId?: string | null }
+        requester?: { id: string; role: Role; empresaId?: string | null }
     ): Promise<UserWithEmpresa> {
         const currentUser = await this.userRepository.findById(id);
 
@@ -114,13 +123,17 @@ export class UserService {
         }
 
         if (requester?.role === 'ADVISOR') {
-            if (!requester.empresaId || currentUser.role !== 'CLIENT' || currentUser.empresaId !== requester.empresaId) {
+            if (!requester.empresaId || currentUser.role !== 'CLIENT' || currentUser.empresaId !== requester.empresaId || currentUser.createdById !== requester.id) {
                 throw new AppError('Forbidden', 403);
             }
 
             const allowedFields: Prisma.UserUpdateInput = {};
             if (data.name !== undefined) allowedFields.name = data.name;
             if (data.address !== undefined) allowedFields.address = data.address;
+            if (data.phone !== undefined) allowedFields.phone = data.phone;
+            if (data.birthDate !== undefined) allowedFields.birthDate = data.birthDate;
+            if (data.age !== undefined) allowedFields.age = data.age;
+            if (data.profilePhotoUrl !== undefined) allowedFields.profilePhotoUrl = data.profilePhotoUrl;
             if (data.documentType !== undefined) allowedFields.documentType = data.documentType;
             if (data.documentNumber !== undefined) allowedFields.documentNumber = data.documentNumber;
             if (data.biometricMethods !== undefined) allowedFields.biometricMethods = data.biometricMethods;
@@ -131,7 +144,7 @@ export class UserService {
         return this.userRepository.update(id, data);
     }
 
-    async resetBiometricEnrollment(id: string, requester?: { role: Role; empresaId?: string | null }): Promise<UserWithEmpresa> {
+    async resetBiometricEnrollment(id: string, requester?: { id: string; role: Role; empresaId?: string | null }): Promise<UserWithEmpresa> {
         const currentUser = await this.userRepository.findById(id);
 
         if (!currentUser) {
@@ -143,7 +156,7 @@ export class UserService {
         }
 
         if (requester?.role === 'ADVISOR') {
-            if (!requester.empresaId || currentUser.empresaId !== requester.empresaId) {
+            if (!requester.empresaId || currentUser.empresaId !== requester.empresaId || currentUser.createdById !== requester.id) {
                 throw new AppError('Forbidden', 403);
             }
         }
@@ -181,7 +194,7 @@ export class UserService {
         });
     }
 
-    async deleteUser(id: string, requester?: { role: Role; empresaId?: string | null }): Promise<UserWithEmpresa> {
+    async deleteUser(id: string, requester?: { id: string; role: Role; empresaId?: string | null }): Promise<UserWithEmpresa> {
         const currentUser = await this.userRepository.findById(id);
 
         if (!currentUser) {
@@ -189,7 +202,7 @@ export class UserService {
         }
 
         if (requester?.role === 'ADVISOR') {
-            if (!requester.empresaId || currentUser.role !== 'CLIENT' || currentUser.empresaId !== requester.empresaId) {
+            if (!requester.empresaId || currentUser.role !== 'CLIENT' || currentUser.empresaId !== requester.empresaId || currentUser.createdById !== requester.id) {
                 throw new AppError('Forbidden', 403);
             }
         }

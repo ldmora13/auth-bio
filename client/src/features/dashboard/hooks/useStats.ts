@@ -4,7 +4,7 @@ import { statsService } from '../../../services/statsService';
 export function useStats() {
     const statsQuery = useQuery({
         queryKey: ['dashboard-stats'],
-        queryFn: statsService.getUserStats,
+        queryFn: statsService.getDashboardStats,
         refetchInterval: 30000, // Refetch every 30 seconds
     });
 

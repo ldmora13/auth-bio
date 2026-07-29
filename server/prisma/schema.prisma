@@ -32,14 +32,18 @@ enum BiometricMethod {
 }
 
 model Empresa {
-  id        String   @id @default(uuid())
-  nombre    String   @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(uuid())
+  nombre      String   @unique
+  nit         String   @unique
+  logoUrl     String?
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   users User[]
 
   @@index([nombre])
+  @@index([nit])
 }
 
 model User {
@@ -49,6 +53,10 @@ model User {
   name            String
   role            Role            @default(CLIENT)
   address         String?
+  phone           String?
+  birthDate       DateTime?
+  age             Int?
+  profilePhotoUrl String?
   documentType    DocumentType?
   documentNumber  String?
   biometricType   BiometricType?  // Only for CLIENT

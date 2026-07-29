@@ -35,7 +35,8 @@ app.use(cors({
     origin: allowedOrigins,
     credentials: true
 }));
-app.use(express.json());
+const bodyLimit = process.env.BODY_LIMIT || '8mb';
+app.use(express.json({ limit: bodyLimit }));
 app.use(cookieParser());
 
 // Rate limiting global
@@ -58,6 +59,13 @@ app.get('/', (req: Request, res: Response) => {
 
 // Error handler global — captura todos los errores de catchAsync y otros
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
+    // Body too large (e.g. base64 logo/profile image payload)
+    if ((err as any).type === 'entity.too.large') {
+        return res.status(413).json({
+            error: `Payload too large. Maximum allowed request body is ${bodyLimit}.`
+        });
+    }
+
     // Error operacional conocido (AppError)
     if (err instanceof AppError) {
         return res.status(err.statusCode).json({

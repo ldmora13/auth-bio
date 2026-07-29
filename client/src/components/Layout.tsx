@@ -11,11 +11,10 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
-  Users,
   User,
   Building2,
 } from 'lucide-react';
-import { canAccessCompanies, canAccessUsersPage } from '../lib/roles';
+import { canAccessCompanies } from '../lib/roles';
 import { clsx } from 'clsx';
 import Footer from './Footer';
 import LanguageSelector from './LanguageSelector';
@@ -41,12 +40,10 @@ export default function Layout({ children }: { children: ReactNode }) {
 
   const baseNavItems = [
     { label: t('nav.dashboard'), icon: LayoutDashboard, path: '/dashboard' },
-    { label: t('nav.profile'), icon: User, path: '/profile' },
   ];
 
   const navItems = [
     ...baseNavItems,
-    ...(user && canAccessUsersPage(user.role) ? [{ label: t('nav.users'), icon: Users, path: '/users' }] : []),
     ...(user && canAccessCompanies(user.role) ? [{ label: user.role === 'ADVISOR' ? 'Mi empresa' : 'Empresas', icon: Building2, path: '/companies' }] : []),
   ];
 

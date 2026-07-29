@@ -12,7 +12,6 @@ import Pagination from '../../components/Pagination';
 import { toast } from 'react-hot-toast';
 import {
     Building2,
-    CalendarDays,
     CheckCircle2,
     Download,
     Eye,
@@ -30,16 +29,33 @@ import {
 
 type CompanySort = 'newest' | 'oldest' | 'name-asc' | 'name-desc' | 'advisors-desc' | 'clients-desc';
 type CompanyStatusFilter = 'all' | 'active' | 'empty';
+type AdvisorSort = 'newest' | 'oldest' | 'name-asc' | 'name-desc';
 type ClientSort = 'newest' | 'oldest' | 'name-asc' | 'name-desc';
 type ClientDraft = {
     name: string;
     address: string;
+    phone: string;
+    birthDate: string;
+    age: number;
+    profilePhotoUrl: string;
     documentType: 'CC' | 'DNI' | 'PASSPORT' | 'OTHER';
     documentNumber: string;
 };
 
 const COMPANY_PAGE_SIZE = 6;
+const ADVISOR_PAGE_SIZE = 5;
 const CLIENT_PAGE_SIZE = 5;
+const MAX_LOGO_FILE_SIZE = 5 * 1024 * 1024;
+const MAX_CLIENT_PHOTO_FILE_SIZE = 2 * 1024 * 1024;
+
+async function fileToDataUrl(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result));
+        reader.onerror = () => reject(new Error('No se pudo leer la imagen'));
+        reader.readAsDataURL(file);
+    });
+}
 
 function formatDate(value?: string) {
     if (!value) return 'N/D';
@@ -68,15 +84,6 @@ function downloadCsv(filename: string, rows: string[][]) {
     anchor.download = filename;
     anchor.click();
     URL.revokeObjectURL(url);
-}
-
-function safeParseDetails(details: string | null) {
-    if (!details) return null;
-    try {
-        return JSON.parse(details) as Record<string, unknown>;
-    } catch {
-        return { raw: details };
-    }
 }
 
 function getErrorMessage(error: unknown, fallback: string) {
@@ -110,15 +117,20 @@ export default function CompanyManagementPage() {
     const [error, setError] = useState<string | null>(null);
 
     const [newCompanyName, setNewCompanyName] = useState('');
+    const [newCompanyNit, setNewCompanyNit] = useState('');
+    const [newCompanyDescription, setNewCompanyDescription] = useState('');
+    const [newCompanyLogoUrl, setNewCompanyLogoUrl] = useState('');
     const [companyNameError, setCompanyNameError] = useState('');
+    const [companyNitError, setCompanyNitError] = useState('');
+    const [companyDescriptionError, setCompanyDescriptionError] = useState('');
+    const [companyLogoError, setCompanyLogoError] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
     const [companySort, setCompanySort] = useState<CompanySort>('newest');
     const [companyStatusFilter, setCompanyStatusFilter] = useState<CompanyStatusFilter>('all');
     const [companyPage, setCompanyPage] = useState(1);
 
     const [companyDetail, setCompanyDetail] = useState<Empresa | null>(null);
-    const [companyAuditLogs, setCompanyAuditLogs] = useState<CompanyAuditLog[]>([]);
-    const [companyAuditLogsError, setCompanyAuditLogsError] = useState<string | null>(null);
+    const [isCreateCompanyModalOpen, setIsCreateCompanyModalOpen] = useState(false);
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
     const [modalCompany, setModalCompany] = useState<Empresa | null>(null);
     const [modalAuditLogs, setModalAuditLogs] = useState<CompanyAuditLog[]>([]);
@@ -130,13 +142,20 @@ export default function CompanyManagementPage() {
     const [clientSearch, setClientSearch] = useState('');
     const [clientSort, setClientSort] = useState<ClientSort>('newest');
     const [clientPage, setClientPage] = useState(1);
+    const [advisorSearch, setAdvisorSearch] = useState('');
+    const [advisorSort, setAdvisorSort] = useState<AdvisorSort>('newest');
+    const [advisorPage, setAdvisorPage] = useState(1);
     const [clientDraft, setClientDraft] = useState<ClientDraft>({
         name: '',
         address: '',
+        phone: '',
+        birthDate: '',
+        age: 18,
+        profilePhotoUrl: '',
         documentType: 'CC',
         documentNumber: '',
     });
-    const [clientErrors, setClientErrors] = useState<Partial<Record<'name' | 'address' | 'documentNumber', string>>>({});
+    const [clientErrors, setClientErrors] = useState<Partial<Record<'name' | 'address' | 'documentNumber' | 'phone' | 'age', string>>>({});
 
     useEffect(() => {
         if (!user || !canAccessCompanies(user.role)) {
@@ -149,7 +168,6 @@ export default function CompanyManagementPage() {
 
         setLoading(true);
         setError(null);
-        setCompanyAuditLogsError(null);
 
         try {
             if (isAdmin && !routeCompanyId) {
@@ -162,7 +180,6 @@ export default function CompanyManagementPage() {
                 setAvailableAdvisors(advisorsResponse as unknown as User[]);
                 setSelectedCompanyId((current) => current || companiesResponse[0]?.id || '');
                 setCompanyDetail(null);
-                setCompanyAuditLogs([]);
             } else {
                 const companyId = routeCompanyId ?? user.empresa?.id;
                 if (!companyId) {
@@ -170,18 +187,8 @@ export default function CompanyManagementPage() {
                 }
 
                 const companyResponse = await UserService.getCompany(companyId);
-                let auditLogs: CompanyAuditLog[] = [];
-
-                try {
-                    auditLogs = await UserService.getCompanyAuditLogs(companyId);
-                    setCompanyAuditLogsError(null);
-                } catch (auditError) {
-                    auditLogs = [];
-                    setCompanyAuditLogsError(getErrorMessage(auditError, 'No se pudo cargar el historial de auditoría'));
-                }
 
                 setCompanyDetail(companyResponse);
-                setCompanyAuditLogs(auditLogs);
                 setSelectedCompanyId(companyId);
             }
         } catch (fetchError) {
@@ -231,12 +238,6 @@ export default function CompanyManagementPage() {
     }, [loadData, isAdvisor, user]);
 
     useEffect(() => {
-        if (!companyDetail) {
-            setCompanyAuditLogsError(null);
-        }
-    }, [companyDetail]);
-
-    useEffect(() => {
         if (!selectedCompanyId && companies.length > 0 && !routeCompanyId) {
             setSelectedCompanyId(companies[0].id);
         }
@@ -250,9 +251,19 @@ export default function CompanyManagementPage() {
         setClientPage(1);
     }, [clientSearch, clientSort, companyDetail?.id]);
 
+    useEffect(() => {
+        setAdvisorPage(1);
+    }, [advisorSearch, advisorSort, companyDetail?.id]);
+
     function validateCompanyName(name: string) {
         if (!name.trim()) {
             setCompanyNameError('El nombre de la empresa es obligatorio');
+            return false;
+        }
+
+        const duplicatedName = companies.some((company) => company.nombre.toLowerCase() === name.trim().toLowerCase());
+        if (duplicatedName) {
+            setCompanyNameError('Ya existe una empresa con ese nombre legal');
             return false;
         }
 
@@ -260,13 +271,95 @@ export default function CompanyManagementPage() {
         return true;
     }
 
-    async function handleCreateCompany(e: React.FormEvent) {
-        e.preventDefault();
-        if (!validateCompanyName(newCompanyName)) return;
+    function validateCompanyNit(nit: string) {
+        const normalized = nit.trim();
+        if (!normalized) {
+            setCompanyNitError('El NIT es obligatorio');
+            return false;
+        }
+
+        if (!/^[0-9]{8,15}(-[0-9])?$/.test(normalized)) {
+            setCompanyNitError('Formato de NIT invalido');
+            return false;
+        }
+
+        const duplicatedNit = companies.some((company) => company.nit?.trim() === normalized);
+        if (duplicatedNit) {
+            setCompanyNitError('Ya existe una empresa con ese NIT');
+            return false;
+        }
+
+        setCompanyNitError('');
+        return true;
+    }
+
+    function validateCompanyDescription(description: string) {
+        if (!description.trim()) {
+            setCompanyDescriptionError('La descripcion es obligatoria');
+            return false;
+        }
+
+        if (description.trim().length > 1000) {
+            setCompanyDescriptionError('La descripcion no puede superar 1000 caracteres');
+            return false;
+        }
+
+        setCompanyDescriptionError('');
+        return true;
+    }
+
+    async function handleLogoChange(e: React.ChangeEvent<HTMLInputElement>) {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) {
+            setCompanyLogoError('Solo se permiten archivos PNG, JPG o WEBP');
+            return;
+        }
+
+        if (file.size > MAX_LOGO_FILE_SIZE) {
+            setCompanyLogoError('El logotipo supera el limite de 5MB');
+            return;
+        }
 
         try {
-            await UserService.createCompany(newCompanyName.trim());
+            const dataUrl = await fileToDataUrl(file);
+            setNewCompanyLogoUrl(dataUrl);
+            setCompanyLogoError('');
+        } catch {
+            setCompanyLogoError('No se pudo cargar el logotipo');
+        }
+    }
+
+    async function handleCreateCompany(e: React.FormEvent) {
+        e.preventDefault();
+        const validName = validateCompanyName(newCompanyName);
+        const validNit = validateCompanyNit(newCompanyNit);
+        const validDescription = validateCompanyDescription(newCompanyDescription);
+        const validLogo = !!newCompanyLogoUrl;
+
+        if (!validLogo) {
+            setCompanyLogoError('El logotipo es obligatorio');
+        }
+
+        if (!validName || !validNit || !validDescription || !validLogo) return;
+
+        try {
+            await UserService.createCompany({
+                nombre: newCompanyName.trim(),
+                nit: newCompanyNit.trim(),
+                logoUrl: newCompanyLogoUrl,
+                description: newCompanyDescription.trim(),
+            });
             setNewCompanyName('');
+            setNewCompanyNit('');
+            setNewCompanyDescription('');
+            setNewCompanyLogoUrl('');
+            setCompanyNameError('');
+            setCompanyNitError('');
+            setCompanyDescriptionError('');
+            setCompanyLogoError('');
+            setIsCreateCompanyModalOpen(false);
             toast.success('Empresa creada');
             await loadData();
         } catch (operationError: unknown) {
@@ -303,6 +396,10 @@ export default function CompanyManagementPage() {
         setClientDraft({
             name: client.name ?? '',
             address: client.address ?? '',
+            phone: client.phone ?? '',
+            birthDate: client.birthDate ? String(client.birthDate).slice(0, 10) : '',
+            age: client.age ?? 18,
+            profilePhotoUrl: client.profilePhotoUrl ?? '',
             documentType: client.documentType ?? 'CC',
             documentNumber: client.documentNumber ?? '',
         });
@@ -311,21 +408,45 @@ export default function CompanyManagementPage() {
     }
 
     function validateClientDraft(draft: ClientDraft) {
-        const nextErrors: Partial<Record<'name' | 'address' | 'documentNumber', string>> = {};
+        const nextErrors: Partial<Record<'name' | 'address' | 'documentNumber' | 'phone' | 'age', string>> = {};
 
         if (!draft.name.trim()) nextErrors.name = 'El nombre es obligatorio';
         if (!draft.address.trim()) nextErrors.address = 'La dirección es obligatoria';
         if (!draft.documentNumber.trim()) nextErrors.documentNumber = 'El documento es obligatorio';
+        if (!draft.phone.trim()) nextErrors.phone = 'El telefono es obligatorio';
+        if (draft.age < 18) nextErrors.age = 'El cliente debe ser mayor de 18 anios';
 
         setClientErrors(nextErrors);
         return Object.keys(nextErrors).length === 0;
     }
 
-    function updateClientDraft(field: keyof ClientDraft, value: string) {
+    function updateClientDraft(field: keyof ClientDraft, value: string | number) {
         setClientDraft((current) => ({ ...current, [field]: value }));
 
-        if (field === 'name' || field === 'address' || field === 'documentNumber') {
+        if (field === 'name' || field === 'address' || field === 'documentNumber' || field === 'phone' || field === 'age') {
             setClientErrors((current) => ({ ...current, [field]: undefined }));
+        }
+    }
+
+    async function handleClientPhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) {
+            toast.error('La foto debe ser PNG, JPG o WEBP');
+            return;
+        }
+
+        if (file.size > MAX_CLIENT_PHOTO_FILE_SIZE) {
+            toast.error('La foto de cliente supera 2MB');
+            return;
+        }
+
+        try {
+            const dataUrl = await fileToDataUrl(file);
+            setClientDraft((current) => ({ ...current, profilePhotoUrl: dataUrl }));
+        } catch {
+            toast.error('No se pudo cargar la foto');
         }
     }
 
@@ -337,6 +458,10 @@ export default function CompanyManagementPage() {
             await UserService.update(selectedClient.id, {
                 name: clientDraft.name.trim(),
                 address: clientDraft.address.trim(),
+                phone: clientDraft.phone.trim(),
+                birthDate: clientDraft.birthDate,
+                age: clientDraft.age,
+                profilePhotoUrl: clientDraft.profilePhotoUrl,
                 documentType: clientDraft.documentType,
                 documentNumber: clientDraft.documentNumber.trim(),
             });
@@ -410,6 +535,33 @@ export default function CompanyManagementPage() {
 
     const totalCompanyPages = Math.max(1, Math.ceil(filteredCompanies.length / COMPANY_PAGE_SIZE));
     const paginatedCompanies = filteredCompanies.slice((companyPage - 1) * COMPANY_PAGE_SIZE, companyPage * COMPANY_PAGE_SIZE);
+
+    const visibleAdvisors = useMemo(() => {
+        const advisors = currentCompany?.advisors ?? [];
+        const term = advisorSearch.trim().toLowerCase();
+
+        return advisors
+            .filter((advisor) => {
+                if (!term) return true;
+                return [advisor.name, advisor.email].join(' ').toLowerCase().includes(term);
+            })
+            .sort((left, right) => {
+                switch (advisorSort) {
+                    case 'name-asc':
+                        return left.name.localeCompare(right.name);
+                    case 'name-desc':
+                        return right.name.localeCompare(left.name);
+                    case 'oldest':
+                        return new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime();
+                    case 'newest':
+                    default:
+                        return new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime();
+                }
+            });
+    }, [advisorSearch, advisorSort, currentCompany]);
+
+    const totalAdvisorPages = Math.max(1, Math.ceil(visibleAdvisors.length / ADVISOR_PAGE_SIZE));
+    const paginatedAdvisors = visibleAdvisors.slice((advisorPage - 1) * ADVISOR_PAGE_SIZE, advisorPage * ADVISOR_PAGE_SIZE);
 
     const visibleClients = useMemo(() => {
         const companyClients = currentCompany?.clients ?? [];
@@ -582,8 +734,19 @@ export default function CompanyManagementPage() {
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div>
                     <p className="text-xs uppercase tracking-[0.3em] text-teal-300/80">{isAdvisor ? 'Tu empresa' : 'Detalle de empresa'}</p>
-                    <h2 className="mt-2 text-3xl font-semibold text-white">{currentCompany.nombre}</h2>
-                    <p className="mt-2 text-sm text-slate-400">Creada {formatDate(currentCompany.createdAt)} · Actualizada {formatDate(currentCompany.updatedAt)}</p>
+                    <div className="flex flex-row items-center gap-x-10">
+                        <div className="flex flex-col">
+                            <h2 className="mt-2 text-3xl font-semibold text-white">{currentCompany.nombre}</h2>
+                            <p className="mt-2 text-sm text-slate-300"><span className="font-medium text-slate-200">NIT:</span> {currentCompany.nit || 'N/D'}</p>
+                        </div>
+                        {currentCompany.logoUrl ? (
+                            <img src={currentCompany.logoUrl} alt={`Logo de ${currentCompany.nombre}`} className="mt-3 h-20 w-auto max-w-52 rounded-xl border border-white/20 bg-white/90 object-contain p-2" />
+                        ) : (
+                            <p className="mt-2 text-sm text-slate-500">No hay logo registrado.</p>
+                        )}
+                    </div>
+                    
+                    <p className="mt-2 max-w-xl text-sm text-slate-400">{currentCompany.description || 'Sin descripcion registrada.'}</p>
                     <div className="mt-4 flex flex-wrap gap-2 text-xs">
                         <span className="rounded-full bg-emerald-500/10 px-3 py-1 text-emerald-300">{getCompanyActivity(currentCompany)}</span>
                         <span className="rounded-full bg-slate-500/10 px-3 py-1 text-slate-300">{currentCompany.advisorCount ?? currentCompany.advisors?.length ?? 0} advisors</span>
@@ -593,8 +756,8 @@ export default function CompanyManagementPage() {
 
                 <div className="flex flex-wrap gap-2">
                     <Button variant="outline" className="w-auto px-4" onClick={() => downloadCsv(`${currentCompany.nombre}-empresa.csv`, [
-                        ['Nombre', 'Advisors', 'Clientes', 'Creada', 'Actualizada'],
-                        [currentCompany.nombre, String(currentCompany.advisorCount ?? currentCompany.advisors?.length ?? 0), String(currentCompany.clientCount ?? currentCompany.clients?.length ?? 0), formatDate(currentCompany.createdAt), formatDate(currentCompany.updatedAt)],
+                        ['Nombre', 'NIT', 'Descripcion', 'Advisors', 'Clientes'],
+                        [currentCompany.nombre, currentCompany.nit ?? '', currentCompany.description ?? '', String(currentCompany.advisorCount ?? currentCompany.advisors?.length ?? 0), String(currentCompany.clientCount ?? currentCompany.clients?.length ?? 0)],
                     ])}>
                         <Download className="h-4 w-4" />
                         Exportar CSV
@@ -603,29 +766,21 @@ export default function CompanyManagementPage() {
                         <Printer className="h-4 w-4" />
                         PDF / imprimir
                     </Button>
-                    {isAdmin && !routeCompanyId && (
-                        <Button className="w-auto px-4" onClick={() => navigate('/users/create', { state: { role: 'CLIENT', empresaId: currentCompany.id } })}>
+                    {isAdmin && (
+                        <Button className="w-auto px-4" onClick={() => navigate(`/companies/${currentCompany.id}/users/create`, { state: { empresaId: currentCompany.id } })}>
                             <UserPlus className="h-4 w-4" />
-                            Añadir cliente
+                            Crear advisor
                         </Button>
                     )}
-                    {!isAdmin && (
-                        <Button className="w-auto px-4" onClick={() => navigate('/users/create', { state: { role: 'CLIENT', empresaId: currentCompany.id } })}>
+                    {isAdvisor && (
+                        <Button className="w-auto px-4" onClick={() => navigate(`/companies/${currentCompany.id}/users/create`, { state: { empresaId: currentCompany.id } })}>
                             <UserPlus className="h-4 w-4" />
                             Nuevo cliente
                         </Button>
                     )}
                 </div>
             </div>
-
             <div className="grid gap-4 md:grid-cols-3">
-                <div className="rounded-2xl border border-white/10 bg-black/10 p-4">
-                    <div className="flex items-center gap-2 text-slate-400">
-                        <CalendarDays className="h-4 w-4" />
-                        Última modificación
-                    </div>
-                    <p className="mt-2 text-lg font-semibold text-white">{formatDate(currentCompany.updatedAt)}</p>
-                </div>
                 <div className="rounded-2xl border border-white/10 bg-black/10 p-4">
                     <div className="flex items-center gap-2 text-slate-400">
                         <ShieldCheck className="h-4 w-4" />
@@ -640,63 +795,106 @@ export default function CompanyManagementPage() {
                     </div>
                     <p className="mt-2 text-lg font-semibold text-white">{(currentCompany.advisorCount ?? currentCompany.advisors?.length ?? 0) + (currentCompany.clientCount ?? currentCompany.clients?.length ?? 0)} perfiles activos</p>
                 </div>
+                <div className="rounded-2xl border border-white/10 bg-black/10 p-4">
+                    <div className="flex items-center gap-2 text-slate-400">
+                        <Building2 className="h-4 w-4" />
+                        NIT empresa
+                    </div>
+                    <p className="mt-2 text-lg font-semibold text-white">{currentCompany.nit || 'N/D'}</p>
+                </div>
             </div>
 
-            <div className="grid gap-6 xl:grid-cols-[1fr_1.2fr]">
+            <div className="space-y-6">
+                {isAdmin && (
                     <section className="space-y-4 rounded-2xl border border-white/10 bg-black/10 p-5">
-                    <div className="flex items-center gap-2">
-                        <Users className="h-5 w-5 text-teal-300" />
-                        <h3 className="text-lg font-semibold text-white">Advisors vinculados</h3>
-                    </div>
-                    <div className="space-y-3">
-                        {(currentCompany.advisors || []).map((advisor) => (
-                            <div key={advisor.id} className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                                    <div>
-                                        <p className="font-medium text-white">{advisor.name}</p>
-                                        <p className="text-sm text-slate-400">{advisor.email}</p>
-                                    </div>
-                                        <div className="flex items-center gap-2">
-                                            <div className="text-xs text-slate-500">Vinculado desde {formatDate(advisor.createdAt)}</div>
-                                            {isAdmin && (
+                        <div className="flex items-center gap-2">
+                            <Users className="h-5 w-5 text-teal-300" />
+                            <h3 className="text-lg font-semibold text-white">Advisors vinculados</h3>
+                        </div>
+
+                        <div className="flex flex-col gap-3 md:flex-row">
+                            <div className="flex-1">
+                                <div className="relative">
+                                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+                                    <Input value={advisorSearch} onChange={(e) => setAdvisorSearch(e.target.value)} placeholder="Buscar advisor" className="pl-10" />
+                                </div>
+                            </div>
+                            <div className="min-w-44">
+                                <select
+                                    value={advisorSort}
+                                    onChange={(e) => setAdvisorSort(e.target.value as AdvisorSort)}
+                                    className="h-11 w-full rounded-lg border border-white/20 bg-white/5 px-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-500/50"
+                                >
+                                    <option value="newest">Mas recientes</option>
+                                    <option value="oldest">Mas antiguos</option>
+                                    <option value="name-asc">Nombre A-Z</option>
+                                    <option value="name-desc">Nombre Z-A</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div className="overflow-x-auto rounded-2xl border border-white/10">
+                            <table className="w-full min-w-180">
+                                <thead className="bg-white/5 text-left text-xs uppercase tracking-[0.2em] text-slate-400">
+                                    <tr>
+                                        <th className="px-4 py-3">Nombre</th>
+                                        <th className="px-4 py-3">Correo</th>
+                                        <th className="px-4 py-3">Incorporacion</th>
+                                        <th className="px-4 py-3">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {paginatedAdvisors.map((advisor) => (
+                                        <tr key={advisor.id} className="border-t border-white/10 text-sm text-slate-200">
+                                            <td className="px-4 py-3">{advisor.name}</td>
+                                            <td className="px-4 py-3">{advisor.email}</td>
+                                            <td className="px-4 py-3">{formatDate(advisor.createdAt)}</td>
+                                            <td className="px-4 py-3">
                                                 <Button variant="outline" className="h-9 w-auto px-3 text-xs" onClick={() => handleUnassignAdvisor(advisor.id)}>
                                                     Quitar
                                                 </Button>
-                                            )}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    {paginatedAdvisors.length === 0 && (
+                                        <tr>
+                                            <td className="px-4 py-6 text-sm text-slate-500" colSpan={4}>No hay advisors que coincidan con la busqueda.</td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <Pagination currentPage={advisorPage} totalPages={totalAdvisorPages} onPageChange={setAdvisorPage} />
+
+                        {!routeCompanyId && (
+                            <div className="space-y-2 border-t border-white/10 pt-4">
+                                <p className="text-sm text-slate-400">Advisors disponibles</p>
+                                <div className="max-h-72 space-y-2 overflow-auto pr-1">
+                                    {availableAdvisors.map((advisor) => (
+                                        <div key={advisor.id} className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+                                            <div>
+                                                <p className="font-medium text-white">{advisor.name}</p>
+                                                <p className="text-xs text-slate-400">{advisor.email}</p>
+                                            </div>
+                                            <Button variant="outline" className="h-9 w-auto px-3 text-xs" onClick={() => handleAssignAdvisor(advisor.id)}>
+                                                <UserPlus className="h-4 w-4" />
+                                                Asignar
+                                            </Button>
                                         </div>
+                                    ))}
+                                    {availableAdvisors.length === 0 && <p className="text-sm text-slate-500">No hay advisors libres para asignar.</p>}
                                 </div>
                             </div>
-                        ))}
-                        {(currentCompany.advisors || []).length === 0 && <p className="text-sm text-slate-500">No hay advisors vinculados.</p>}
-                    </div>
-
-                    {isAdmin && !routeCompanyId && (
-                        <div className="space-y-2 border-t border-white/10 pt-4">
-                            <p className="text-sm text-slate-400">Advisors disponibles</p>
-                            <div className="max-h-72 space-y-2 overflow-auto pr-1">
-                                {availableAdvisors.map((advisor) => (
-                                    <div key={advisor.id} className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-                                        <div>
-                                            <p className="font-medium text-white">{advisor.name}</p>
-                                            <p className="text-xs text-slate-400">{advisor.email}</p>
-                                        </div>
-                                        <Button variant="outline" className="h-9 w-auto px-3 text-xs" onClick={() => handleAssignAdvisor(advisor.id)}>
-                                            <UserPlus className="h-4 w-4" />
-                                            Asignar
-                                        </Button>
-                                    </div>
-                                ))}
-                                {availableAdvisors.length === 0 && <p className="text-sm text-slate-500">No hay advisors libres para asignar.</p>}
-                            </div>
-                        </div>
-                    )}
-                </section>
+                        )}
+                    </section>
+                )}
 
                 <section className="space-y-4 rounded-2xl border border-white/10 bg-black/10 p-5">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <div className="flex items-center gap-2">
                             <Building2 className="h-5 w-5 text-teal-300" />
-                            <h3 className="text-lg font-semibold text-white">Clientes</h3>
+                            <h3 className="text-lg font-semibold text-white">{isAdmin ? 'Clientes de la empresa' : 'Mis clientes'}</h3>
                         </div>
                         <div className="flex gap-2">
                             <Button variant="outline" className="h-9 w-auto px-3 text-xs" onClick={() => downloadCsv(`${currentCompany.nombre}-clientes.csv`, [
@@ -730,18 +928,30 @@ export default function CompanyManagementPage() {
                         </div>
                     </div>
 
-                    <div className="space-y-3">
-                        {paginatedClients.map((client) => (
-                            <div key={client.id} className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                                    <div>
-                                        <p className="font-medium text-white">{client.name}</p>
-                                        <p className="text-sm text-slate-400">{client.email}</p>
-                                        <p className="mt-1 text-xs text-slate-500">{client.documentType ?? 'N/D'} · {client.documentNumber ?? 'N/D'}</p>
-                                        <p className="mt-1 text-[11px] uppercase tracking-[0.22em] text-slate-500">Alta {formatDate(client.createdAt)}</p>
-                                    </div>
-
-                                    <Menu as="div" className="relative inline-block text-left">
+                    <div className="overflow-x-auto rounded-2xl border border-white/10">
+                        <table className="w-full min-w-230">
+                            <thead className="bg-white/5 text-left text-xs uppercase tracking-[0.2em] text-slate-400">
+                                <tr>
+                                    <th className="px-4 py-3">Nombre</th>
+                                    <th className="px-4 py-3">Correo</th>
+                                    <th className="px-4 py-3">Telefono</th>
+                                    <th className="px-4 py-3">Documento</th>
+                                    <th className="px-4 py-3">Nacimiento</th>
+                                    <th className="px-4 py-3">Incorporacion</th>
+                                    <th className="px-4 py-3">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {paginatedClients.map((client) => (
+                                    <tr key={client.id} className="border-t border-white/10 text-sm text-slate-200">
+                                        <td className="px-4 py-3">{client.name}</td>
+                                        <td className="px-4 py-3">{client.email}</td>
+                                        <td className="px-4 py-3">{client.phone ?? 'N/D'}</td>
+                                        <td className="px-4 py-3">{client.documentType ?? 'N/D'} · {client.documentNumber ?? 'N/D'}</td>
+                                        <td className="px-4 py-3">{client.birthDate ? formatDate(client.birthDate) : 'N/D'}</td>
+                                        <td className="px-4 py-3">{formatDate(client.createdAt)}</td>
+                                        <td className="px-4 py-3">
+                                            <Menu as="div" className="relative inline-block text-left">
                                         <Menu.Button className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-black/10 px-3 py-2 text-sm text-slate-200 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-teal-500/50">
                                             <MoreHorizontal className="h-4 w-4" />
                                             Acciones
@@ -811,39 +1021,21 @@ export default function CompanyManagementPage() {
                                             </Menu.Items>
                                         </Transition>
                                     </Menu>
-                                </div>
-                            </div>
-                        ))}
-
-                        {paginatedClients.length === 0 && <p className="text-sm text-slate-500">No hay clientes que coincidan con los filtros.</p>}
+                                        </td>
+                                    </tr>
+                                ))}
+                                {paginatedClients.length === 0 && (
+                                    <tr>
+                                        <td className="px-4 py-6 text-sm text-slate-500" colSpan={7}>No hay clientes que coincidan con los filtros.</td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
                     </div>
 
                     <Pagination currentPage={clientPage} totalPages={totalClientPages} onPageChange={setClientPage} />
                 </section>
             </div>
-
-            <section className="space-y-4 rounded-2xl border border-white/10 bg-black/10 p-5">
-                <div className="flex items-center gap-2">
-                    <CalendarDays className="h-5 w-5 text-teal-300" />
-                    <h3 className="text-lg font-semibold text-white">Historial de cambios</h3>
-                </div>
-                {companyAuditLogsError && <p className="text-sm text-amber-300">{companyAuditLogsError}</p>}
-                <div className="space-y-3">
-                    {companyAuditLogs.map((log) => (
-                        <div key={log.id} className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-300">
-                            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                                <p className="font-medium text-white">{log.action}</p>
-                                <p className="text-xs text-slate-500">{formatDate(log.createdAt)}</p>
-                            </div>
-                            <p className="mt-1 text-slate-400">{log.user ? `${log.user.name} · ${log.user.email}` : 'Sistema'}</p>
-                            {safeParseDetails(log.details) && (
-                                <pre className="mt-2 overflow-auto rounded-xl bg-black/20 p-3 text-xs text-slate-400">{JSON.stringify(safeParseDetails(log.details), null, 2)}</pre>
-                            )}
-                        </div>
-                    ))}
-                    {companyAuditLogs.length === 0 && <p className="text-sm text-slate-500">Todavía no hay cambios registrados.</p>}
-                </div>
-            </section>
         </div>
     ) : null;
 
@@ -857,29 +1049,12 @@ export default function CompanyManagementPage() {
                             Gestión de empresas
                         </div>
                         <h1 className="text-4xl font-bold text-white">{isAdmin ? 'Administración de empresas' : 'Mi empresa'}</h1>
-                        <p className="max-w-3xl text-sm text-slate-400">
-                            {isAdmin
-                                ? 'Filtra, ordena y revisa empresas con acceso rápido al detalle, historial y acciones de vínculo.'
-                                : 'Accede únicamente a la información de tu empresa y administra los clientes autorizados por tu rol.'}
-                        </p>
                     </div>
 
-                    {isAdmin && !routeCompanyId && (
-                        <div className="w-full max-w-xl rounded-3xl border border-teal-500/20 bg-white/5 p-5 shadow-xl shadow-black/10">
-                            <form onSubmit={handleCreateCompany} className="space-y-3">
-                                <Input
-                                    value={newCompanyName}
-                                    onChange={(e) => {
-                                        setNewCompanyName(e.target.value);
-                                        if (companyNameError) validateCompanyName(e.target.value);
-                                    }}
-                                    placeholder="Nombre de empresa"
-                                    label="Nueva empresa"
-                                    error={companyNameError}
-                                />
-                                <Button type="submit">Crear empresa</Button>
-                            </form>
-                        </div>
+                    {isAdmin && !routeCompanyId && (<Button className="mt-4 w-auto" onClick={() => setIsCreateCompanyModalOpen(true)}>
+                        <Building2 className="h-4 w-4" />
+                            Nueva empresa
+                        </Button>
                     )}
                 </div>
 
@@ -908,6 +1083,105 @@ export default function CompanyManagementPage() {
                     detailSection
                 )}
             </div>
+
+            <Transition appear show={isCreateCompanyModalOpen} as={Fragment}>
+                <Dialog as="div" className="relative z-50" onClose={setIsCreateCompanyModalOpen}>
+                    <Transition.Child
+                        as={Fragment}
+                        enter="ease-out duration-200"
+                        enterFrom="opacity-0"
+                        enterTo="opacity-100"
+                        leave="ease-in duration-150"
+                        leaveFrom="opacity-100"
+                        leaveTo="opacity-0"
+                    >
+                        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm" />
+                    </Transition.Child>
+
+                    <div className="fixed inset-0 overflow-y-auto">
+                        <div className="flex min-h-full items-center justify-center p-4">
+                            <Transition.Child
+                                as={Fragment}
+                                enter="ease-out duration-200"
+                                enterFrom="opacity-0 scale-95"
+                                enterTo="opacity-100 scale-100"
+                                leave="ease-in duration-150"
+                                leaveFrom="opacity-100 scale-100"
+                                leaveTo="opacity-0 scale-95"
+                            >
+                                <Dialog.Panel className="w-full max-w-2xl rounded-3xl border border-white/10 bg-[#0f172a] p-6 shadow-2xl">
+                                    <div className="mb-5 flex items-start justify-between gap-4">
+                                        <div>
+                                            <Dialog.Title className="text-2xl font-semibold text-white">Crear empresa</Dialog.Title>
+                                            <p className="mt-1 text-sm text-slate-400">Completa los campos obligatorios para registrar la empresa.</p>
+                                        </div>
+                                        <button
+                                            onClick={() => setIsCreateCompanyModalOpen(false)}
+                                            className="rounded-xl border border-white/10 p-2 text-slate-300 hover:bg-white/10"
+                                            aria-label="Cerrar modal de creacion de empresa"
+                                        >
+                                            <X className="h-5 w-5" />
+                                        </button>
+                                    </div>
+
+                                    <form onSubmit={handleCreateCompany} className="space-y-3">
+                                        <Input
+                                            value={newCompanyName}
+                                            onChange={(e) => {
+                                                setNewCompanyName(e.target.value);
+                                                if (companyNameError) validateCompanyName(e.target.value);
+                                            }}
+                                            placeholder="Nombre legal de la empresa"
+                                            label="Nombre legal"
+                                            error={companyNameError}
+                                        />
+                                        <Input
+                                            value={newCompanyNit}
+                                            onChange={(e) => {
+                                                setNewCompanyNit(e.target.value);
+                                                if (companyNitError) validateCompanyNit(e.target.value);
+                                            }}
+                                            placeholder="900123456-7"
+                                            label="NIT"
+                                            error={companyNitError}
+                                        />
+                                        <div>
+                                            <label className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-300">
+                                                Logotipo
+                                                <span title="Formatos permitidos: PNG, JPG, WEBP. Tamano maximo 5MB." className="text-xs text-slate-500">(info)</span>
+                                            </label>
+                                            <Input type="file" accept="image/png,image/jpeg,image/webp" onChange={handleLogoChange as any} error={companyLogoError} />
+                                            {newCompanyLogoUrl && <img src={newCompanyLogoUrl} alt="Vista previa logo" className="mt-2 h-16 w-16 rounded-xl border border-white/20 object-cover" />}
+                                        </div>
+                                        <div>
+                                            <label className="mb-2 block text-sm font-medium text-slate-300">Descripcion (max 1000)</label>
+                                            <textarea
+                                                value={newCompanyDescription}
+                                                onChange={(e) => {
+                                                    setNewCompanyDescription(e.target.value);
+                                                    if (companyDescriptionError) validateCompanyDescription(e.target.value);
+                                                }}
+                                                maxLength={1000}
+                                                className="min-h-24 w-full rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-teal-500/50"
+                                            />
+                                            <div className="mt-1 flex items-center justify-between text-xs text-slate-500">
+                                                <span>{companyDescriptionError || 'Describe actividad, alcance y enfoque de la empresa.'}</span>
+                                                <span>{newCompanyDescription.length}/1000</span>
+                                            </div>
+                                        </div>
+                                        <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end">
+                                            <Button variant="outline" className="sm:w-auto" onClick={() => setIsCreateCompanyModalOpen(false)} type="button">
+                                                Cancelar
+                                            </Button>
+                                            <Button type="submit" className="sm:w-auto">Crear empresa</Button>
+                                        </div>
+                                    </form>
+                                </Dialog.Panel>
+                            </Transition.Child>
+                        </div>
+                    </div>
+                </Dialog>
+            </Transition>
 
             <Transition appear show={isDetailModalOpen} as={Fragment}>
                 <Dialog as="div" className="relative z-50" onClose={() => setIsDetailModalOpen(false)}>
@@ -938,7 +1212,6 @@ export default function CompanyManagementPage() {
                                     <div className="mb-4 flex items-start justify-between gap-4">
                                         <div>
                                             <Dialog.Title className="text-2xl font-semibold text-white">{modalCompany?.nombre ?? 'Detalle de empresa'}</Dialog.Title>
-                                            <p className="mt-1 text-sm text-slate-400">Información completa y historial de cambios.</p>
                                         </div>
                                         <button onClick={() => setIsDetailModalOpen(false)} className="rounded-xl border border-white/10 p-2 text-slate-300 hover:bg-white/10">
                                             <X className="h-5 w-5" />
@@ -947,6 +1220,14 @@ export default function CompanyManagementPage() {
 
                                     {modalCompany && (
                                         <div className="space-y-4">
+                                            <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                                                <p className="text-sm text-slate-400">NIT: <span className="text-white">{modalCompany.nit || 'N/D'}</span></p>
+                                                <p className="mt-2 text-sm text-slate-400">{modalCompany.description || 'Sin descripcion registrada.'}</p>
+                                                {modalCompany.logoUrl && (
+                                                    <img src={modalCompany.logoUrl} alt={`Logo de ${modalCompany.nombre}`} className="mt-3 h-16 w-auto max-w-44 rounded-xl border border-white/20 bg-white/90 object-contain p-2" />
+                                                )}
+                                            </div>
+
                                             <div className="grid gap-3 md:grid-cols-3">
                                                 <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
                                                     <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Advisors</p>
@@ -986,20 +1267,6 @@ export default function CompanyManagementPage() {
                                                     </div>
                                                 </section>
                                             </div>
-
-                                            <section className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                                                <p className="text-sm text-slate-400">Historial de cambios</p>
-                                                {modalAuditLogsError && <p className="mt-2 text-sm text-amber-300">{modalAuditLogsError}</p>}
-                                                <div className="mt-3 space-y-2">
-                                                    {modalAuditLogs.map((log) => (
-                                                        <div key={log.id} className="rounded-xl border border-white/10 bg-black/10 p-3 text-sm text-slate-300">
-                                                            <p className="font-medium text-white">{log.action}</p>
-                                                            <p className="text-xs text-slate-500">{formatDate(log.createdAt)} · {log.user ? log.user.name : 'Sistema'}</p>
-                                                        </div>
-                                                    ))}
-                                                    {modalAuditLogs.length === 0 && <p className="text-sm text-slate-500">Sin registros todavía.</p>}
-                                                </div>
-                                            </section>
                                         </div>
                                     )}
                                 </Dialog.Panel>
@@ -1041,6 +1308,23 @@ export default function CompanyManagementPage() {
                                         <div>
                                             <label className="mb-2 block text-sm text-slate-300">Dirección</label>
                                             <Input value={clientDraft.address} onChange={(e) => updateClientDraft('address', e.target.value)} error={clientErrors.address} />
+                                        </div>
+                                        <div>
+                                            <label className="mb-2 block text-sm text-slate-300">Telefono</label>
+                                            <Input value={clientDraft.phone} onChange={(e) => updateClientDraft('phone', e.target.value)} error={clientErrors.phone} />
+                                        </div>
+                                        <div>
+                                            <label className="mb-2 block text-sm text-slate-300">Fecha de nacimiento</label>
+                                            <Input type="date" value={clientDraft.birthDate} onChange={(e) => updateClientDraft('birthDate', e.target.value)} />
+                                        </div>
+                                        <div>
+                                            <label className="mb-2 block text-sm text-slate-300">Edad</label>
+                                            <Input type="number" min={18} max={120} value={clientDraft.age} onChange={(e) => updateClientDraft('age', Number(e.target.value))} error={clientErrors.age} />
+                                        </div>
+                                        <div>
+                                            <label className="mb-2 block text-sm text-slate-300">Foto de perfil</label>
+                                            <Input type="file" accept="image/png,image/jpeg,image/webp" onChange={handleClientPhotoChange as any} />
+                                            {clientDraft.profilePhotoUrl && <img src={clientDraft.profilePhotoUrl} alt="Vista previa" className="mt-2 h-14 w-14 rounded-lg border border-white/20 object-cover" />}
                                         </div>
                                         <div>
                                             <label className="mb-2 block text-sm text-slate-300">Tipo de documento</label>

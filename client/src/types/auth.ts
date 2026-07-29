@@ -6,8 +6,13 @@ export interface User {
     name: string;
     role: 'CLIENT' | 'ADMIN' | 'ADVISOR';
     address?: string;
+    phone?: string;
+    birthDate?: string;
+    age?: number;
+    profilePhotoUrl?: string;
     documentType?: DocumentType;
     documentNumber?: string;
+    createdById?: string | null;
     empresaId?: string | null;
     empresa?: {
         id: string;
@@ -20,6 +25,9 @@ export interface User {
 export interface Empresa {
     id: string;
     nombre: string;
+    nit?: string;
+    logoUrl?: string;
+    description?: string;
     createdAt: string;
     updatedAt: string;
     advisorCount?: number;

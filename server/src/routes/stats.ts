@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { verifyAuth } from '../middlewares/authMiddleware';
-import { getUserStats } from '../controllers/stats';
+import { getDashboardStats, getUserStats } from '../controllers/stats';
 
 const router = Router();
 
@@ -8,5 +8,6 @@ const router = Router();
 router.use(verifyAuth);
 
 router.get('/users', getUserStats);
+router.get('/dashboard', getDashboardStats);
 
 export default router;

@@ -6,11 +6,22 @@ export interface CreateUserData {
     password?: string;
     name: string;
     address: string;
+    phone?: string;
+    birthDate?: string;
+    age?: number;
+    profilePhotoUrl?: string;
     documentType: DocumentType;
     documentNumber: string;
     role: 'CLIENT' | 'ADVISOR';
     empresaId?: string;
     biometricMethods?: Array<'OCULAR' | 'FACIAL' | 'DACTILAR'>;
+}
+
+export interface CreateCompanyData {
+    nombre: string;
+    nit: string;
+    logoUrl: string;
+    description: string;
 }
 
 export interface CompanyListResponse {
@@ -57,7 +68,7 @@ export const UserService = {
         return data.user;
     },
 
-    update: async (id: string, updates: Partial<Pick<User, 'name' | 'role' | 'address' | 'documentType' | 'documentNumber' | 'empresaId'>>) => {
+    update: async (id: string, updates: Partial<Pick<User, 'name' | 'role' | 'address' | 'phone' | 'birthDate' | 'age' | 'profilePhotoUrl' | 'documentType' | 'documentNumber' | 'empresaId'>>) => {
         const { data } = await api.patch<{ user: User }>(`/users/${id}`, updates);
         return data.user;
     },
@@ -82,8 +93,8 @@ export const UserService = {
         return data.auditLogs;
     },
 
-    createCompany: async (nombre: string) => {
-        const { data } = await api.post<{ company: Empresa }>('/companies', { nombre });
+    createCompany: async (companyData: CreateCompanyData) => {
+        const { data } = await api.post<{ company: Empresa }>('/companies', companyData);
         return data.company;
     },
 

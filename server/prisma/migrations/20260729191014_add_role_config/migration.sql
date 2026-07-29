@@ -14,6 +14,9 @@ CREATE TYPE "BiometricMethod" AS ENUM ('DACTILAR', 'FACIAL', 'OCULAR');
 CREATE TABLE "Empresa" (
     "id" TEXT NOT NULL,
     "nombre" TEXT NOT NULL,
+    "nit" TEXT NOT NULL,
+    "logoUrl" TEXT,
+    "description" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -28,6 +31,10 @@ CREATE TABLE "User" (
     "name" TEXT NOT NULL,
     "role" "Role" NOT NULL DEFAULT 'CLIENT',
     "address" TEXT,
+    "phone" TEXT,
+    "birthDate" TIMESTAMP(3),
+    "age" INTEGER,
+    "profilePhotoUrl" TEXT,
     "documentType" "DocumentType",
     "documentNumber" TEXT,
     "biometricType" "BiometricType",
@@ -69,7 +76,13 @@ CREATE TABLE "AuditLog" (
 CREATE UNIQUE INDEX "Empresa_nombre_key" ON "Empresa"("nombre");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "Empresa_nit_key" ON "Empresa"("nit");
+
+-- CreateIndex
 CREATE INDEX "Empresa_nombre_idx" ON "Empresa"("nombre");
+
+-- CreateIndex
+CREATE INDEX "Empresa_nit_idx" ON "Empresa"("nit");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "User_email_key" ON "User"("email");

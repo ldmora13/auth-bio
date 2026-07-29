@@ -26,6 +26,7 @@ export type CompanyWithAdvisors = Prisma.EmpresaGetPayload<{
                 role: true;
                 empresaId: true;
                 createdAt: true;
+                createdById: true;
             };
         };
     };
@@ -41,8 +42,14 @@ export type CompanyDetail = Prisma.EmpresaGetPayload<{
                 role: true;
                 empresaId: true;
                 createdAt: true;
+                createdById: true;
                 documentType: true;
                 documentNumber: true;
+                address: true;
+                phone: true;
+                birthDate: true;
+                age: true;
+                profilePhotoUrl: true;
             };
         };
     };
@@ -61,8 +68,14 @@ export class CompanyRepository {
                         role: true,
                         empresaId: true,
                         createdAt: true,
+                        createdById: true,
                         documentType: true,
                         documentNumber: true,
+                        address: true,
+                        phone: true,
+                        birthDate: true,
+                        age: true,
+                        profilePhotoUrl: true,
                     },
                 },
             },
@@ -82,6 +95,7 @@ export class CompanyRepository {
                         role: true,
                         empresaId: true,
                         createdAt: true,
+                        createdById: true,
                     },
                 },
             },
@@ -100,8 +114,14 @@ export class CompanyRepository {
                         role: true,
                         empresaId: true,
                         createdAt: true,
+                        createdById: true,
                         documentType: true,
                         documentNumber: true,
+                        address: true,
+                        phone: true,
+                        birthDate: true,
+                        age: true,
+                        profilePhotoUrl: true,
                     },
                 },
             },
@@ -112,9 +132,18 @@ export class CompanyRepository {
         return db.empresa.findUnique({ where: { nombre } });
     }
 
-    async create(nombre: string): Promise<CompanyWithAdvisors> {
+    async findByNit(nit: string) {
+        return db.empresa.findUnique({ where: { nit } });
+    }
+
+    async create(data: { nombre: string; nit: string; logoUrl?: string | null; description?: string | null }): Promise<CompanyWithAdvisors> {
         return db.empresa.create({
-            data: { nombre },
+            data: {
+                nombre: data.nombre,
+                nit: data.nit,
+                logoUrl: data.logoUrl ?? null,
+                description: data.description ?? null,
+            },
             include: {
                 users: {
                     where: { role: 'ADVISOR' },
@@ -125,6 +154,7 @@ export class CompanyRepository {
                         role: true,
                         empresaId: true,
                         createdAt: true,
+                        createdById: true,
                     },
                 },
             },

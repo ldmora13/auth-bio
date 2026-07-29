@@ -1,13 +1,22 @@
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import { lazy, Suspense } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
 import { Toaster } from 'react-hot-toast';
-import UserList from './pages/Users/UserList';
-import CreateUserPage from './pages/Users/CreateUserPage';
-import ProfilePage from './pages/Profile/ProfilePage';
-import CompanyManagementPage from './pages/Companies/CompanyManagementPage';
-import { canAccessCompanies, canAccessUsersPage } from './lib/roles';
+import { canAccessCompanies } from './lib/roles';
+
+const Login = lazy(() => import('./pages/Login'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const ProfilePage = lazy(() => import('./pages/Profile/ProfilePage'));
+const CompanyManagementPage = lazy(() => import('./pages/Companies/CompanyManagementPage'));
+const CreateUserPage = lazy(() => import('./pages/Users/CreateUserPage'));
+
+function RouteLoader() {
+  return (
+    <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#313e52' }}>
+      <div className="w-8 h-8 border-4 border-teal-500 border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
+}
 
 function ProtectedRoute() {
   const { user, loading } = useAuth();
@@ -27,7 +36,7 @@ function ProtectedRoute() {
   return <Outlet />;
 }
 
-function UserCreateRoute() {
+function CompanyUserCreateRoute() {
   const { user, loading } = useAuth();
 
   if (loading) {
@@ -38,8 +47,8 @@ function UserCreateRoute() {
     );
   }
 
-  if (!user || !canAccessUsersPage(user.role)) {
-    return <Navigate to="/login" replace />;
+  if (!user || !canAccessCompanies(user.role)) {
+    return <Navigate to="/dashboard" replace />;
   }
 
   return <Outlet />;
@@ -74,28 +83,29 @@ function PublicRoute() {
 
 function AppRoutes() {
   return (
-    <Routes>
-      <Route element={<PublicRoute />}>
-        <Route path="/login" element={<Login />} />
-      </Route>
+    <Suspense fallback={<RouteLoader />}>
+      <Routes>
+        <Route element={<PublicRoute />}>
+          <Route path="/login" element={<Login />} />
+        </Route>
 
-      <Route element={<ProtectedRoute />}>
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/users" element={<UserList />} />
-        <Route path="/profile/*" element={<ProfilePage />} />
-      </Route>
+        <Route element={<ProtectedRoute />}>
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/profile/*" element={<ProfilePage />} />
+        </Route>
 
-      <Route element={<UserCreateRoute />}>
-        <Route path="/users/create" element={<CreateUserPage />} />
-      </Route>
+        <Route element={<CompanyManagementRoute />}>
+          <Route path="/companies" element={<CompanyManagementPage />} />
+          <Route path="/companies/:id" element={<CompanyManagementPage />} />
+        </Route>
 
-      <Route element={<CompanyManagementRoute />}>
-        <Route path="/companies" element={<CompanyManagementPage />} />
-        <Route path="/companies/:id" element={<CompanyManagementPage />} />
-      </Route>
+        <Route element={<CompanyUserCreateRoute />}>
+          <Route path="/companies/:id/users/create" element={<CreateUserPage />} />
+        </Route>
 
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
-    </Routes>
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      </Routes>
+    </Suspense>
   );
 }
 

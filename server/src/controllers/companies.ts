@@ -13,6 +13,9 @@ export const getCompanies = catchAsync(async (req: Request, res: Response) => {
         companies: companies.map((company) => ({
             id: company.id,
             nombre: company.nombre,
+            nit: company.nit,
+            logoUrl: company.logoUrl,
+            description: company.description,
             createdAt: company.createdAt,
             updatedAt: company.updatedAt,
             advisors: company.users.filter((user) => user.role === 'ADVISOR'),
@@ -34,12 +37,25 @@ export const getCompany = catchAsync(async (req: Request, res: Response) => {
     const company = await companyService.getCompany(id);
 
     const advisors = company.users.filter((user) => user.role === 'ADVISOR');
-    const clients = company.users.filter((user) => user.role === 'CLIENT');
+    const clients = company.users.filter((user) => {
+        if (user.role !== 'CLIENT') {
+            return false;
+        }
+
+        if (currentUser.role === 'ADVISOR') {
+            return user.createdById === currentUser.id;
+        }
+
+        return true;
+    });
 
     res.json({
         company: {
             id: company.id,
             nombre: company.nombre,
+            nit: company.nit,
+            logoUrl: company.logoUrl,
+            description: company.description,
             createdAt: company.createdAt,
             updatedAt: company.updatedAt,
             advisors,
@@ -74,13 +90,22 @@ export const getCompanyAuditLogs = catchAsync(async (req: Request, res: Response
 });
 
 export const createCompany = catchAsync(async (req: Request, res: Response) => {
-    const { nombre } = req.body;
+    const { nombre, nit, logoUrl, description } = req.body;
 
     if (!nombre?.trim()) {
         throw new AppError('Company name is required', 400);
     }
 
-    const company = await companyService.createCompany(nombre.trim());
+    if (!nit?.trim()) {
+        throw new AppError('Company NIT is required', 400);
+    }
+
+    const company = await companyService.createCompany({
+        nombre: nombre.trim(),
+        nit: nit.trim(),
+        logoUrl: logoUrl?.trim(),
+        description: description?.trim(),
+    });
 
     await AuditLogService.log({
         action: 'CREATE',
@@ -94,6 +119,9 @@ export const createCompany = catchAsync(async (req: Request, res: Response) => {
         company: {
             id: company.id,
             nombre: company.nombre,
+            nit: company.nit,
+            logoUrl: company.logoUrl,
+            description: company.description,
             createdAt: company.createdAt,
             updatedAt: company.updatedAt,
             advisors: company.users.filter((user) => user.role === 'ADVISOR'),
