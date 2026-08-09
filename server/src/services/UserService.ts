@@ -168,6 +168,43 @@ export class UserService {
         });
     }
 
+    async requestBiometricEnrollment(
+        id: string,
+        biometricTypes: BiometricMethod[],
+        requester?: { id: string; role: Role; empresaId?: string | null }
+    ): Promise<UserWithEmpresa> {
+        const currentUser = await this.userRepository.findById(id);
+
+        if (!currentUser) {
+            throw new AppError('User not found', 404);
+        }
+
+        if (currentUser.role !== 'CLIENT') {
+            throw new AppError('Only clients can receive biometric enrollment requests', 400);
+        }
+
+        if (!biometricTypes || biometricTypes.length === 0) {
+            throw new AppError('At least one biometric method is required', 400);
+        }
+
+        const uniqueMethods = [...new Set(biometricTypes)];
+        const primaryType = uniqueMethods[0];
+
+        if (requester?.role === 'ADVISOR') {
+            if (!requester.empresaId || currentUser.empresaId !== requester.empresaId || currentUser.createdById !== requester.id) {
+                throw new AppError('Forbidden', 403);
+            }
+        }
+
+        return this.userRepository.update(id, {
+            biometricType: primaryType,
+            biometricMethods: uniqueMethods,
+            biometricEnrollmentRequired: true,
+            biometricEnrollmentCompletedAt: null,
+            biometricEnrollmentRequestedAt: new Date(),
+        });
+    }
+
     async completeBiometricEnrollment(id: string, completedMethods: BiometricMethod[]): Promise<UserWithEmpresa> {
         const currentUser = await this.userRepository.findById(id);
 

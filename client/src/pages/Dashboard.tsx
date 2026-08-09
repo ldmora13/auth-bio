@@ -65,18 +65,6 @@ export default function Dashboard() {
                     </p>
                 </motion.div>
 
-                {user?.role === 'ADVISOR' && user.empresa?.nombre && (
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.05 }}
-                        className="glass rounded-3xl p-6 border border-teal-500/20 bg-teal-500/5"
-                    >
-                        <p className="text-xs uppercase tracking-[0.25em] text-teal-300/80">Empresa asignada</p>
-                        <h2 className="mt-2 text-2xl font-semibold text-white">{user.empresa.nombre}</h2>
-                    </motion.div>
-                )}
-
                 {stats?.role === 'ADMIN' && stats.totals && (
                     <>
                         <motion.section

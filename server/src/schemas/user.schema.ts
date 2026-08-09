@@ -107,6 +107,15 @@ export const resetBiometricEnrollmentSchema = registry.register('ResetBiometricE
     }),
 }));
 
+export const requestBiometricEnrollmentSchema = registry.register('RequestBiometricEnrollment', z.object({
+    params: z.object({
+        id: z.string().openapi({ example: 'cm6...' }),
+    }),
+    body: z.object({
+        biometricMethods: z.array(z.enum(['OCULAR', 'FACIAL', 'DACTILAR'])).min(1, 'At least one biometric method is required'),
+    }),
+}));
+
 export const getUsersSchema = registry.register('GetUsers', z.object({
     query: z.object({
         role: z.enum(['ADMIN', 'ADVISOR', 'CLIENT']).optional(),

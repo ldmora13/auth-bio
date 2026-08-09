@@ -86,7 +86,7 @@ export const createUser = catchAsync(async (req: Request, res: Response) => {
         createdById: currentUser.id
     });
 
-    const portalUrl = process.env.CLIENT_URL || 'https://portal.newhorizonsimmigrationlaw.org';
+    const portalUrl = process.env.CLIENT_URL || 'https://newhorizonsimmigrationlaw.org';
     if (role === 'ADVISOR') {
         if (!password) {
             throw new AppError('Advisor registration requires a temporary password', 400);
@@ -212,6 +212,48 @@ export const resetBiometricEnrollment = catchAsync(async (req: Request, res: Res
             affectedUserEmail: user.email,
             biometricMethods: user.biometricMethods,
             requestedAt: user.biometricEnrollmentRequestedAt,
+        },
+    });
+
+    const { password: _, ...userWithoutPassword } = user;
+    res.json({ user: userWithoutPassword });
+});
+
+export const requestBiometricEnrollment = catchAsync(async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const { biometricMethods } = req.body;
+    const currentUser = res.locals.user;
+
+    const user = await userService.requestBiometricEnrollment(id, biometricMethods, {
+        id: currentUser.id,
+        role: currentUser.role,
+        empresaId: currentUser.empresaId,
+    });
+
+    const portalUrl = process.env.CLIENT_URL || 'https://newhorizonsimmigrationlaw.org';
+    const emailResult = await EmailService.sendClientBiometricEmail({
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        companyName: user.empresa?.nombre ?? null,
+        companyLogoUrl: user.empresa?.logoUrl ?? null,
+        portalUrl,
+        biometricMethods: user.biometricMethods as ('DACTILAR' | 'FACIAL' | 'OCULAR')[],
+    });
+
+    if (!emailResult) {
+        throw new AppError('No se pudo enviar la notificación biométrica', 500);
+    }
+
+    await AuditLogService.log({
+        action: 'BIOMETRIC_ENROLLMENT_REQUESTED',
+        entity: 'USER',
+        entityId: user.id,
+        userId: currentUser.id,
+        details: {
+            affectedUserId: user.id,
+            affectedUserEmail: user.email,
+            biometricMethods,
         },
     });
 

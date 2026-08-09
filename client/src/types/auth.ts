@@ -1,4 +1,5 @@
 export type DocumentType = 'CC' | 'DNI' | 'PASSPORT' | 'OTHER';
+export type BiometricMethod = 'DACTILAR' | 'FACIAL' | 'OCULAR';
 
 export interface User {
     id: string;
@@ -12,6 +13,11 @@ export interface User {
     profilePhotoUrl?: string;
     documentType?: DocumentType;
     documentNumber?: string;
+    biometricType?: BiometricMethod | null;
+    biometricMethods?: BiometricMethod[];
+    biometricEnrollmentRequired?: boolean;
+    biometricEnrollmentRequestedAt?: string | null;
+    biometricEnrollmentCompletedAt?: string | null;
     createdById?: string | null;
     empresaId?: string | null;
     empresa?: {

@@ -18,10 +18,27 @@ const biometricComponentMap = {
   OCULAR: IrisSimulator,
 } as const;
 
+const biometricMethodValues: BiometricMethod[] = ['DACTILAR', 'FACIAL', 'OCULAR'];
+
 export default function Verification() {
   const location = useLocation();
   const navigate = useNavigate();
   const state = location.state as VerificationLocationState | null;
+  const queryMethods = useMemo(() => {
+    const methodsParam = new URLSearchParams(location.search).get('methods');
+
+    if (!methodsParam) {
+      return null;
+    }
+
+    const parsedMethods = methodsParam
+      .split(',')
+      .map((value) => value.trim().toUpperCase())
+      .filter((value): value is BiometricMethod => biometricMethodValues.includes(value as BiometricMethod));
+
+    return parsedMethods.length > 0 ? normalizeBiometricMethods(parsedMethods) : null;
+  }, [location.search]);
+
   const storedMethods = useMemo(() => {
     const raw = localStorage.getItem('clientBiometricMethods');
     if (!raw) return null;
@@ -34,8 +51,8 @@ export default function Verification() {
   }, []);
 
   const biometricMethods = useMemo(
-    () => normalizeBiometricMethods(state?.biometricMethods ?? storedMethods ?? ['DACTILAR']),
-    [state?.biometricMethods, storedMethods]
+    () => normalizeBiometricMethods(queryMethods ?? state?.biometricMethods ?? storedMethods ?? ['DACTILAR']),
+    [queryMethods, state?.biometricMethods, storedMethods]
   );
   const enrollmentRequired = state?.biometricEnrollmentRequired ?? localStorage.getItem('clientBiometricEnrollmentRequired') === 'true';
 

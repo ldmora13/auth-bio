@@ -241,18 +241,20 @@ export default function CreateUserPage() {
                         </div>
 
                         <div className="md:col-span-2">
-                            <label className="mb-2 block text-sm font-medium text-slate-300">Correo electronico</label>
-                            <Input type="email" value={formData.email} onChange={(e) => setField('email', e.target.value)} error={errors.email} />
-                        </div>
-
-                        <div className="md:col-span-2">
                             <label className="mb-2 block text-sm font-medium text-slate-300">Direccion</label>
                             <Input value={formData.address} onChange={(e) => setField('address', e.target.value)} error={errors.address} />
                         </div>
 
+                        <div>
+                            <label className="mb-2 block text-sm font-medium text-slate-300">Correo electronico</label>
+                            <Input type="email" value={formData.email} onChange={(e) => setField('email', e.target.value)} error={errors.email} />
+                        </div>
+
+                        
+
                         {formData.role === 'ADVISOR' && (
                             <>
-                                <div>
+                                <div className="hidden">
                                     <label className="mb-2 block text-sm font-medium text-slate-300">Empresa</label>
                                     <select
                                         value={formData.empresaId ?? ''}
@@ -288,7 +290,7 @@ export default function CreateUserPage() {
                                     <label className="mb-2 block text-sm font-medium text-slate-300">Edad</label>
                                     <Input type="number" min={18} max={120} value={formData.age ?? ''} onChange={(e) => setField('age', Number(e.target.value))} error={errors.age} />
                                 </div>
-                                <div>
+                                <div className="md:col-span-2">
                                     <label className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-300">
                                         Foto de perfil
                                         <span title="Formatos permitidos: PNG, JPG y WEBP. Tamano maximo 2MB."><Info className="h-4 w-4 text-slate-400" /></span>
@@ -325,7 +327,7 @@ export default function CreateUserPage() {
                     </div>
 
                     {formData.role === 'CLIENT' && (
-                        <div className="rounded-2xl border border-white/10 bg-black/10 p-4">
+                        <div className="rounded-2xl border border-white/10 bg-black/10 p-4 hidden">
                             <label className="block text-sm font-medium text-white">Registro biometrico</label>
                             <p className="mt-1 text-xs text-slate-400">Dactilar es obligatorio. Puedes sumar reconocimiento facial u ocular.</p>
                             <div className="mt-3 space-y-2">

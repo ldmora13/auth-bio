@@ -44,7 +44,7 @@ export default function Layout({ children }: { children: ReactNode }) {
 
   const navItems = [
     ...baseNavItems,
-    ...(user && canAccessCompanies(user.role) ? [{ label: user.role === 'ADVISOR' ? 'Mi empresa' : 'Empresas', icon: Building2, path: '/companies' }] : []),
+    ...(user && canAccessCompanies(user.role) ? [{ label: user.role === 'ADVISOR' ? 'Clientes' : 'Empresas', icon: Building2, path: '/companies' }] : []),
   ];
 
   return (

@@ -1,10 +1,10 @@
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
-import { Dialog, Menu, Transition } from '@headlessui/react';
+import { Dialog, Transition } from '@headlessui/react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Layout from '../../components/Layout';
 import { useAuth } from '../../context/AuthContext';
 import { canAccessCompanies } from '../../lib/roles';
-import { UserService, type CompanyAuditLog } from '../../services/userService';
+import { UserService, type BiometricMethod, type CompanyAuditLog } from '../../services/userService';
 import type { Empresa, User } from '../../types/auth';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -12,19 +12,17 @@ import Pagination from '../../components/Pagination';
 import { toast } from 'react-hot-toast';
 import {
     Building2,
-    CheckCircle2,
     Download,
     Eye,
     FileText,
-    Filter,
-    MoreHorizontal,
-    Printer,
     Search,
-    ShieldCheck,
-    Trash2,
     UserPlus,
     Users,
     X,
+    Send,
+    Info,
+    Trash,
+    FingerprintPattern,
 } from 'lucide-react';
 
 type CompanySort = 'newest' | 'oldest' | 'name-asc' | 'name-desc' | 'advisors-desc' | 'clients-desc';
@@ -59,12 +57,10 @@ async function fileToDataUrl(file: File): Promise<string> {
 
 function formatDate(value?: string) {
     if (!value) return 'N/D';
-    return new Date(value).toLocaleString('es-ES', {
+    return new Date(value).toLocaleDateString('es-ES', {
         year: 'numeric',
         month: 'short',
         day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
     });
 }
 
@@ -139,6 +135,9 @@ export default function CompanyManagementPage() {
     const [selectedClient, setSelectedClient] = useState<User | null>(null);
     const [clientModalOpen, setClientModalOpen] = useState(false);
     const [clientSaving, setClientSaving] = useState(false);
+    const [biometricModalOpen, setBiometricModalOpen] = useState(false);
+    const [biometricRequesting, setBiometricRequesting] = useState(false);
+    const [biometricRequestMethods, setBiometricRequestMethods] = useState<BiometricMethod[]>(['DACTILAR']);
     const [clientSearch, setClientSearch] = useState('');
     const [clientSort, setClientSort] = useState<ClientSort>('newest');
     const [clientPage, setClientPage] = useState(1);
@@ -407,6 +406,12 @@ export default function CompanyManagementPage() {
         setClientModalOpen(true);
     }
 
+    function openBiometricRequestModal(client: User) {
+        setSelectedClient(client);
+        setBiometricRequestMethods((client.biometricType ?? ['DACTILAR']) as BiometricMethod[]);
+        setBiometricModalOpen(true);
+    }
+
     function validateClientDraft(draft: ClientDraft) {
         const nextErrors: Partial<Record<'name' | 'address' | 'documentNumber' | 'phone' | 'age', string>> = {};
 
@@ -477,6 +482,24 @@ export default function CompanyManagementPage() {
         }
     }
 
+    async function handleSendBiometricRequest() {
+        if (!selectedClient || biometricRequestMethods.length === 0) return;
+
+        setBiometricRequesting(true);
+        try {
+            await UserService.requestBiometricEnrollment(selectedClient.id, biometricRequestMethods);
+            toast.success('Notificación biométrica enviada');
+            setBiometricModalOpen(false);
+            setSelectedClient(null);
+            await loadData();
+        } catch (operationError: unknown) {
+            toast.error(getErrorMessage(operationError, 'No se pudo enviar la notificación biométrica'));
+        } finally {
+            setBiometricRequesting(false);
+        }
+    }
+
+    
     async function handleDeleteClient(clientId: string) {
         if (!window.confirm('¿Eliminar este cliente? Esta acción no se puede deshacer.')) return;
 
@@ -733,7 +756,7 @@ export default function CompanyManagementPage() {
         <div className="space-y-6 rounded-3xl border border-white/10 bg-white/5 p-6 md:p-8">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div>
-                    <p className="text-xs uppercase tracking-[0.3em] text-teal-300/80">{isAdvisor ? 'Tu empresa' : 'Detalle de empresa'}</p>
+                    <p className="text-xs uppercase tracking-[0.3em] text-teal-300/80">{isAdvisor ? '' : 'Detalle de empresa'}</p>
                     <div className="flex flex-row items-center gap-x-10">
                         <div className="flex flex-col">
                             <h2 className="mt-2 text-3xl font-semibold text-white">{currentCompany.nombre}</h2>
@@ -755,21 +778,10 @@ export default function CompanyManagementPage() {
                 </div>
 
                 <div className="flex flex-wrap gap-2">
-                    <Button variant="outline" className="w-auto px-4" onClick={() => downloadCsv(`${currentCompany.nombre}-empresa.csv`, [
-                        ['Nombre', 'NIT', 'Descripcion', 'Advisors', 'Clientes'],
-                        [currentCompany.nombre, currentCompany.nit ?? '', currentCompany.description ?? '', String(currentCompany.advisorCount ?? currentCompany.advisors?.length ?? 0), String(currentCompany.clientCount ?? currentCompany.clients?.length ?? 0)],
-                    ])}>
-                        <Download className="h-4 w-4" />
-                        Exportar CSV
-                    </Button>
-                    <Button variant="outline" className="w-auto px-4" onClick={() => window.print()}>
-                        <Printer className="h-4 w-4" />
-                        PDF / imprimir
-                    </Button>
                     {isAdmin && (
                         <Button className="w-auto px-4" onClick={() => navigate(`/companies/${currentCompany.id}/users/create`, { state: { empresaId: currentCompany.id } })}>
                             <UserPlus className="h-4 w-4" />
-                            Crear advisor
+                            Crear asesor
                         </Button>
                     )}
                     {isAdvisor && (
@@ -780,36 +792,24 @@ export default function CompanyManagementPage() {
                     )}
                 </div>
             </div>
-            <div className="grid gap-4 md:grid-cols-3">
-                <div className="rounded-2xl border border-white/10 bg-black/10 p-4">
-                    <div className="flex items-center gap-2 text-slate-400">
-                        <ShieldCheck className="h-4 w-4" />
-                        Estado operativo
-                    </div>
-                    <p className="mt-2 text-lg font-semibold text-white">{getCompanyActivity(currentCompany)}</p>
-                </div>
-                <div className="rounded-2xl border border-white/10 bg-black/10 p-4">
-                    <div className="flex items-center gap-2 text-slate-400">
-                        <Users className="h-4 w-4" />
-                        Cobertura
-                    </div>
-                    <p className="mt-2 text-lg font-semibold text-white">{(currentCompany.advisorCount ?? currentCompany.advisors?.length ?? 0) + (currentCompany.clientCount ?? currentCompany.clients?.length ?? 0)} perfiles activos</p>
-                </div>
-                <div className="rounded-2xl border border-white/10 bg-black/10 p-4">
-                    <div className="flex items-center gap-2 text-slate-400">
-                        <Building2 className="h-4 w-4" />
-                        NIT empresa
-                    </div>
-                    <p className="mt-2 text-lg font-semibold text-white">{currentCompany.nit || 'N/D'}</p>
-                </div>
-            </div>
 
             <div className="space-y-6">
                 {isAdmin && (
                     <section className="space-y-4 rounded-2xl border border-white/10 bg-black/10 p-5">
-                        <div className="flex items-center gap-2">
-                            <Users className="h-5 w-5 text-teal-300" />
-                            <h3 className="text-lg font-semibold text-white">Advisors vinculados</h3>
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                            <div className="flex items-center gap-2">
+                                <Users className="h-5 w-5 text-teal-300" />
+                                <h3 className="text-lg font-semibold text-white">Advisors vinculados</h3>
+                            </div>
+                            <div className="flex gap-2">
+                                <Button variant="outline" className="h-9 w-auto px-3 text-xs" onClick={() => downloadCsv(`${currentCompany.nombre}-advisors.csv`, [
+                                    ['Nombre', 'Email', 'Documento', 'Tipo documento', 'Creado'],
+                                    ...(currentCompany.advisors || []).map((advisor) => [advisor.name, advisor.email, advisor.documentNumber ?? '', advisor.documentType ?? '', formatDate(advisor.createdAt)]),
+                                ])}>
+                                    <Download className="h-4 w-4" />
+                                    Exportar
+                                </Button>
+                            </div>
                         </div>
 
                         <div className="flex flex-col gap-3 md:flex-row">
@@ -951,76 +951,35 @@ export default function CompanyManagementPage() {
                                         <td className="px-4 py-3">{client.birthDate ? formatDate(client.birthDate) : 'N/D'}</td>
                                         <td className="px-4 py-3">{formatDate(client.createdAt)}</td>
                                         <td className="px-4 py-3">
-                                            <Menu as="div" className="relative inline-block text-left">
-                                        <Menu.Button className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-black/10 px-3 py-2 text-sm text-slate-200 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-teal-500/50">
-                                            <MoreHorizontal className="h-4 w-4" />
-                                            Acciones
-                                        </Menu.Button>
-                                        <Transition as={Fragment} enter="transition ease-out duration-100" enterFrom="transform opacity-0 scale-95" enterTo="transform opacity-100 scale-100" leave="transition ease-in duration-75" leaveFrom="transform opacity-100 scale-100" leaveTo="transform opacity-0 scale-95">
-                                            <Menu.Items className="absolute right-0 z-20 mt-2 w-56 origin-top-right rounded-2xl border border-white/10 bg-[#111827] p-2 shadow-2xl focus:outline-none">
-                                                <Menu.Item>
-                                                    {({ active }) => (
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => openClientEditor(client)}
-                                                            className={`flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm ${active ? 'bg-white/10 text-white' : 'text-slate-300'}`}
-                                                        >
-                                                            <Eye className="h-4 w-4" />
-                                                            Ver detalles
-                                                        </button>
-                                                    )}
-                                                </Menu.Item>
-                                                <Menu.Item>
-                                                    {({ active }) => (
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => openClientEditor(client)}
-                                                            className={`flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm ${active ? 'bg-white/10 text-white' : 'text-slate-300'}`}
-                                                        >
-                                                            <FileText className="h-4 w-4" />
-                                                            Editar información
-                                                        </button>
-                                                    )}
-                                                </Menu.Item>
-                                                <Menu.Item>
-                                                    {({ active }) => (
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => toast('Registro de seguimiento pendiente de integración')}
-                                                            className={`flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm ${active ? 'bg-white/10 text-white' : 'text-slate-300'}`}
-                                                        >
-                                                            <CheckCircle2 className="h-4 w-4" />
-                                                            Registrar seguimiento
-                                                        </button>
-                                                    )}
-                                                </Menu.Item>
-                                                <Menu.Item>
-                                                    {({ active }) => (
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => toast('Cambio de estado pendiente de integración')}
-                                                            className={`flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm ${active ? 'bg-white/10 text-white' : 'text-slate-300'}`}
-                                                        >
-                                                            <Filter className="h-4 w-4" />
-                                                            Cambiar estado
-                                                        </button>
-                                                    )}
-                                                </Menu.Item>
-                                                <Menu.Item>
-                                                    {({ active }) => (
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => handleDeleteClient(client.id)}
-                                                            className={`flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm ${active ? 'bg-red-500/10 text-red-300' : 'text-red-300'}`}
-                                                        >
-                                                            <Trash2 className="h-4 w-4" />
-                                                            Eliminar cliente
-                                                        </button>
-                                                    )}
-                                                </Menu.Item>
-                                            </Menu.Items>
-                                        </Transition>
-                                    </Menu>
+                                            <div className="flex items-center gap-2">
+                                                <button
+                                                    type="button"
+                                                    title="Editar cliente"
+                                                    aria-label="Editar cliente"
+                                                    className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/5 text-slate-400 transition hover:border-sky-400/40 hover:bg-sky-500/10 hover:text-sky-200"
+                                                    onClick={() => openClientEditor(client)}
+                                                >
+                                                    <Info className="h-4 w-4" />
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    title="Solicitar verificación biométrica"
+                                                    aria-label="Solicitar verificación biométrica"
+                                                    className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/5 text-slate-400 transition hover:border-teal-400/40 hover:bg-teal-500/10 hover:text-teal-200"
+                                                    onClick={() => openBiometricRequestModal(client)}
+                                                >
+                                                    <FingerprintPattern className="h-4 w-4" />
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    title="Eliminar cliente"
+                                                    aria-label="Eliminar cliente"
+                                                    className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/5 text-slate-400 transition hover:border-red-400/40 hover:bg-red-500/10 hover:text-red-200"
+                                                    onClick={() => handleDeleteClient(client.id)}
+                                                >
+                                                    <Trash className="h-4 w-4" />
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))}
@@ -1150,7 +1109,7 @@ export default function CompanyManagementPage() {
                                                 Logotipo
                                                 <span title="Formatos permitidos: PNG, JPG, WEBP. Tamano maximo 5MB." className="text-xs text-slate-500">(info)</span>
                                             </label>
-                                            <Input type="file" accept="image/png,image/jpeg,image/webp" onChange={handleLogoChange as any} error={companyLogoError} />
+                                            <Input type="file" accept="image/png,image/jpeg,image/webp" onChange={handleLogoChange} error={companyLogoError} />
                                             {newCompanyLogoUrl && <img src={newCompanyLogoUrl} alt="Vista previa logo" className="mt-2 h-16 w-16 rounded-xl border border-white/20 object-cover" />}
                                         </div>
                                         <div>
@@ -1267,6 +1226,31 @@ export default function CompanyManagementPage() {
                                                     </div>
                                                 </section>
                                             </div>
+
+                                            <section className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                                                <div className="flex items-center justify-between gap-3">
+                                                    <p className="text-sm text-slate-400">Historial de auditoría</p>
+                                                    <span className="text-xs uppercase tracking-[0.18em] text-slate-500">{modalAuditLogs.length} eventos</span>
+                                                </div>
+                                                {modalAuditLogsError ? (
+                                                    <p className="mt-3 text-sm text-amber-200">{modalAuditLogsError}</p>
+                                                ) : modalAuditLogs.length > 0 ? (
+                                                    <div className="mt-3 space-y-2">
+                                                        {modalAuditLogs.map((log) => (
+                                                            <div key={log.id} className="rounded-xl border border-white/10 bg-black/10 p-3 text-sm text-slate-300">
+                                                                <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                                                                    <p className="font-medium text-white">{log.action}</p>
+                                                                    <p className="text-xs text-slate-500">{formatDate(log.createdAt)}</p>
+                                                                </div>
+                                                                <p className="mt-1 text-xs text-slate-400">{log.user?.name ?? 'Sistema'} · {log.user?.email ?? 'N/D'}</p>
+                                                                {log.details && <p className="mt-2 text-xs text-slate-500">{log.details}</p>}
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                ) : (
+                                                    <p className="mt-3 text-sm text-slate-500">No hay eventos registrados para esta empresa.</p>
+                                                )}
+                                            </section>
                                         </div>
                                     )}
                                 </Dialog.Panel>
@@ -1289,7 +1273,7 @@ export default function CompanyManagementPage() {
                                     <div className="mb-5 flex items-start justify-between gap-4">
                                         <div>
                                             <Dialog.Title className="text-2xl font-semibold text-white">{selectedClient?.name ?? 'Cliente'}</Dialog.Title>
-                                            <p className="mt-1 text-sm text-slate-400">Edición rápida con validación en tiempo real.</p>
+                                            <p className="mt-1 text-sm text-slate-400">Visualiza y modifica los datos del cliente.</p>
                                         </div>
                                         <button onClick={() => setClientModalOpen(false)} className="rounded-xl border border-white/10 p-2 text-slate-300 hover:bg-white/10">
                                             <X className="h-5 w-5" />
@@ -1297,13 +1281,9 @@ export default function CompanyManagementPage() {
                                     </div>
 
                                     <div className="grid gap-4 md:grid-cols-2">
-                                        <div>
+                                        <div className="md:col-span-2">
                                             <label className="mb-2 block text-sm text-slate-300">Nombre</label>
                                             <Input value={clientDraft.name} onChange={(e) => updateClientDraft('name', e.target.value)} error={clientErrors.name} />
-                                        </div>
-                                        <div>
-                                            <label className="mb-2 block text-sm text-slate-300">Documento</label>
-                                            <Input value={clientDraft.documentNumber} onChange={(e) => updateClientDraft('documentNumber', e.target.value)} error={clientErrors.documentNumber} />
                                         </div>
                                         <div>
                                             <label className="mb-2 block text-sm text-slate-300">Dirección</label>
@@ -1312,19 +1292,6 @@ export default function CompanyManagementPage() {
                                         <div>
                                             <label className="mb-2 block text-sm text-slate-300">Telefono</label>
                                             <Input value={clientDraft.phone} onChange={(e) => updateClientDraft('phone', e.target.value)} error={clientErrors.phone} />
-                                        </div>
-                                        <div>
-                                            <label className="mb-2 block text-sm text-slate-300">Fecha de nacimiento</label>
-                                            <Input type="date" value={clientDraft.birthDate} onChange={(e) => updateClientDraft('birthDate', e.target.value)} />
-                                        </div>
-                                        <div>
-                                            <label className="mb-2 block text-sm text-slate-300">Edad</label>
-                                            <Input type="number" min={18} max={120} value={clientDraft.age} onChange={(e) => updateClientDraft('age', Number(e.target.value))} error={clientErrors.age} />
-                                        </div>
-                                        <div>
-                                            <label className="mb-2 block text-sm text-slate-300">Foto de perfil</label>
-                                            <Input type="file" accept="image/png,image/jpeg,image/webp" onChange={handleClientPhotoChange as any} />
-                                            {clientDraft.profilePhotoUrl && <img src={clientDraft.profilePhotoUrl} alt="Vista previa" className="mt-2 h-14 w-14 rounded-lg border border-white/20 object-cover" />}
                                         </div>
                                         <div>
                                             <label className="mb-2 block text-sm text-slate-300">Tipo de documento</label>
@@ -1339,6 +1306,24 @@ export default function CompanyManagementPage() {
                                                 <option value="OTHER">Otro</option>
                                             </select>
                                         </div>
+                                        <div>
+                                            <label className="mb-2 block text-sm text-slate-300">Documento</label>
+                                            <Input value={clientDraft.documentNumber} onChange={(e) => updateClientDraft('documentNumber', e.target.value)} error={clientErrors.documentNumber} />
+                                        </div>
+                                        <div>
+                                            <label className="mb-2 block text-sm text-slate-300">Fecha de nacimiento</label>
+                                            <Input type="date" value={clientDraft.birthDate} onChange={(e) => updateClientDraft('birthDate', e.target.value)} />
+                                        </div>
+                                        <div>
+                                            <label className="mb-2 block text-sm text-slate-300">Edad</label>
+                                            <Input type="number" min={18} max={120} value={clientDraft.age} onChange={(e) => updateClientDraft('age', Number(e.target.value))} error={clientErrors.age} />
+                                        </div>
+                                        <div>
+                                            <label className="mb-2 block text-sm text-slate-300">Foto de perfil</label>
+                                            <Input type="file" accept="image/png,image/jpeg,image/webp" onChange={handleClientPhotoChange} />
+                                            {clientDraft.profilePhotoUrl && <img src={clientDraft.profilePhotoUrl} alt="Vista previa" className="mt-2 h-14 w-14 rounded-lg border border-white/20 object-cover" />}
+                                        </div>
+                                        
                                     </div>
 
                                     <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end">
@@ -1347,6 +1332,84 @@ export default function CompanyManagementPage() {
                                         </Button>
                                         <Button className="sm:w-auto" onClick={() => void handleSaveClient()} isLoading={clientSaving}>
                                             Guardar cambios
+                                        </Button>
+                                    </div>
+                                </Dialog.Panel>
+                            </Transition.Child>
+                        </div>
+                    </div>
+                </Dialog>
+            </Transition>
+
+            <Transition appear show={biometricModalOpen} as={Fragment}>
+                <Dialog as="div" className="relative z-50" onClose={() => setBiometricModalOpen(false)}>
+                    <Transition.Child as={Fragment} enter="ease-out duration-200" enterFrom="opacity-0" enterTo="opacity-100" leave="ease-in duration-150" leaveFrom="opacity-100" leaveTo="opacity-0">
+                        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm" />
+                    </Transition.Child>
+
+                    <div className="fixed inset-0 overflow-y-auto">
+                        <div className="flex min-h-full items-center justify-center p-4">
+                            <Transition.Child as={Fragment} enter="ease-out duration-200" enterFrom="opacity-0 scale-95" enterTo="opacity-100 scale-100" leave="ease-in duration-150" leaveFrom="opacity-100 scale-100" leaveTo="opacity-0 scale-95">
+                                <Dialog.Panel className="w-full max-w-xl rounded-3xl border border-white/10 bg-[#0f172a] p-6 shadow-2xl">
+                                    <div className="mb-5 flex items-start justify-between gap-4">
+                                        <div>
+                                            <Dialog.Title className="text-2xl font-semibold text-white">Solicitar verificación biométrica</Dialog.Title>
+                                            <p className="mt-1 text-sm text-slate-400">Selecciona el método biometrico que completará el cliente.</p>
+                                        </div>
+                                        <button onClick={() => setBiometricModalOpen(false)} className="rounded-xl border border-white/10 p-2 text-slate-300 hover:bg-white/10" type="button" aria-label="Cerrar modal de solicitud biométrica">
+                                            <X className="h-5 w-5" />
+                                        </button>
+                                    </div>
+
+                                    <div className="space-y-4">
+                                        <div>
+                                            <label className="mb-2 block text-sm text-slate-300">Cliente</label>
+                                            <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-200">
+                                                <p className="font-medium text-white">{selectedClient?.name ?? 'Cliente'}</p>
+                                                <p className="text-slate-400">{selectedClient?.email}</p>
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <label className="mb-2 block text-sm text-slate-300">Tipo de verificación</label>
+                                            <div className="space-y-3">
+                                                {(['DACTILAR', 'FACIAL', 'OCULAR'] as BiometricMethod[]).map((method) => (
+                                                    <label
+                                                        key={method}
+                                                        className="flex cursor-pointer items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-200 hover:bg-white/10 transition-colors"
+                                                    >
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={biometricRequestMethods.includes(method)}
+                                                            onChange={(e) => {
+                                                                if (e.target.checked) {
+                                                                    setBiometricRequestMethods((prev) => [...prev, method]);
+                                                                } else {
+                                                                    setBiometricRequestMethods((prev) => prev.filter((m) => m !== method));
+                                                                }
+                                                            }}
+                                                            className="h-4 w-4 rounded border-white/20 bg-white/5 text-teal-500 focus:ring-teal-500/50"
+                                                        />
+                                                        <span className="font-medium text-white">
+                                                            {method === 'DACTILAR' ? 'Dactilar' : method === 'FACIAL' ? 'Facial' : 'Ocular'}
+                                                        </span>
+                                                    </label>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        <div className="rounded-2xl border border-teal-400/20 bg-teal-500/10 px-4 py-3 text-sm text-teal-100">
+                                            Se enviará un enlace por correo para registrar o verificar este método biométrico.
+                                        </div>
+                                    </div>
+
+                                    <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end">
+                                        <Button variant="outline" className="sm:w-auto" onClick={() => setBiometricModalOpen(false)} type="button">
+                                            Cancelar
+                                        </Button>
+                                        <Button className="sm:w-auto" onClick={() => void handleSendBiometricRequest()} isLoading={biometricRequesting} type="button">
+                                            <Send className="h-4 w-4" />
+                                            Enviar notificación
                                         </Button>
                                     </div>
                                 </Dialog.Panel>

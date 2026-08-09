@@ -1,5 +1,7 @@
 import api from '../lib/api';
-import type { DocumentType, Empresa, User } from '../types/auth';
+import type { BiometricMethod, DocumentType, Empresa, User } from '../types/auth';
+
+export type { BiometricMethod } from '../types/auth';
 
 export interface CreateUserData {
     email: string;
@@ -73,6 +75,11 @@ export const UserService = {
         return data.user;
     },
 
+    requestBiometricEnrollment: async (id: string, biometricMethods: BiometricMethod[]) => {
+        const { data } = await api.post<{ user: User }>(`/users/${id}/biometric-request`, { biometricMethods });
+        return data.user;
+    },
+
     remove: async (id: string) => {
         const { data } = await api.delete<{ user: User }>(`/users/${id}`);
         return data.user;
@@ -117,4 +124,5 @@ export const UserService = {
         const { data } = await api.post<{ user: User }>(`/users/${userId}/login-as`);
         return data.user;
     },
+
 };
