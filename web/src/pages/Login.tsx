@@ -1,8 +1,8 @@
 import axios from 'axios';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
-import { getBiometricMethodLabel, resolveBiometricMethods, type BiometricMethod } from '../shared/biometricMethods';
+import type { BiometricMethod } from '../shared/biometricMethods';
 
 type DocumentType = 'CC' | 'DNI' | 'PASSPORT' | 'OTHER';
 
@@ -20,6 +20,7 @@ type ClientProfile = {
   biometricEnrollmentRequired?: boolean;
   createdAt: string;
   updatedAt: string;
+  profilePhotoUrl?: string | null;
 };
 
 const documentOptions: Array<{ value: DocumentType; label: string }> = [
@@ -43,14 +44,6 @@ export default function Login() {
   const [fieldErrors, setFieldErrors] = useState(initialFieldErrors);
   const [formError, setFormError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [profile, setProfile] = useState<ClientProfile | null>(null);
-
-  useEffect(() => {
-    if (profile) {
-      const firstAction = document.getElementById('confirm-data');
-      firstAction?.focus();
-    }
-  }, [profile]);
 
   const canSubmit = documentType !== '' && stripSpaces(documentNumber).length > 0 && !loading;
 
@@ -106,35 +99,33 @@ export default function Login() {
     setFormError('');
 
     try {
-      const { data } = await api.post<{ user: ClientProfile }>('/auth/client-verify', {
+      const { data } = await api.post<{ user: ClientProfile; sessionId?: string }>('/auth/client-verify', {
         documentType,
         documentNumber: documentNumber.trim(),
       });
 
-      setProfile(data.user);
+      if (data.sessionId) {
+        localStorage.setItem('clientSessionId', data.sessionId);
+      }
+      localStorage.setItem('clientDocumentType', documentType);
+      localStorage.setItem('clientDocumentNumber', documentNumber.trim());
+
+      navigate('/home', {
+        replace: true,
+        state: {
+          profile: data.user,
+          documentType,
+          documentNumber: documentNumber.trim(),
+        },
+      });
     } catch (error: unknown) {
       const message = axios.isAxiosError(error)
         ? error.response?.data?.error || 'No encontramos un cliente con esos datos. Revisa e intenta otra vez.'
         : 'No encontramos un cliente con esos datos. Revisa e intenta otra vez.';
-      setProfile(null);
       setFormError(message);
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleConfirm = () => {
-    const biometricMethods = resolveBiometricMethods(profile ?? undefined);
-
-    localStorage.setItem('clientBiometricMethods', JSON.stringify(biometricMethods));
-    localStorage.setItem('clientBiometricEnrollmentRequired', String(Boolean(profile?.biometricEnrollmentRequired)));
-
-    navigate('/verification', {
-      state: {
-        biometricMethods,
-        biometricEnrollmentRequired: profile?.biometricEnrollmentRequired ?? false,
-      },
-    });
   };
 
 
@@ -147,137 +138,71 @@ export default function Login() {
         </div>
 
         <div className="px-6 py-6 sm:px-8 sm:py-8">
-          {!profile ? (
-            <form className="space-y-5" onSubmit={handleSubmit} noValidate>
-              <div className="space-y-2">
-                <label htmlFor="documentType" className="block text-sm font-semibold text-slate-800">
-                  Tipo de documento
-                </label>
-                <select
-                  id="documentType"
-                  value={documentType}
-                  onChange={(event) => handleDocumentTypeChange(event.target.value)}
-                  onBlur={(event) => updateFieldError('documentType', event.target.value)}
-                  aria-invalid={Boolean(fieldErrors.documentType)}
-                  aria-describedby={fieldErrors.documentType ? 'documentType-error' : undefined}
-                  className="h-12 w-full rounded-xl border border-slate-300 bg-white px-4 text-base text-slate-900 shadow-sm outline-none transition focus:border-slate-500 focus:ring-4 focus:ring-slate-200"
-                >
-                  <option value="">Seleccione una opción</option>
-                  {documentOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-                {fieldErrors.documentType ? (
-                  <p className="text-sm font-medium text-red-700" id="documentType-error" role="alert">
-                    {fieldErrors.documentType}
-                  </p>
-                ) : null}
-              </div>
-
-              <div className="space-y-2">
-                <label htmlFor="documentNumber" className="block text-sm font-semibold text-slate-800">
-                  Número de documento
-                </label>
-                <input
-                  id="documentNumber"
-                  type="text"
-                  inputMode="numeric"
-                  autoComplete="off"
-                  value={documentNumber}
-                  onChange={(event) => handleDocumentNumberChange(event.target.value)}
-                  onBlur={(event) => updateFieldError('documentNumber', event.target.value)}
-                  aria-invalid={Boolean(fieldErrors.documentNumber)}
-                  aria-describedby={fieldErrors.documentNumber ? 'documentNumber-error' : undefined}
-                  className="h-12 w-full rounded-xl border border-slate-300 bg-white px-4 text-base text-slate-900 shadow-sm outline-none transition focus:border-slate-500 focus:ring-4 focus:ring-slate-200"
-                />
-                {fieldErrors.documentNumber ? (
-                  <p className="text-sm font-medium text-red-700" id="documentNumber-error" role="alert">
-                    {fieldErrors.documentNumber}
-                  </p>
-                ) : null}
-              </div>
-
-              {formError ? (
-                <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-base text-red-800" role="alert">
-                  {formError}
+          <form className="space-y-5" onSubmit={handleSubmit} noValidate>
+            <div className="space-y-2">
+              <label htmlFor="documentType" className="block text-sm font-semibold text-slate-800">
+                Tipo de documento
+              </label>
+              <select
+                id="documentType"
+                value={documentType}
+                onChange={(event) => handleDocumentTypeChange(event.target.value)}
+                onBlur={(event) => updateFieldError('documentType', event.target.value)}
+                aria-invalid={Boolean(fieldErrors.documentType)}
+                aria-describedby={fieldErrors.documentType ? 'documentType-error' : undefined}
+                className="h-12 w-full rounded-xl border border-slate-300 bg-white px-4 text-base text-slate-900 shadow-sm outline-none transition focus:border-slate-500 focus:ring-4 focus:ring-slate-200"
+              >
+                <option value="">Seleccione una opción</option>
+                {documentOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              {fieldErrors.documentType ? (
+                <p className="text-sm font-medium text-red-700" id="documentType-error" role="alert">
+                  {fieldErrors.documentType}
                 </p>
               ) : null}
+            </div>
 
-              <button
-                className="inline-flex h-12 min-w-40 items-center justify-center rounded-xl bg-slate-900 px-5 text-base font-semibold text-white shadow-sm transition hover:bg-slate-800 focus:outline-none focus:ring-4 focus:ring-slate-300 disabled:cursor-not-allowed disabled:opacity-50"
-                type="submit"
-                disabled={!canSubmit}
-              >
-                {loading ? 'Buscando...' : 'Ingresar'}
-              </button>
-            </form>
-          ) : (
-            <section className="space-y-6" aria-live="polite">
-              <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-800" role="status">
-                Encontramos su información. Revísela con calma.
-              </div>
+            <div className="space-y-2">
+              <label htmlFor="documentNumber" className="block text-sm font-semibold text-slate-800">
+                Número de documento
+              </label>
+              <input
+                id="documentNumber"
+                type="text"
+                inputMode="numeric"
+                autoComplete="off"
+                value={documentNumber}
+                onChange={(event) => handleDocumentNumberChange(event.target.value)}
+                onBlur={(event) => updateFieldError('documentNumber', event.target.value)}
+                aria-invalid={Boolean(fieldErrors.documentNumber)}
+                aria-describedby={fieldErrors.documentNumber ? 'documentNumber-error' : undefined}
+                className="h-12 w-full rounded-xl border border-slate-300 bg-white px-4 text-base text-slate-900 shadow-sm outline-none transition focus:border-slate-500 focus:ring-4 focus:ring-slate-200"
+              />
+              {fieldErrors.documentNumber ? (
+                <p className="text-sm font-medium text-red-700" id="documentNumber-error" role="alert">
+                  {fieldErrors.documentNumber}
+                </p>
+              ) : null}
+            </div>
 
-              <dl className="grid gap-4 sm:grid-cols-2">
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
-                  <dt className="text-sm font-semibold text-slate-700">Nombre completo</dt>
-                  <dd className="mt-1 text-base font-medium text-slate-900">{profile.name}</dd>
-                </div>
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
-                  <dt className="text-sm font-semibold text-slate-700">Tipo de documento</dt>
-                  <dd className="mt-1 text-base font-medium text-slate-900">{profile.documentType || 'No registrado'}</dd>
-                </div>
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
-                  <dt className="text-sm font-semibold text-slate-700">Número de documento</dt>
-                  <dd className="mt-1 text-base font-medium text-slate-900">{profile.documentNumber || 'No registrado'}</dd>
-                </div>
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
-                  <dt className="text-sm font-semibold text-slate-700">Dirección</dt>
-                  <dd className="mt-1 text-base font-medium text-slate-900">{profile.address || 'No registrada'}</dd>
-                </div>
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
-                  <dt className="text-sm font-semibold text-slate-700">Correo electrónico</dt>
-                  <dd className="mt-1 text-base font-medium text-slate-900">{profile.email}</dd>
-                </div>
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
-                  <dt className="text-sm font-semibold text-slate-700">Tipo de biometría</dt>
-                  <dd className="mt-1 text-base font-medium text-slate-900">
-                    {resolveBiometricMethods(profile).map(getBiometricMethodLabel).join(' · ')}
-                  </dd>
-                </div>
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
-                  <dt className="text-sm font-semibold text-slate-700">Estado de registro</dt>
-                  <dd className="mt-1 text-base font-medium text-slate-900">
-                    {profile.biometricEnrollmentRequired ? 'Pendiente de completar' : 'Completado'}
-                  </dd>
-                </div>
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
-                  <dt className="text-sm font-semibold text-slate-700">Fecha de registro</dt>
-                  <dd className="mt-1 text-base font-medium text-slate-900">{new Date(profile.createdAt).toLocaleDateString('es-CO')}</dd>
-                </div>
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
-                  <dt className="text-sm font-semibold text-slate-700">Última actualización</dt>
-                  <dd className="mt-1 text-base font-medium text-slate-900">{new Date(profile.updatedAt).toLocaleDateString('es-CO')}</dd>
-                </div>
-              </dl>
+            {formError ? (
+              <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-base text-red-800" role="alert">
+                {formError}
+              </p>
+            ) : null}
 
-              <span className="block text-sm font-semibold text-slate-700">
-                Si alguno de estos datos es incorrecto o no corresponden a usted, por favor comuníquese con nuestro equipo de soporte.
-              </span>
-
-              <div className="flex flex-col gap-3 sm:flex-row">
-                <button
-                  id="confirm-data"
-                  className="inline-flex h-12 min-w-44 items-center justify-center rounded-xl bg-slate-900 px-5 text-base font-semibold text-white shadow-sm transition hover:bg-slate-800 focus:outline-none focus:ring-4 focus:ring-slate-300"
-                  type="button"
-                  onClick={handleConfirm}
-                >
-                  Verificar mis datos
-                </button>
-              </div>
-            </section>
-          )}
+            <button
+              className="inline-flex h-12 min-w-40 items-center justify-center rounded-xl bg-slate-900 px-5 text-base font-semibold text-white shadow-sm transition hover:bg-slate-800 focus:outline-none focus:ring-4 focus:ring-slate-300 disabled:cursor-not-allowed disabled:opacity-50"
+              type="submit"
+              disabled={!canSubmit}
+            >
+              {loading ? 'Buscando...' : 'Ingresar'}
+            </button>
+          </form>
         </div>
       </section>
     </main>

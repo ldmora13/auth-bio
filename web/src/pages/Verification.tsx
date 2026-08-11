@@ -5,11 +5,13 @@ import api from '../lib/api';
 import { FingerprintSimulator } from "../components/verification/Finger";
 import { FacialSimulator } from "../components/verification/Facial";
 import { IrisSimulator } from "../components/verification/Iris";
-import { getBiometricMethodLabel, normalizeBiometricMethods, type BiometricMethod } from "../shared/biometricMethods";
+import { normalizeBiometricMethods, type BiometricMethod } from "../shared/biometricMethods";
 
 type VerificationLocationState = {
   biometricMethods?: BiometricMethod[] | null;
   biometricEnrollmentRequired?: boolean;
+  documentType?: string;
+  documentNumber?: string;
 };
 
 const biometricComponentMap = {
@@ -24,6 +26,8 @@ export default function Verification() {
   const location = useLocation();
   const navigate = useNavigate();
   const state = location.state as VerificationLocationState | null;
+  const documentType = state?.documentType ?? localStorage.getItem('clientDocumentType') ?? undefined;
+  const documentNumber = state?.documentNumber ?? localStorage.getItem('clientDocumentNumber') ?? undefined;
   const queryMethods = useMemo(() => {
     const methodsParam = new URLSearchParams(location.search).get('methods');
 
@@ -54,11 +58,11 @@ export default function Verification() {
     () => normalizeBiometricMethods(queryMethods ?? state?.biometricMethods ?? storedMethods ?? ['DACTILAR']),
     [queryMethods, state?.biometricMethods, storedMethods]
   );
-  const enrollmentRequired = state?.biometricEnrollmentRequired ?? localStorage.getItem('clientBiometricEnrollmentRequired') === 'true';
 
   const [currentMethodIndex, setCurrentMethodIndex] = useState(0);
   const [completedMethods, setCompletedMethods] = useState<BiometricMethod[]>([]);
   const [enrollmentDone, setEnrollmentDone] = useState(false);
+  const [submissionError, setSubmissionError] = useState<string | null>(null);
 
   useEffect(() => {
     setCurrentMethodIndex(0);
@@ -85,16 +89,49 @@ export default function Verification() {
     try {
       await api.post('/auth/biometric-enrollment/complete', {
         completedMethods: biometricMethods,
+        documentType,
+        documentNumber,
       });
       setEnrollmentDone(true);
+      setSubmissionError(null);
     } catch (error) {
+      const status = axios.isAxiosError(error) ? error.response?.status : undefined;
       const message = axios.isAxiosError(error)
         ? error.response?.data?.error || 'No se pudo completar el registro biométrico.'
         : 'No se pudo completar el registro biométrico.';
+
+      if (status === 401 && documentType && documentNumber) {
+        try {
+          const { data } = await api.post<{ sessionId?: string }>('/auth/client-verify', {
+            documentType,
+            documentNumber,
+          });
+
+          if (data.sessionId) {
+            localStorage.setItem('clientSessionId', data.sessionId);
+          }
+
+          await api.post('/auth/biometric-enrollment/complete', {
+            completedMethods: biometricMethods,
+            documentType,
+            documentNumber,
+          });
+
+          setEnrollmentDone(true);
+          setSubmissionError(null);
+          return;
+        } catch (retryError) {
+          const retryMessage = axios.isAxiosError(retryError)
+            ? retryError.response?.data?.error || 'No se pudo completar el registro biométrico.'
+            : 'No se pudo completar el registro biométrico.';
+          setSubmissionError(retryMessage);
+          console.error(retryMessage);
+          return;
+        }
+      }
+
+      setSubmissionError(message);
       console.error(message);
-    } finally {
-      // Intentionally left blank: completion either succeeds and advances,
-      // or keeps the user on the current biometric screen for retry.
     }
   };
 
@@ -130,30 +167,11 @@ export default function Verification() {
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.95)_0%,rgba(226,232,240,0.9)_38%,rgba(241,245,249,1)_100%)] px-4 py-6 text-slate-900 sm:px-6 lg:px-8 lg:py-10">
       <section className="mx-auto grid w-full max-w-6xl gap-8">
-        <header className="space-y-4 text-center lg:text-left">
-          <span className="inline-flex items-center justify-center rounded-full border border-slate-200 bg-white/80 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 shadow-sm backdrop-blur">
-            Verificación biométrica
-          </span>
-          <div className="space-y-3">
-            <h1 className="text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl lg:text-5xl">
-              Confirme su identidad
-            </h1>
-            <p className="mx-auto max-w-xl text-sm text-slate-500 lg:mx-0">
-              {enrollmentRequired
-                ? 'Debe completar todos los métodos biométricos asignados antes de continuar.'
-                : 'Complete los métodos asignados para validar su acceso.'}
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2 justify-center lg:justify-start">
-            {biometricMethods.map((method) => (
-              <span key={method} className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] ${completedMethods.includes(method) ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>
-                {getBiometricMethodLabel(method)}
-              </span>
-            ))}
-          </div>
-        </header>
-
-        <div className="flex min-h-155 items-center justify-center rounded-4xl border border-slate-200 bg-white/90 p-4 shadow-[0_24px_80px_rgba(15,23,42,0.10)] backdrop-blur sm:p-8">
+          {submissionError ? (
+            <div className="max-w-2xl rounded-3xl border border-red-200 bg-red-50 px-6 py-5 text-red-800 shadow-sm">
+              {submissionError}
+            </div>
+          ) : null}
           {BiometricComponent ? (
             <div className="flex w-full justify-center">
               <BiometricComponent onComplete={handleComplete} />
@@ -163,7 +181,6 @@ export default function Verification() {
               No se encontró un tipo biométrico válido para este cliente. Contacte al asesor.
             </div>
           )}
-        </div>
       </section>
     </main>
   );

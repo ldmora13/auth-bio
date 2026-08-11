@@ -134,9 +134,9 @@ export const EmailService = {
             ? (payload.companyLogoUrl.startsWith('http') ? payload.companyLogoUrl : `${normalizedPortalUrl}${payload.companyLogoUrl}`)
             : null;
 
-        const verificationUrl = new URL(`${normalizedPortalUrl}/verification`);
+        const verificationUrl = new URL(`${normalizedPortalUrl}/home`);
         verificationUrl.searchParams.set('clientId', payload.id);
-        verificationUrl.searchParams.set('methods', uniqueValidMethods.join(','));
+        verificationUrl.searchParams.set('flow', 'quick-link');
         const verificationLink = verificationUrl.toString();
 
         const biometricLabels = uniqueValidMethods.map((m) => biometricMethodLabels[m]).join(', ');

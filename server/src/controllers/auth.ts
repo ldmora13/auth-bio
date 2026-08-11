@@ -96,11 +96,45 @@ export const verifyClientData = catchAsync(async (req: Request, res: Response) =
     res.status(200).json({ user: userWithoutPassword });
 });
 
-export const completeBiometricEnrollment = catchAsync(async (req: Request, res: Response) => {
-    const { completedMethods } = req.body;
-    const currentUser = res.locals.user;
+export const getClientById = catchAsync(async (req: Request, res: Response) => {
+    const { id } = req.params;
 
-    const user = await userService.completeBiometricEnrollment(currentUser.id, completedMethods);
+    const user = await userService.getUserById(id);
+
+    if (user.role !== 'CLIENT') {
+        throw new AppError('Client not found', 404);
+    }
+
+    const { password: _, ...userWithoutPassword } = user;
+    res.status(200).json({ user: userWithoutPassword });
+});
+
+export const completeBiometricEnrollment = catchAsync(async (req: Request, res: Response) => {
+    const { completedMethods, documentType, documentNumber } = req.body;
+    const sessionId = req.cookies.auth_session ?? lucia.readBearerToken(req.headers.authorization ?? "");
+
+    let currentUserId: string | null = null;
+
+    if (sessionId) {
+        const { session, user } = await lucia.validateSession(sessionId);
+        if (session && user) {
+            currentUserId = user.id;
+        }
+    }
+
+    if (!currentUserId && documentType && documentNumber) {
+        const normalizedDocumentNumber = documentNumber.trim();
+        const user = await userService.findClientByDocument(documentType, normalizedDocumentNumber);
+        if (user) {
+            currentUserId = user.id;
+        }
+    }
+
+    if (!currentUserId) {
+        throw new AppError('Unauthorized', 401);
+    }
+
+    const user = await userService.completeBiometricEnrollment(currentUserId, completedMethods);
 
     await AuditLogService.log({
         action: 'BIOMETRIC_ENROLLMENT_COMPLETED',

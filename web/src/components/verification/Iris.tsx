@@ -14,7 +14,7 @@ export interface IrisSimulatorProps extends BaseBiometricProps {}
 
 export function IrisSimulator({
   onComplete,
-  successRate = 0.85,
+  successRate = 0.99,
   disabled = false,
 }: IrisSimulatorProps) {
   const { videoRef, status: cameraStatus, errorMessage, requestCamera, stopCamera } = useCamera();
@@ -140,30 +140,27 @@ export function IrisSimulator({
         showRetry={cameraStatus === "ready" && phase === "error"}
         onRetry={handleManualRetry}
         overlay={
-          <svg className={styles.overlaySvg} viewBox="0 0 220 120" aria-hidden="true">
+          <svg className={styles.overlaySvg} viewBox="0 0 220 140" aria-hidden="true">
             <defs>
               <mask id={maskId}>
-                <rect width="220" height="120" fill="white" />
-                <ellipse cx="58" cy="60" rx="38" ry="22" fill="black" />
-                <ellipse cx="162" cy="60" rx="38" ry="22" fill="black" />
+                <rect width="220" height="140" fill="white" />
+                <rect x="40" y="42" width="140" height="56" rx="4" fill="black" />
               </mask>
               <clipPath id={clipId}>
-                <rect x="10" y="20" width="200" height="80" />
+                <rect x="40" y="42" width="140" height="56" rx="4" />
               </clipPath>
             </defs>
 
-            <rect width="220" height="120" fill="rgba(15, 23, 42, 0.68)" mask={`url(#${maskId})`} />
-            <line className={styles.bridge} x1="98" y1="60" x2="122" y2="60" />
+            <rect width="220" height="140" fill="rgba(15, 23, 42, 0.78)" mask={`url(#${maskId})`} />
 
-            {/* Ojo izquierdo */}
-            <EyeGuide cx={58} locked={locked} />
-            {/* Ojo derecho */}
-            <EyeGuide cx={162} locked={locked} />
+            <rect className={styles.window} data-locked={locked} x="40" y="42" width="140" height="56" rx="4" />
+
+            <line className={styles.bridge} x1="98" y1="70" x2="122" y2="70" />
 
             {phase === "scanning" && (
               <g clipPath={`url(#${clipId})`}>
                 <g className={styles.sweepGroup}>
-                  <line className={styles.sweepLine} x1="110" y1="15" x2="110" y2="105" />
+                  <line className={styles.sweepLine} x1="110" y1="34" x2="110" y2="106" />
                 </g>
               </g>
             )}
@@ -183,27 +180,6 @@ export function IrisSimulator({
         </button>
       )}
     </div>
-  );
-}
-
-function EyeGuide({ cx, locked }: { cx: number; locked: boolean }) {
-  return (
-    <g>
-      <ellipse
-        className={styles.eyeOutline}
-        data-locked={locked}
-        cx={cx}
-        cy={60}
-        rx={38}
-        ry={22}
-      />
-      <circle className={styles.iris} data-locked={locked} cx={cx} cy={60} r={14} />
-      {/* Marcadores de alineación en las cuatro esquinas de cada guía ocular */}
-      <circle className={styles.marker} data-locked={locked} cx={cx - 38} cy={60} r={2.4} />
-      <circle className={styles.marker} data-locked={locked} cx={cx + 38} cy={60} r={2.4} />
-      <circle className={styles.marker} data-locked={locked} cx={cx} cy={38} r={2.4} />
-      <circle className={styles.marker} data-locked={locked} cx={cx} cy={82} r={2.4} />
-    </g>
   );
 }
 

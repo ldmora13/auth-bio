@@ -98,6 +98,8 @@ export const updateUserSchema = registry.register('UpdateUser', z.object({
 export const completeBiometricEnrollmentSchema = registry.register('CompleteBiometricEnrollment', z.object({
     body: z.object({
         completedMethods: z.array(z.enum(['OCULAR', 'FACIAL', 'DACTILAR'])).min(1, 'At least one biometric method is required'),
+        documentType: z.enum(['CC', 'DNI', 'PASSPORT', 'OTHER']).optional(),
+        documentNumber: z.string().min(1).optional(),
     }),
 }));
 

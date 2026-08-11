@@ -14,7 +14,7 @@ export interface FacialSimulatorProps extends BaseBiometricProps {}
 
 export function FacialSimulator({
   onComplete,
-  successRate = 0.85,
+  successRate = 0.99,
   disabled = false,
 }: FacialSimulatorProps) {
   const { videoRef, status: cameraStatus, errorMessage, requestCamera, stopCamera } = useCamera();

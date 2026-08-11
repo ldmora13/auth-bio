@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { BaseBiometricProps, BiometricPhase } from "../../shared/biometricTypes";
+import handImage from "../../assets/hand.png";
+import type { BaseBiometricProps, BiometricPhase, BiometricResult } from "../../shared/biometricTypes";
 import type { BiometricMethod } from "../../shared/biometricMethods";
 import styles from "./Finger.module.css";
 
-const SCAN_DURATION_MS = 3400;
-const RESULT_HOLD_MS = 1500;
+const SCAN_DURATION_MS = 1700;
+const RESULT_HOLD_MS = 450;
+const HAND_FADE_MS = 280;
+const MAX_AUTO_RETRIES = 1;
 const RIDGE_RADII = [38, 32, 26, 20, 14, 9] as const;
 
 type FingerKey = "thumb" | "index" | "middle" | "ring" | "pinky";
@@ -30,33 +33,30 @@ const FINGER_SEQUENCE: FingerStep[] = [
   { method: "DACTILAR", hand: "right", finger: "pinky", label: "Meñique derecho", short: "Meñique" },
 ];
 
-const HANDS = {
-  left: {
-    eyebrow: "Mano izquierda",
-    fingers: FINGER_SEQUENCE.slice(0, 5),
-  },
-  right: {
-    eyebrow: "Mano derecha",
-    fingers: FINGER_SEQUENCE.slice(5),
-  },
-} as const;
-
-const STATUS_COPY: Record<BiometricPhase, { title: string; sub: string }> = {
+const STATUS_COPY: Record<BiometricPhase | "remove" | "switching", { title: string; sub: string }> = {
   idle: {
-    title: "Selecciona el dedo activo",
-    sub: "Los 10 rectángulos deben completarse en orden",
+    title: "Coloca el dedo en el lector",
+    sub: "Mantén el dedo sobre el panel hasta que la lectura termine.",
   },
   scanning: {
     title: "Leyendo huella…",
-    sub: "Mantén el dedo sobre la zona resaltada",
+    sub: "Mantén la posición. No muevas el dedo.",
   },
   success: {
-    title: "Huella verificada",
-    sub: "Dedo completado correctamente. Pulsa continuar para seguir.",
+    title: "Huella registrada correctamente",
+    sub: "Quita el dedo del lector para continuar con el siguiente.",
   },
   error: {
     title: "No se pudo leer la huella",
-    sub: "Repite el mismo dedo hasta validarlo",
+    sub: "Quita el dedo y vuelve a colocarlo para reintentar.",
+  },
+  remove: {
+    title: "Retira el dedo del lector",
+    sub: "Una vez retirado, se preparará el siguiente dedo.",
+  },
+  switching: {
+    title: "Cambiando de mano…",
+    sub: "Preparando la siguiente mano. Por favor espera.",
   },
 };
 
@@ -64,131 +64,179 @@ export type FingerprintSimulatorProps = BaseBiometricProps;
 
 export function FingerprintSimulator({
   onComplete,
-  successRate = 0.85,
+  successRate = 0.88,
   disabled = false,
 }: FingerprintSimulatorProps) {
   const [phase, setPhase] = useState<BiometricPhase>("idle");
   const [progress, setProgress] = useState(0);
-  const [activeFingerIndex, setActiveFingerIndex] = useState(0);
-  const [completedFingerIndices, setCompletedFingerIndices] = useState<number[]>([]);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [completed, setCompleted] = useState<number[]>([]);
+  const [handTransitioning, setHandTransitioning] = useState(false);
   const [canContinue, setCanContinue] = useState(false);
 
   const rafRef = useRef<number | null>(null);
-  const scanStartedAtRef = useRef(0);
-  const totalStartedAtRef = useRef<number | null>(null);
-  const timeoutRef = useRef<number | null>(null);
+  const timeoutsRef = useRef<number[]>([]);
+  const scanStartRef = useRef<number>(0);
+  const totalStartRef = useRef<number | null>(null);
   const lastResultRef = useRef<{ success: boolean; durationMs: number } | null>(null);
+  const resultRef = useRef<BiometricResult | null>(null);
   const phaseRef = useRef<BiometricPhase>("idle");
-  const activeFingerIndexRef = useRef(0);
-  const hoverIntentRef = useRef(false);
+  const activeIndexRef = useRef(0);
+  const retriesRef = useRef(0);
+  const completedRef = useRef<number[]>([]);
+  const fingerOnPadRef = useRef(false);
+  const canContinueRef = useRef(false);
 
   useEffect(() => {
     phaseRef.current = phase;
   }, [phase]);
-
   useEffect(() => {
-    activeFingerIndexRef.current = activeFingerIndex;
-  }, [activeFingerIndex]);
+    activeIndexRef.current = activeIndex;
+  }, [activeIndex]);
+  useEffect(() => {
+    completedRef.current = completed;
+  }, [completed]);
+  useEffect(() => {
+    canContinueRef.current = canContinue;
+  }, [canContinue]);
 
   const clearTimers = useCallback(() => {
     if (rafRef.current !== null) {
       cancelAnimationFrame(rafRef.current);
       rafRef.current = null;
     }
-    if (timeoutRef.current !== null) {
-      window.clearTimeout(timeoutRef.current);
-      timeoutRef.current = null;
-    }
-  }, []);
-
-  const resetInteractionState = useCallback(() => {
-    hoverIntentRef.current = false;
-    setCanContinue(false);
+    timeoutsRef.current.forEach((t) => window.clearTimeout(t));
+    timeoutsRef.current = [];
   }, []);
 
   useEffect(() => clearTimers, [clearTimers]);
 
-  const resetCurrentStep = useCallback(() => {
+  const advanceAfterFingerRemoval = useCallback(() => {
+    const currentIndex = activeIndexRef.current;
     clearTimers();
-    lastResultRef.current = null;
-    resetInteractionState();
-    setProgress(0);
-    setPhase("idle");
-  }, [clearTimers, resetInteractionState]);
+    const now = performance.now();
+    if (!completedRef.current.includes(currentIndex)) {
+      setCompleted((prev) => (prev.includes(currentIndex) ? prev : [...prev, currentIndex]));
+    }
 
-  const advanceStep = useCallback(() => {
-    const currentIndex = activeFingerIndexRef.current;
     const nextIndex = currentIndex + 1;
-
-    clearTimers();
-    setCompletedFingerIndices((current) =>
-      current.includes(currentIndex) ? current : [...current, currentIndex]
-    );
-    resetInteractionState();
-
     if (nextIndex >= FINGER_SEQUENCE.length) {
-      onComplete(
-        lastResultRef.current ?? {
+      const finalResult = lastResultRef.current ?? {
           success: true,
-          durationMs: totalStartedAtRef.current
-            ? Math.round(performance.now() - totalStartedAtRef.current)
-            : Math.round(SCAN_DURATION_MS),
-        }
-      );
+          durationMs: totalStartRef.current
+            ? Math.round(now - totalStartRef.current)
+            : Math.round(SCAN_DURATION_MS * FINGER_SEQUENCE.length),
+        };
+      resultRef.current = finalResult;
+      setCanContinue(true);
+      setPhase("success");
       return;
     }
 
+    const currentHand = FINGER_SEQUENCE[currentIndex].hand;
+    const nextHand = FINGER_SEQUENCE[nextIndex].hand;
+    const handSwitch = currentHand !== nextHand;
+
     lastResultRef.current = null;
-    setActiveFingerIndex(nextIndex);
+    retriesRef.current = 0;
+    resultRef.current = null;
+    setCanContinue(false);
+    setProgress(0);
+
+    if (handSwitch) {
+      setHandTransitioning(true);
+      setPhase("idle");
+      const t1 = window.setTimeout(() => {
+        setActiveIndex(nextIndex);
+        const t2 = window.setTimeout(() => {
+          setHandTransitioning(false);
+        }, HAND_FADE_MS);
+        timeoutsRef.current.push(t2);
+      }, HAND_FADE_MS);
+      timeoutsRef.current.push(t1);
+    } else {
+      setActiveIndex(nextIndex);
+      setPhase("idle");
+    }
+  }, [clearTimers, onComplete]);
+
+  const resetCurrentStep = useCallback(() => {
+    clearTimers();
+    lastResultRef.current = null;
+    resultRef.current = null;
+    setCanContinue(false);
     setProgress(0);
     setPhase("idle");
-  }, [clearTimers, onComplete, resetInteractionState]);
+  }, [clearTimers]);
 
   const handleContinue = useCallback(() => {
-    if (!canContinue) return;
+    if (!resultRef.current) return;
 
-    advanceStep();
-  }, [advanceStep, canContinue]);
+    onComplete(resultRef.current);
+  }, [onComplete]);
 
   const startScan = useCallback(() => {
-    if (disabled || phaseRef.current === "scanning" || phaseRef.current === "success") return;
+    if (disabled) return;
+    if (phaseRef.current === "scanning" || phaseRef.current === "success") return;
+    if (handTransitioning) return;
 
     clearTimers();
-    setProgress(0);
+    if (totalStartRef.current === null) totalStartRef.current = performance.now();
+    scanStartRef.current = performance.now();
     setPhase("scanning");
-
-    if (totalStartedAtRef.current === null) {
-      totalStartedAtRef.current = performance.now();
-    }
-    scanStartedAtRef.current = performance.now();
+    setProgress(0);
 
     const tick = (now: number) => {
-      const elapsed = now - scanStartedAtRef.current;
+      const elapsed = now - scanStartRef.current;
       const pct = Math.min(100, (elapsed / SCAN_DURATION_MS) * 100);
       setProgress(pct);
 
       if (pct >= 100) {
-        const success = Math.random() < successRate;
-
-        if (success) {
-          clearTimers();
+        const pass = Math.random() < successRate;
+        if (pass) {
+          retriesRef.current = 0;
           lastResultRef.current = {
             success: true,
-            durationMs: totalStartedAtRef.current
-              ? Math.round(now - totalStartedAtRef.current)
+            durationMs: totalStartRef.current
+              ? Math.round(now - totalStartRef.current)
               : Math.round(SCAN_DURATION_MS),
           };
           setProgress(100);
           setPhase("success");
-          setCanContinue(true);
+
+          if (!fingerOnPadRef.current) {
+            const t = window.setTimeout(() => {
+              advanceAfterFingerRemoval();
+            }, RESULT_HOLD_MS);
+            timeoutsRef.current.push(t);
+          }
           return;
         }
 
+        retriesRef.current += 1;
         lastResultRef.current = null;
         setPhase("error");
-        timeoutRef.current = window.setTimeout(() => {
-          resetCurrentStep();
+
+        if (retriesRef.current > MAX_AUTO_RETRIES) {
+          const t = window.setTimeout(() => {
+            if (!fingerOnPadRef.current) {
+              advanceAfterFingerRemoval();
+            } else {
+              setPhase("success");
+            }
+          }, RESULT_HOLD_MS);
+          timeoutsRef.current.push(t);
+          return;
+        }
+
+        const t = window.setTimeout(() => {
+          if (!fingerOnPadRef.current) {
+            resetCurrentStep();
+          } else {
+            setPhase("idle");
+          }
         }, RESULT_HOLD_MS);
+        timeoutsRef.current.push(t);
         return;
       }
 
@@ -196,68 +244,108 @@ export function FingerprintSimulator({
     };
 
     rafRef.current = requestAnimationFrame(tick);
-  }, [clearTimers, disabled, resetCurrentStep, successRate]);
+  }, [advanceAfterFingerRemoval, disabled, handTransitioning, resetCurrentStep, successRate]);
 
-  useEffect(() => {
-    if (phase !== "idle" || disabled) return;
-    if (!hoverIntentRef.current) return;
-    if (activeFingerIndex >= FINGER_SEQUENCE.length) return;
+  const handleFingerOnPad = useCallback(() => {
+    if (disabled || handTransitioning) return;
+    fingerOnPadRef.current = true;
 
-    startScan();
-  }, [activeFingerIndex, disabled, phase, startScan]);
+    if (phaseRef.current === "idle" || phaseRef.current === "error") {
+      startScan();
+    }
+  }, [disabled, handTransitioning, startScan]);
 
-  const cancelScan = useCallback(() => {
-    hoverIntentRef.current = false;
+  const handleFingerOffPad = useCallback(() => {
+    fingerOnPadRef.current = false;
 
-    if (phaseRef.current !== "scanning") {
+    if (phaseRef.current === "success" && canContinueRef.current) {
       return;
     }
 
-    clearTimers();
-    setProgress(0);
-    setPhase("idle");
-  }, [clearTimers]);
+    if (phaseRef.current === "success") {
+      const t = window.setTimeout(() => advanceAfterFingerRemoval(), 180);
+      timeoutsRef.current.push(t);
+      return;
+    }
 
-  const activeStep = FINGER_SEQUENCE[activeFingerIndex];
-  const copy = STATUS_COPY[phase];
+    if (phaseRef.current === "scanning") {
+      clearTimers();
+      setProgress(0);
+      setPhase("idle");
+    }
+  }, [advanceAfterFingerRemoval, clearTimers]);
+
+  const activeStep = FINGER_SEQUENCE[activeIndex];
+  const currentHand: "left" | "right" = activeStep.hand;
+  const handDoneCount = completed.filter((i) => FINGER_SEQUENCE[i].hand === currentHand).length;
+
+  const statusKey: keyof typeof STATUS_COPY = handTransitioning
+    ? "switching"
+    : phase === "success" && fingerOnPadRef.current
+      ? "remove"
+      : phase;
+  const copy = STATUS_COPY[statusKey];
   const circumference = 2 * Math.PI * 44;
   const dashOffset = circumference - (progress / 100) * circumference;
-  const continueLabel = activeFingerIndex === FINGER_SEQUENCE.length - 1 ? "Continuar y finalizar" : "Continuar";
 
   return (
     <div className={styles.card} data-phase={phase}>
-      <div className={styles.header}>
-        <div>
-          <span className={styles.eyebrow}>Verificación · Huellas</span>
-          <h2 className={styles.title}>Registro de 10 huellas dactilares</h2>
-          <p className={styles.description}>
-            Ambas manos deben registrarse en orden. El dedo activo se resalta arriba y el lector inferior completa la lectura al pasar el cursor.
-          </p>
-        </div>
-        <div className={styles.pill}>
-          {activeFingerIndex + 1}/{FINGER_SEQUENCE.length}
-        </div>
+      <div className={styles.stageHeader}>
+        <span className={styles.handLabel}>
+          {currentHand === "left" ? "Mano izquierda" : "Mano derecha"} · {handDoneCount}/5
+        </span>
+        <strong className={styles.fingerLabel}>{activeStep.label}</strong>
       </div>
 
-      <div className={styles.handsGrid} aria-label="Ambas manos con zonas de huella">
-        {(["left", "right"] as const).map((hand) => (
-          <HandPanel
-            key={hand}
-            hand={hand}
-            activeFingerIndex={activeFingerIndex}
-            completedFingerIndices={completedFingerIndices}
-            disabled={disabled}
+      <section className={styles.handCard} aria-label={currentHand === "left" ? "Mano izquierda" : "Mano derecha"}>
+        <div
+          className={`${styles.handWrapper} ${
+            handTransitioning ? styles.handFadeOut : styles.handFadeIn
+          }`}
+          data-hand={currentHand}
+        >
+          <img
+            src={handImage}
+            alt={`Guía visual de la mano ${currentHand === "left" ? "izquierda" : "derecha"}`}
+            className={`${styles.handImage} ${currentHand === "left" ? styles.handMirror : ""}`}
+            draggable={false}
           />
-        ))}
-      </div>
+
+          {FINGER_SEQUENCE.filter((s) => s.hand === currentHand).map((step) => {
+            const globalIdx = FINGER_SEQUENCE.indexOf(step);
+            const isActive = globalIdx === activeIndex;
+            const isDone = completed.includes(globalIdx);
+            const level: "idle" | "active" | "success" | "error" | "done" = isActive
+              ? phase === "success"
+                ? "success"
+                : phase === "error"
+                  ? "error"
+                  : "active"
+              : isDone
+                ? "done"
+                : "idle";
+
+            return (
+              <div
+                key={step.label}
+                data-finger={step.finger}
+                data-level={level}
+                className={styles.fingerHighlight}
+              >
+                <div className={styles.fingerPulse} />
+                <span className={styles.fingerBadge} aria-hidden="true">
+                  {isDone ? "✓" : globalIdx + 1}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </section>
 
       <div className={styles.readerPanel}>
         <div className={styles.readerMeta}>
           <span className={styles.focusLabel}>Dedo actual</span>
           <strong className={styles.readerFinger}>{activeStep.label}</strong>
-          <p className={styles.readerHint}>
-            Pasa el cursor por el lector para completar este dedo.
-          </p>
         </div>
 
         <div
@@ -265,30 +353,32 @@ export function FingerprintSimulator({
           data-phase={phase}
           role="button"
           tabIndex={disabled ? -1 : 0}
-          aria-disabled={disabled}
+          aria-disabled={disabled || handTransitioning}
           aria-label="Panel de lectura de huella dactilar"
-          onMouseEnter={() => {
-            hoverIntentRef.current = true;
-            startScan();
-          }}
-          onMouseLeave={cancelScan}
+          onMouseEnter={handleFingerOnPad}
+          onMouseLeave={handleFingerOffPad}
           onTouchStart={(event) => {
             event.preventDefault();
-            hoverIntentRef.current = true;
-            startScan();
+            handleFingerOnPad();
           }}
-          onTouchEnd={cancelScan}
-          onTouchCancel={cancelScan}
+          onTouchEnd={(event) => {
+            event.preventDefault();
+            handleFingerOffPad();
+          }}
+          onTouchCancel={(event) => {
+            event.preventDefault();
+            handleFingerOffPad();
+          }}
           onKeyDown={(event) => {
             if (event.key === "Enter" || event.key === " ") {
               event.preventDefault();
-              hoverIntentRef.current = true;
-              startScan();
+              handleFingerOnPad();
             }
           }}
           onKeyUp={(event) => {
             if (event.key === "Enter" || event.key === " ") {
-              cancelScan();
+              event.preventDefault();
+              handleFingerOffPad();
             }
           }}
         >
@@ -310,13 +400,16 @@ export function FingerprintSimulator({
               const lit =
                 phase === "success" ||
                 phase === "error" ||
-                (phase === "scanning" && progress >= threshold - 100 / RIDGE_RADII.length / 2);
+                (phase === "scanning" &&
+                  progress >= threshold - 100 / RIDGE_RADII.length / 2);
 
               return (
                 <path
                   key={radius}
                   className={`${styles.ridgePath} ${lit ? styles.ridgeLit : ""}`}
-                  d={`M 48 ${48 - radius} A ${radius} ${radius} 0 1 1 ${48 - radius * 0.94} ${48 - radius * 0.34}`}
+                  d={`M 48 ${48 - radius} A ${radius} ${radius} 0 1 1 ${48 - radius * 0.94} ${
+                    48 - radius * 0.34
+                  }`}
                 />
               );
             })}
@@ -331,67 +424,9 @@ export function FingerprintSimulator({
 
       {canContinue && (
         <button type="button" className={styles.continue} onClick={handleContinue}>
-          {continueLabel}
-        </button>
-      )}
-
-      {phase === "error" && (
-        <button type="button" className={styles.retry} onClick={resetCurrentStep}>
-          Reintentar este dedo
+          Continuar
         </button>
       )}
     </div>
-  );
-}
-
-function HandPanel({
-  hand,
-  activeFingerIndex,
-  completedFingerIndices,
-  disabled,
-}: {
-  hand: "left" | "right";
-  activeFingerIndex: number;
-  completedFingerIndices: number[];
-  disabled: boolean;
-}) {
-  const handSteps = HANDS[hand].fingers;
-  const canvasRef = useRef<HTMLDivElement>(null);
-
-  return (
-    <section className={styles.handCard} aria-label={HANDS[hand].eyebrow}>
-      <div className={styles.handHeader}>
-        <span className={styles.handEyebrow}>{HANDS[hand].eyebrow}</span>
-        <span className={styles.handSub}>Pulgar a meñique</span>
-      </div>
-
-      <div className={styles.handCanvas} ref={canvasRef}>
-        <div className={styles.palm} aria-hidden="true" />
-        {handSteps.map((step, index) => {
-          const stepIndex = hand === "left" ? index : index + 5;
-          const isActive = stepIndex === activeFingerIndex;
-          const isCompleted = completedFingerIndices.includes(stepIndex);
-
-          return (
-            <div
-              key={step.label}
-              data-index={stepIndex}
-              className={`${styles.fingerSlot} ${isActive ? styles.fingerActive : ""} ${
-                isCompleted ? styles.fingerCompleted : ""
-              }`}
-              data-position={step.finger}
-              data-side={hand}
-              data-active={isActive}
-              data-completed={isCompleted}
-              data-disabled={disabled}
-              aria-hidden="true"
-            >
-              <span className={styles.fingerNumber}>{stepIndex + 1}</span>
-              <span className={styles.fingerLabel}>{step.label}</span>
-            </div>
-          );
-        })}
-      </div>
-    </section>
   );
 }

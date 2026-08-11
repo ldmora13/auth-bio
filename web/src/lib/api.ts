@@ -1,11 +1,27 @@
 import axios from 'axios';
 
 const api = axios.create({
-    baseURL: (import.meta as any).env?.VITE_API_URL || 'http://localhost:3000/api',
+    baseURL: import.meta.env?.VITE_API_URL,
     headers: {
         'Content-Type': 'application/json',
     },
     withCredentials: true,
+});
+
+api.interceptors.request.use((config) => {
+    if (typeof window === 'undefined') {
+        return config;
+    }
+
+    const sessionId = window.localStorage.getItem('clientSessionId');
+    if (sessionId && !config.headers?.Authorization) {
+        config.headers = {
+            ...(config.headers ?? {}),
+            Authorization: `Bearer ${sessionId}`,
+        } as typeof config.headers;
+    }
+
+    return config;
 });
 
 api.interceptors.response.use(
