@@ -687,7 +687,7 @@ export default function CompanyManagementPage() {
                         <option value="oldest">Más antiguas</option>
                         <option value="name-asc">Nombre A-Z</option>
                         <option value="name-desc">Nombre Z-A</option>
-                        <option value="advisors-desc">Más advisors</option>
+                        <option value="advisors-desc">Más asesores</option>
                         <option value="clients-desc">Más clientes</option>
                     </select>
                 </div>
@@ -723,7 +723,7 @@ export default function CompanyManagementPage() {
 
                                     <div className="mt-5 grid grid-cols-2 gap-3 text-sm text-slate-300">
                                     <div className="rounded-2xl border border-white/10 bg-black/10 p-3">
-                                        <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Advisors</p>
+                                        <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Asesores</p>
                                         <p className="mt-1 text-xl font-semibold text-white">{company.advisorCount ?? company.advisors?.length ?? 0}</p>
                                     </div>
                                     <div className="rounded-2xl border border-white/10 bg-black/10 p-3">

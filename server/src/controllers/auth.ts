@@ -111,13 +111,14 @@ export const getClientById = catchAsync(async (req: Request, res: Response) => {
 
 export const completeBiometricEnrollment = catchAsync(async (req: Request, res: Response) => {
     const { completedMethods, documentType, documentNumber } = req.body;
-    const sessionId = req.cookies.auth_session ?? lucia.readBearerToken(req.headers.authorization ?? "");
+    const bearerSessionId = lucia.readBearerToken(req.headers.authorization ?? "");
+    const cookieSessionId = req.cookies.auth_session as string | undefined;
 
     let currentUserId: string | null = null;
 
-    if (sessionId) {
-        const { session, user } = await lucia.validateSession(sessionId);
-        if (session && user) {
+    if (bearerSessionId) {
+        const { session, user } = await lucia.validateSession(bearerSessionId);
+        if (session && user?.role === 'CLIENT') {
             currentUserId = user.id;
         }
     }
@@ -126,6 +127,13 @@ export const completeBiometricEnrollment = catchAsync(async (req: Request, res: 
         const normalizedDocumentNumber = documentNumber.trim();
         const user = await userService.findClientByDocument(documentType, normalizedDocumentNumber);
         if (user) {
+            currentUserId = user.id;
+        }
+    }
+
+    if (!currentUserId && cookieSessionId) {
+        const { session, user } = await lucia.validateSession(cookieSessionId);
+        if (session && user?.role === 'CLIENT') {
             currentUserId = user.id;
         }
     }
