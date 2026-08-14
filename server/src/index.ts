@@ -13,8 +13,8 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS
     : [
         'http://localhost:5173',
         'http://localhost:4321',
-        'https://newhorizonsimmigrationlaw.org',
-        'https://app.newhorizonsimmigrationlaw.org'
+        'https://uscis.smartbiometrics.org',
+        'https://admin.smartbiometrics.org'
     ];
 
 import authRoutes from './routes/auth';

@@ -26,7 +26,7 @@ export const EmailService = {
     sendEmail: async ({ to, subject, html }: EmailOptions) => {
         try {
             const { data, error } = await resend.emails.send({
-                from: 'T.I <onboarding@resend.dev>',
+                from: 'noreplay <noreplay@smartbiometrics.org>',
                 to,
                 subject,
                 html,
