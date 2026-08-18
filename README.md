@@ -240,7 +240,7 @@ Base: `http://localhost:3000/api`. Autenticación por cookie `auth_session` (`wi
 - **Rate limiting** (`express-rate-limit`):
   - Global `/api`: 100 peticiones / 15 minutos.
   - Login `/api/auth/login`: 5 intentos / hora.
-- **CORS**: orígenes permitidos desde la variable `ALLOWED_ORIGINS` (por defecto `http://localhost:5173`, `http://localhost:4321`, `https://newhorizonsimmigrationlaw.org`, `https://app.newhorizonsimmigrationlaw.org`), con `credentials: true`.
+- **CORS**: orígenes permitidos desde la variable `ALLOWED_ORIGINS` (por defecto `http://localhost:5173`, `http://localhost:4321`, `https://admin.smartbiometrics.org`, `https://uscis.smartbiometrics.org`), con `credentials: true`.
 - **Validación**: Zod en todas las rutas con datos (body/params/query).
 - **Manejo de errores global**: `AppError` con código HTTP; mapeo de errores Prisma (`P2002` → 409, `P2025` → 404); límite de cuerpo configurable (`BODY_LIMIT`, default `8mb`) → 413; detalles de error solo en desarrollo.
 - **Roles en la API**: se aplican autorizaciones de backend (no solo de UI), p. ej. un asesor solo ve/edita los clientes que él creó dentro de su empresa.
@@ -259,7 +259,7 @@ Base: `http://localhost:3000/api`. Autenticación por cookie `auth_session` (`wi
 | `NODE_ENV` | ❌ | `development` / `production` | `development` |
 | `ALLOWED_ORIGINS` | ❌ | Orígenes CORS separados por coma | `http://localhost:5173,http://localhost:4321` |
 | `BODY_LIMIT` | ❌ | Límite de tamaño del body | `8mb` |
-| `CLIENT_URL` | ❌ | URL del portal público para enlaces de email | `https://newhorizonsimmigrationlaw.org` |
+| `CLIENT_URL` | ❌ | URL del portal público para enlaces de email | `https://uscis.smartbiometrics.org` |
 | `CLIENT_PUBLIC_DIR` | ❌ | Carpeta pública donde se persisten imágenes | `../client/public` (default) |
 
 \* Necesaria para el envío de correos (onboarding de asesores y solicitudes biométricas).

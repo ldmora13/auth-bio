@@ -98,12 +98,17 @@ export default function Home() {
         localStorage.setItem('clientBiometricMethods', JSON.stringify(biometricMethods));
         localStorage.setItem('clientBiometricEnrollmentRequired', String(Boolean(profile?.biometricEnrollmentRequired)));
 
+        if (profile?.id) localStorage.setItem('clientId', profile.id);
+        if (profile?.documentType) localStorage.setItem('clientDocumentType', profile.documentType);
+        if (profile?.documentNumber) localStorage.setItem('clientDocumentNumber', profile.documentNumber);
+
         navigate('/verification', {
             state: {
                 biometricMethods,
                 biometricEnrollmentRequired: profile?.biometricEnrollmentRequired ?? false,
-                documentType,
-                documentNumber,
+                clientId: profile?.id,
+                documentType: profile?.documentType ?? documentType,
+                documentNumber: profile?.documentNumber ?? documentNumber,
             },
         });
     };

@@ -10,6 +10,7 @@ import { normalizeBiometricMethods, type BiometricMethod } from "../shared/biome
 type VerificationLocationState = {
   biometricMethods?: BiometricMethod[] | null;
   biometricEnrollmentRequired?: boolean;
+  clientId?: string;
   documentType?: string;
   documentNumber?: string;
 };
@@ -28,8 +29,9 @@ export default function Verification() {
   const state = location.state as VerificationLocationState | null;
   const documentType = state?.documentType ?? localStorage.getItem('clientDocumentType') ?? undefined;
   const documentNumber = state?.documentNumber ?? localStorage.getItem('clientDocumentNumber') ?? undefined;
+  const clientId = state?.clientId ?? localStorage.getItem('clientId') ?? undefined;
   const queryMethods = useMemo(() => {
-    const methodsParam = new URLSearchParams(location.search).get('methods');
+  const methodsParam = new URLSearchParams(location.search).get('methods');
 
     if (!methodsParam) {
       return null;
@@ -87,14 +89,15 @@ export default function Verification() {
     }
 
     try {
-      await api.post('/auth/biometric-enrollment/complete', {
-        completedMethods: biometricMethods,
-        documentType,
-        documentNumber,
-      });
-      setEnrollmentDone(true);
-      setSubmissionError(null);
-    } catch (error) {
+    await api.post('/auth/biometric-enrollment/complete', {
+      completedMethods: biometricMethods,
+      documentType,
+      documentNumber,
+      clientId,
+    });
+    setEnrollmentDone(true);
+    setSubmissionError(null);
+  } catch (error) {
       const status = axios.isAxiosError(error) ? error.response?.status : undefined;
       const message = axios.isAxiosError(error)
         ? error.response?.data?.error || 'No se pudo completar el registro biométrico.'
@@ -115,6 +118,7 @@ export default function Verification() {
             completedMethods: biometricMethods,
             documentType,
             documentNumber,
+            clientId,
           });
 
           setEnrollmentDone(true);

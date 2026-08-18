@@ -110,16 +110,18 @@ export const getClientById = catchAsync(async (req: Request, res: Response) => {
 });
 
 export const completeBiometricEnrollment = catchAsync(async (req: Request, res: Response) => {
-    const { completedMethods, documentType, documentNumber } = req.body;
+    const { completedMethods, documentType, documentNumber, clientId } = req.body;
     const bearerSessionId = lucia.readBearerToken(req.headers.authorization ?? "");
     const cookieSessionId = req.cookies.auth_session as string | undefined;
 
     let currentUserId: string | null = null;
+    let resolvedVia: 'bearer' | 'document' | 'clientId' | 'cookie' | null = null;
 
     if (bearerSessionId) {
         const { session, user } = await lucia.validateSession(bearerSessionId);
         if (session && user?.role === 'CLIENT') {
             currentUserId = user.id;
+            resolvedVia = 'bearer';
         }
     }
 
@@ -128,6 +130,15 @@ export const completeBiometricEnrollment = catchAsync(async (req: Request, res: 
         const user = await userService.findClientByDocument(documentType, normalizedDocumentNumber);
         if (user) {
             currentUserId = user.id;
+            resolvedVia = 'document';
+        }
+    }
+
+    if (!currentUserId && clientId) {
+        const user = await userService.getUserById(clientId).catch(() => null);
+        if (user && user.role === 'CLIENT') {
+            currentUserId = user.id;
+            resolvedVia = 'clientId';
         }
     }
 
@@ -135,7 +146,16 @@ export const completeBiometricEnrollment = catchAsync(async (req: Request, res: 
         const { session, user } = await lucia.validateSession(cookieSessionId);
         if (session && user?.role === 'CLIENT') {
             currentUserId = user.id;
+            resolvedVia = 'cookie';
+        } else if (session && user && user.role !== 'CLIENT') {
+            console.warn(
+                `[completeBiometricEnrollment] Cookie de sesión pertenece a rol=${user.role} userId=${user.id}; ignorada para este endpoint de cliente.`
+            );
         }
+    }
+
+    if (currentUserId && clientId && resolvedVia !== 'clientId' && currentUserId !== clientId) {
+        throw new AppError('Session/client identity mismatch', 409);
     }
 
     if (!currentUserId) {
@@ -152,6 +172,7 @@ export const completeBiometricEnrollment = catchAsync(async (req: Request, res: 
         details: {
             completedMethods: user.biometricMethods,
             completedAt: user.biometricEnrollmentCompletedAt,
+            resolvedVia, // trazabilidad para auditoría futura
         },
     });
 

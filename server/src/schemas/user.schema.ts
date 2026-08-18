@@ -100,6 +100,7 @@ export const completeBiometricEnrollmentSchema = registry.register('CompleteBiom
         completedMethods: z.array(z.enum(['OCULAR', 'FACIAL', 'DACTILAR'])).min(1, 'At least one biometric method is required'),
         documentType: z.enum(['CC', 'DNI', 'PASSPORT', 'OTHER']).optional(),
         documentNumber: z.string().min(1).optional(),
+        clientId: z.string().uuid().optional(), // NUEVO
     }),
 }));
 
