@@ -167,6 +167,42 @@ export const EmailService = {
             subject,
             html,
         });
+    },
+
+    sendBiometricEnrollmentCompletedEmail: async (payload: {
+        email: string;
+        name: string;
+        companyName?: string | null;
+        biometricMethods: ('DACTILAR' | 'FACIAL' | 'OCULAR')[];
+        completedAt?: Date | null;
+    }) => {
+        const uniqueValidMethods = [...new Set(payload.biometricMethods)].filter((method) =>
+            VALID_BIOMETRIC_METHODS.includes(method)
+        );
+        const biometricLabels = uniqueValidMethods.map((method) => biometricMethodLabels[method]).join(', ');
+        const completedAt = payload.completedAt
+            ? payload.completedAt.toLocaleString('es-CO', { dateStyle: 'long', timeStyle: 'short' })
+            : null;
+
+        const subject = 'Registro biométrico completado correctamente';
+        const html = `
+            <div style="font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: 0 auto;">
+                <h2>Hola, ${payload.name}</h2>
+                <p>Tu registro biométrico fue completado correctamente.</p>
+                ${payload.companyName ? `<p><strong>Empresa:</strong> ${payload.companyName}</p>` : ''}
+                <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 8px; padding: 16px; margin: 18px 0;">
+                    <p style="margin: 4px 0;"><strong>Registro realizado:</strong> ${biometricLabels}</p>
+                    ${completedAt ? `<p style="margin: 4px 0;"><strong>Fecha:</strong> ${completedAt}</p>` : ''}
+                </div>
+                <p>Ya puedes continuar utilizando la plataforma con normalidad.</p>
+            </div>
+        `;
+
+        return EmailService.sendEmailWithRetry({
+            to: payload.email,
+            subject,
+            html,
+        });
     }
 
 };

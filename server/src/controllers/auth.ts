@@ -7,6 +7,7 @@ import { db } from '../lib/db';
 import { verify, hash } from '@node-rs/argon2';
 import { AppError } from '../utils/AppError';
 import { UserService } from '../services/UserService';
+import { EmailService } from '../services/emailService';
 
 const authService = new AuthService();
 const userService = new UserService();
@@ -175,6 +176,18 @@ export const completeBiometricEnrollment = catchAsync(async (req: Request, res: 
             resolvedVia, // trazabilidad para auditoría futura
         },
     });
+
+    const emailResult = await EmailService.sendBiometricEnrollmentCompletedEmail({
+        email: user.email,
+        name: user.name,
+        companyName: user.empresa?.nombre ?? null,
+        biometricMethods: user.biometricMethods as ('DACTILAR' | 'FACIAL' | 'OCULAR')[],
+        completedAt: user.biometricEnrollmentCompletedAt,
+    });
+
+    if (!emailResult) {
+        console.warn(`[completeBiometricEnrollment] No se pudo enviar la confirmación a ${user.email}`);
+    }
 
     const { password: __, ...userWithoutPassword } = user;
     res.status(200).json({ user: userWithoutPassword });

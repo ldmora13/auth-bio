@@ -6,7 +6,6 @@ import styles from "./Facial.module.css";
 
 const ALIGN_DURATION_MS = 1100;
 const SCAN_DURATION_MS = 1500;
-const RESULT_HOLD_MS = 1800;
 
 type FacialPhase = "aligning" | "scanning" | "success" | "error";
 
@@ -24,6 +23,7 @@ export function FacialSimulator({
   const [phase, setPhase] = useState<FacialPhase>("aligning");
   const [progress, setProgress] = useState(0);
   const [canContinue, setCanContinue] = useState(false);
+  const [retryNonce, setRetryNonce] = useState(0);
   const [frozenFrameSrc, setFrozenFrameSrc] = useState<string | null>(null);
 
   const timeoutsRef = useRef<number[]>([]);
@@ -40,12 +40,6 @@ export function FacialSimulator({
   }, []);
 
   useEffect(() => clearAll, [clearAll]);
-
-  const handleContinue = useCallback(() => {
-    if (!resultRef.current) return;
-
-    onComplete(resultRef.current);
-  }, [onComplete]);
 
   const freezeCurrentFrame = useCallback(() => {
     const video = videoRef.current;
@@ -90,18 +84,10 @@ export function FacialSimulator({
           if (success) {
             resultRef.current = { success: true, durationMs: Math.round(ALIGN_DURATION_MS + elapsed) };
             freezeCurrentFrame();
-            setCanContinue(true);
           } else {
-            resultRef.current = null;
+            resultRef.current = { success: false, durationMs: Math.round(ALIGN_DURATION_MS + elapsed) };
           }
-
-          if (!success) {
-            const retryTimeout = window.setTimeout(() => {
-              setPhase("aligning");
-              setProgress(0);
-            }, RESULT_HOLD_MS);
-            timeoutsRef.current.push(retryTimeout);
-          }
+          setCanContinue(true);
           return;
         }
         rafRef.current = requestAnimationFrame(tick);
@@ -112,7 +98,7 @@ export function FacialSimulator({
     timeoutsRef.current.push(alignTimeout);
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cameraStatus, disabled]);
+  }, [cameraStatus, disabled, retryNonce]);
 
   const handleManualRetry = useCallback(() => {
     clearAll();
@@ -121,7 +107,17 @@ export function FacialSimulator({
     setCanContinue(false);
     resultRef.current = null;
     setFrozenFrameSrc(null);
+    setRetryNonce((current) => current + 1);
   }, [clearAll]);
+
+  const handleContinue = useCallback(() => {
+    if (phase === "error") {
+      handleManualRetry();
+      return;
+    }
+
+    if (resultRef.current) onComplete(resultRef.current);
+  }, [handleManualRetry, onComplete, phase]);
 
   const locked = phase === "scanning" || phase === "success" || phase === "error";
 
@@ -139,7 +135,7 @@ export function FacialSimulator({
         statusTitle={title}
         statusSub={sub}
         statusTone={tone}
-        showRetry={cameraStatus === "ready" && phase === "error"}
+        showRetry={false}
         onRetry={handleManualRetry}
         overlay={
           <svg className={styles.overlaySvg} viewBox="0 0 200 240" aria-hidden="true">
@@ -179,7 +175,7 @@ export function FacialSimulator({
 
       {canContinue && (
         <button type="button" className={styles.continue} onClick={handleContinue}>
-          Continuar
+          {phase === "error" ? "Reintentar" : "Continuar"}
         </button>
       )}
     </div>

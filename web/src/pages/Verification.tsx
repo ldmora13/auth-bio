@@ -89,12 +89,13 @@ export default function Verification() {
     }
 
     try {
-    await api.post('/auth/biometric-enrollment/complete', {
-      completedMethods: biometricMethods,
-      documentType,
-      documentNumber,
-      clientId,
-    });
+      await api.post('/auth/biometric-enrollment/complete', {
+        completedMethods: biometricMethods,
+        documentType,
+        documentNumber,
+        clientId,
+      }
+    );
     setEnrollmentDone(true);
     setSubmissionError(null);
   } catch (error) {

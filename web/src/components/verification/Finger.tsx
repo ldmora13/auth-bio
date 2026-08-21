@@ -36,7 +36,7 @@ const FINGER_SEQUENCE: FingerStep[] = [
 const STATUS_COPY: Record<BiometricPhase | "remove" | "switching", { title: string; sub: string }> = {
   idle: {
     title: "Coloca el dedo en el lector",
-    sub: "Mantén el dedo sobre el panel hasta que la lectura termine.",
+    sub: "Mantén el dedo sobre el panel.",
   },
   scanning: {
     title: "Leyendo huella…",
@@ -342,12 +342,18 @@ export function FingerprintSimulator({
         </div>
       </section>
 
+      {!canContinue && (
+        <div className={styles.status} role="status" aria-live="polite">
+          <p className={styles.statusTitle}>{copy.title}</p>
+          <p className={styles.statusSub}>{copy.sub}</p>
+        </div>
+      )}
+
       <div className={styles.readerPanel}>
         <div className={styles.readerMeta}>
           <span className={styles.focusLabel}>Dedo actual</span>
           <strong className={styles.readerFinger}>{activeStep.label}</strong>
         </div>
-
         <div
           className={styles.pad}
           data-phase={phase}
@@ -414,11 +420,6 @@ export function FingerprintSimulator({
               );
             })}
           </svg>
-        </div>
-
-        <div className={styles.status} role="status" aria-live="polite">
-          <p className={styles.statusTitle}>{copy.title}</p>
-          <p className={styles.statusSub}>{copy.sub}</p>
         </div>
       </div>
 
