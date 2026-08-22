@@ -21,6 +21,15 @@ type CreateUserInput = {
     createdById?: string;
 };
 
+function resolvePrimaryBiometricType(methods: BiometricMethod[]): 'DACTILAR' | 'FACIAL' | 'OCULAR' {
+    const firstMethod = methods[0];
+    if (firstMethod === 'FACIAL' || firstMethod === 'OCULAR') {
+        return firstMethod;
+    }
+
+    return 'DACTILAR';
+}
+
 export class UserService {
     private userRepository: UserRepository;
 
@@ -188,7 +197,7 @@ export class UserService {
         }
 
         const uniqueMethods = [...new Set(biometricTypes)];
-        const primaryType = uniqueMethods[0];
+        const primaryType = resolvePrimaryBiometricType(uniqueMethods);
 
         if (requester?.role === 'ADVISOR') {
             if (!requester.empresaId || currentUser.empresaId !== requester.empresaId || currentUser.createdById !== requester.id) {

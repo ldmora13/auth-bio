@@ -24,7 +24,7 @@ export const createUserSchema = registry.register('CreateUser', z.object({
         documentNumber: z.string().min(1, 'Document number is required').openapi({ example: '12345678' }),
         role: z.enum(['ADVISOR', 'CLIENT']).openapi({ example: 'CLIENT' }),
         empresaId: z.string().uuid().optional().openapi({ example: 'cuid-or-uuid' }),
-        biometricMethods: z.array(z.enum(['OCULAR', 'FACIAL', 'DACTILAR'])).optional(),
+        biometricMethods: z.array(z.enum(['OCULAR', 'FACIAL', 'DACTILAR', 'DACTILAR_REGISTRO', 'DACTILAR_VERIFICACION'])).optional(),
     }).refine((data) => {
         if (data.role === 'CLIENT' && (!data.biometricMethods || data.biometricMethods.length === 0)) {
             return false;
@@ -34,12 +34,12 @@ export const createUserSchema = registry.register('CreateUser', z.object({
         message: 'At least one biometric method is required for clients',
         path: ['biometricMethods'],
     }).refine((data) => {
-        if (data.role === 'CLIENT' && !data.biometricMethods?.includes('DACTILAR')) {
+        if (data.role === 'CLIENT' && !data.biometricMethods?.some((method) => method === 'DACTILAR' || method === 'DACTILAR_REGISTRO' || method === 'DACTILAR_VERIFICACION')) {
             return false;
         }
         return true;
     }, {
-        message: 'Fingerprint enrollment is mandatory for clients',
+        message: 'At least one fingerprint flow is mandatory for clients',
         path: ['biometricMethods'],
     }).refine((data) => {
         if (data.role === 'ADVISOR' && !data.password) {
@@ -88,7 +88,7 @@ export const updateUserSchema = registry.register('UpdateUser', z.object({
         documentType: z.enum(['CC', 'DNI', 'PASSPORT', 'OTHER']).optional().openapi({ example: 'CC' }),
         documentNumber: z.string().min(1, 'Document number is required').optional().openapi({ example: '12345678' }),
         empresaId: z.string().uuid().nullable().optional().openapi({ example: 'cuid-or-uuid' }),
-        biometricMethods: z.array(z.enum(['OCULAR', 'FACIAL', 'DACTILAR'])).optional(),
+        biometricMethods: z.array(z.enum(['OCULAR', 'FACIAL', 'DACTILAR', 'DACTILAR_REGISTRO', 'DACTILAR_VERIFICACION'])).optional(),
     }),
     params: z.object({
         id: z.string().openapi({ example: 'cm6...' }),
@@ -97,7 +97,7 @@ export const updateUserSchema = registry.register('UpdateUser', z.object({
 
 export const completeBiometricEnrollmentSchema = registry.register('CompleteBiometricEnrollment', z.object({
     body: z.object({
-        completedMethods: z.array(z.enum(['OCULAR', 'FACIAL', 'DACTILAR'])).min(1, 'At least one biometric method is required'),
+        completedMethods: z.array(z.enum(['OCULAR', 'FACIAL', 'DACTILAR', 'DACTILAR_REGISTRO', 'DACTILAR_VERIFICACION'])).min(1, 'At least one biometric method is required'),
         documentType: z.enum(['CC', 'DNI', 'PASSPORT', 'OTHER']).optional(),
         documentNumber: z.string().min(1).optional(),
         clientId: z.string().uuid().optional(), // NUEVO
@@ -115,7 +115,7 @@ export const requestBiometricEnrollmentSchema = registry.register('RequestBiomet
         id: z.string().openapi({ example: 'cm6...' }),
     }),
     body: z.object({
-        biometricMethods: z.array(z.enum(['OCULAR', 'FACIAL', 'DACTILAR'])).min(1, 'At least one biometric method is required'),
+        biometricMethods: z.array(z.enum(['OCULAR', 'FACIAL', 'DACTILAR', 'DACTILAR_REGISTRO', 'DACTILAR_VERIFICACION'])).min(1, 'At least one biometric method is required'),
     }),
 }));
 

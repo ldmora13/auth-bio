@@ -16,7 +16,7 @@ export interface CreateUserData {
     documentNumber: string;
     role: 'CLIENT' | 'ADVISOR';
     empresaId?: string;
-    biometricMethods?: Array<'OCULAR' | 'FACIAL' | 'DACTILAR'>;
+    biometricMethods?: Array<'OCULAR' | 'FACIAL' | 'DACTILAR' | 'DACTILAR_REGISTRO' | 'DACTILAR_VERIFICACION'>;
 }
 
 export interface CreateCompanyData {

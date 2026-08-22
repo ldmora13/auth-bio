@@ -27,6 +27,8 @@ enum BiometricType {
 
 enum BiometricMethod {
   DACTILAR
+  DACTILAR_REGISTRO
+  DACTILAR_VERIFICACION
   FACIAL
   OCULAR
 }

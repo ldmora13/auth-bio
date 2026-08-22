@@ -1,9 +1,17 @@
-export type BiometricMethod = 'DACTILAR' | 'FACIAL' | 'OCULAR';
+export type BiometricMethod = 'DACTILAR' | 'DACTILAR_REGISTRO' | 'DACTILAR_VERIFICACION' | 'FACIAL' | 'OCULAR';
 
-export const BIOMETRIC_METHOD_ORDER: BiometricMethod[] = ['DACTILAR', 'FACIAL', 'OCULAR'];
+export const BIOMETRIC_METHOD_ORDER: BiometricMethod[] = [
+  'DACTILAR',
+  'DACTILAR_REGISTRO',
+  'DACTILAR_VERIFICACION',
+  'FACIAL',
+  'OCULAR',
+];
 
 export const BIOMETRIC_METHOD_LABELS: Record<BiometricMethod, string> = {
-  DACTILAR: 'Huellas dactilares',
+  DACTILAR: 'Registro dactilar',
+  DACTILAR_REGISTRO: 'Registro dactilar',
+  DACTILAR_VERIFICACION: 'Verificación dactilar',
   FACIAL: 'Verificación facial',
   OCULAR: 'Verificación de iris',
 };
@@ -21,7 +29,7 @@ export function resolveBiometricMethods(profile?: { biometricMethods?: Biometric
       ? [profile.biometricType]
       : [];
 
-  return normalizeBiometricMethods(methods.length > 0 ? methods : ['DACTILAR']);
+  return normalizeBiometricMethods(methods.length > 0 ? methods : ['DACTILAR_REGISTRO']);
 }
 
 export function getBiometricMethodLabel(method: BiometricMethod) {

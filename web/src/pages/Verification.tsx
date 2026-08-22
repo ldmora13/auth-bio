@@ -17,11 +17,13 @@ type VerificationLocationState = {
 
 const biometricComponentMap = {
   DACTILAR: FingerprintSimulator,
+  DACTILAR_REGISTRO: FingerprintSimulator,
+  DACTILAR_VERIFICACION: FingerprintSimulator,
   FACIAL: FacialSimulator,
   OCULAR: IrisSimulator,
 } as const;
 
-const biometricMethodValues: BiometricMethod[] = ['DACTILAR', 'FACIAL', 'OCULAR'];
+const biometricMethodValues: BiometricMethod[] = ['DACTILAR', 'DACTILAR_REGISTRO', 'DACTILAR_VERIFICACION', 'FACIAL', 'OCULAR'];
 
 export default function Verification() {
   const location = useLocation();
@@ -57,7 +59,7 @@ export default function Verification() {
   }, []);
 
   const biometricMethods = useMemo(
-    () => normalizeBiometricMethods(queryMethods ?? state?.biometricMethods ?? storedMethods ?? ['DACTILAR']),
+    () => normalizeBiometricMethods(queryMethods ?? state?.biometricMethods ?? storedMethods ?? ['DACTILAR_REGISTRO']),
     [queryMethods, state?.biometricMethods, storedMethods]
   );
 
@@ -74,6 +76,7 @@ export default function Verification() {
 
   const activeMethod = biometricMethods[currentMethodIndex];
   const BiometricComponent = activeMethod ? biometricComponentMap[activeMethod] : null;
+  const fingerprintFlowMode = activeMethod === 'DACTILAR_VERIFICACION' ? 'quick-verification' : 'full-enrollment';
 
   const handleComplete = async (result: { success: boolean; durationMs: number }) => {
     if (!result.success || !activeMethod) {
@@ -179,7 +182,11 @@ export default function Verification() {
           ) : null}
           {BiometricComponent ? (
             <div className="flex w-full justify-center">
-              <BiometricComponent onComplete={handleComplete} />
+              {activeMethod === 'DACTILAR' || activeMethod === 'DACTILAR_REGISTRO' || activeMethod === 'DACTILAR_VERIFICACION' ? (
+                <FingerprintSimulator onComplete={handleComplete} flowMode={fingerprintFlowMode} />
+              ) : (
+                <BiometricComponent onComplete={handleComplete} />
+              )}
             </div>
           ) : (
             <div className="max-w-md rounded-3xl border border-amber-200 bg-amber-50 px-6 py-5 text-amber-900 shadow-sm">

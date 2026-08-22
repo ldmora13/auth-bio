@@ -238,7 +238,7 @@ export const requestBiometricEnrollment = catchAsync(async (req: Request, res: R
         companyName: user.empresa?.nombre ?? null,
         companyLogoUrl: user.empresa?.logoUrl ?? null,
         portalUrl,
-        biometricMethods: user.biometricMethods as ('DACTILAR' | 'FACIAL' | 'OCULAR')[],
+        biometricMethods: user.biometricMethods as ('DACTILAR' | 'DACTILAR_REGISTRO' | 'DACTILAR_VERIFICACION' | 'FACIAL' | 'OCULAR')[],
     });
 
     if (!emailResult) {

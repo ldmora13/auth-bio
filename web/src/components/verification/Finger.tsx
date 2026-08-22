@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import handImage from "../../assets/hand.png";
 import type { BaseBiometricProps, BiometricPhase, BiometricResult } from "../../shared/biometricTypes";
-import type { BiometricMethod } from "../../shared/biometricMethods";
 import styles from "./Finger.module.css";
 
 const SCAN_DURATION_MS = 1700;
@@ -12,28 +11,29 @@ const RIDGE_RADII = [38, 32, 26, 20, 14, 9] as const;
 
 type FingerKey = "thumb" | "index" | "middle" | "ring" | "pinky";
 
+type FingerFlowMode = "full-enrollment" | "quick-verification";
+
 type FingerStep = {
-  method: BiometricMethod;
   hand: "left" | "right";
   finger: FingerKey;
   label: string;
   short: string;
 };
 
-const FINGER_SEQUENCE: FingerStep[] = [
-  { method: "DACTILAR", hand: "left", finger: "thumb", label: "Pulgar izquierdo", short: "Pulgar" },
-  { method: "DACTILAR", hand: "left", finger: "index", label: "Índice izquierdo", short: "Índice" },
-  { method: "DACTILAR", hand: "left", finger: "middle", label: "Medio izquierdo", short: "Medio" },
-  { method: "DACTILAR", hand: "left", finger: "ring", label: "Anular izquierdo", short: "Anular" },
-  { method: "DACTILAR", hand: "left", finger: "pinky", label: "Meñique izquierdo", short: "Meñique" },
-  { method: "DACTILAR", hand: "right", finger: "thumb", label: "Pulgar derecho", short: "Pulgar" },
-  { method: "DACTILAR", hand: "right", finger: "index", label: "Índice derecho", short: "Índice" },
-  { method: "DACTILAR", hand: "right", finger: "middle", label: "Medio derecho", short: "Medio" },
-  { method: "DACTILAR", hand: "right", finger: "ring", label: "Anular derecho", short: "Anular" },
-  { method: "DACTILAR", hand: "right", finger: "pinky", label: "Meñique derecho", short: "Meñique" },
+const FULL_FINGER_SEQUENCE: FingerStep[] = [
+  { hand: "left", finger: "thumb", label: "Pulgar izquierdo", short: "Pulgar" },
+  { hand: "left", finger: "index", label: "Índice izquierdo", short: "Índice" },
+  { hand: "left", finger: "middle", label: "Medio izquierdo", short: "Medio" },
+  { hand: "left", finger: "ring", label: "Anular izquierdo", short: "Anular" },
+  { hand: "left", finger: "pinky", label: "Meñique izquierdo", short: "Meñique" },
+  { hand: "right", finger: "thumb", label: "Pulgar derecho", short: "Pulgar" },
+  { hand: "right", finger: "index", label: "Índice derecho", short: "Índice" },
+  { hand: "right", finger: "middle", label: "Medio derecho", short: "Medio" },
+  { hand: "right", finger: "ring", label: "Anular derecho", short: "Anular" },
+  { hand: "right", finger: "pinky", label: "Meñique derecho", short: "Meñique" },
 ];
 
-const STATUS_COPY: Record<BiometricPhase | "remove" | "switching", { title: string; sub: string }> = {
+const STATUS_COPY_ENROLLMENT: Record<BiometricPhase | "remove" | "switching", { title: string; sub: string }> = {
   idle: {
     title: "Coloca el dedo en el lector",
     sub: "Mantén el dedo sobre el panel.",
@@ -60,12 +60,70 @@ const STATUS_COPY: Record<BiometricPhase | "remove" | "switching", { title: stri
   },
 };
 
-export type FingerprintSimulatorProps = BaseBiometricProps;
+const STATUS_COPY_VERIFICATION: Record<BiometricPhase | "remove" | "switching", { title: string; sub: string }> = {
+  idle: {
+    title: "Coloca el dedo para verificar",
+    sub: "Debes validar 2 dedos aleatorios por mano.",
+  },
+  scanning: {
+    title: "Validando huella…",
+    sub: "Mantén la posición. No muevas el dedo.",
+  },
+  success: {
+    title: "Huella validada correctamente",
+    sub: "Quita el dedo del lector para continuar con el siguiente.",
+  },
+  error: {
+    title: "No se pudo validar la huella",
+    sub: "Quita el dedo y vuelve a colocarlo para reintentar.",
+  },
+  remove: {
+    title: "Retira el dedo del lector",
+    sub: "Una vez retirado, se preparará el siguiente dedo.",
+  },
+  switching: {
+    title: "Cambiando de mano…",
+    sub: "Preparando la siguiente mano. Por favor espera.",
+  },
+};
+
+function shuffleFingerKeys(values: FingerKey[]) {
+  const clone = [...values];
+  for (let index = clone.length - 1; index > 0; index -= 1) {
+    const randomIndex = Math.floor(Math.random() * (index + 1));
+    const current = clone[index];
+    clone[index] = clone[randomIndex];
+    clone[randomIndex] = current;
+  }
+
+  return clone;
+}
+
+function buildVerificationSequence(): FingerStep[] {
+  const leftCandidates = shuffleFingerKeys(["thumb", "index", "middle", "ring", "pinky"]).slice(0, 2);
+  const rightCandidates = shuffleFingerKeys(["thumb", "index", "middle", "ring", "pinky"]).slice(0, 2);
+
+  return [
+    ...leftCandidates.map((finger) => {
+      const fullStep = FULL_FINGER_SEQUENCE.find((step) => step.hand === "left" && step.finger === finger)!;
+      return fullStep;
+    }),
+    ...rightCandidates.map((finger) => {
+      const fullStep = FULL_FINGER_SEQUENCE.find((step) => step.hand === "right" && step.finger === finger)!;
+      return fullStep;
+    }),
+  ];
+}
+
+export type FingerprintSimulatorProps = BaseBiometricProps & {
+  flowMode?: FingerFlowMode;
+};
 
 export function FingerprintSimulator({
   onComplete,
   successRate = 0.88,
   disabled = false,
+  flowMode = "full-enrollment",
 }: FingerprintSimulatorProps) {
   const [phase, setPhase] = useState<BiometricPhase>("idle");
   const [progress, setProgress] = useState(0);
@@ -86,6 +144,11 @@ export function FingerprintSimulator({
   const completedRef = useRef<number[]>([]);
   const fingerOnPadRef = useRef(false);
   const canContinueRef = useRef(false);
+  const verificationSequenceRef = useRef<FingerStep[]>(buildVerificationSequence());
+
+  const fingerSequence = flowMode === "quick-verification"
+    ? verificationSequenceRef.current
+    : FULL_FINGER_SEQUENCE;
 
   useEffect(() => {
     phaseRef.current = phase;
@@ -111,6 +174,24 @@ export function FingerprintSimulator({
 
   useEffect(() => clearTimers, [clearTimers]);
 
+  useEffect(() => {
+    clearTimers();
+    verificationSequenceRef.current = buildVerificationSequence();
+    setPhase("idle");
+    setProgress(0);
+    setActiveIndex(0);
+    setCompleted([]);
+    setHandTransitioning(false);
+    setCanContinue(false);
+    totalStartRef.current = null;
+    lastResultRef.current = null;
+    resultRef.current = null;
+    retriesRef.current = 0;
+    completedRef.current = [];
+    fingerOnPadRef.current = false;
+    canContinueRef.current = false;
+  }, [clearTimers, flowMode]);
+
   const advanceAfterFingerRemoval = useCallback(() => {
     const currentIndex = activeIndexRef.current;
     clearTimers();
@@ -120,12 +201,12 @@ export function FingerprintSimulator({
     }
 
     const nextIndex = currentIndex + 1;
-    if (nextIndex >= FINGER_SEQUENCE.length) {
+    if (nextIndex >= fingerSequence.length) {
       const finalResult = lastResultRef.current ?? {
           success: true,
           durationMs: totalStartRef.current
             ? Math.round(now - totalStartRef.current)
-            : Math.round(SCAN_DURATION_MS * FINGER_SEQUENCE.length),
+            : Math.round(SCAN_DURATION_MS * fingerSequence.length),
         };
       resultRef.current = finalResult;
       setCanContinue(true);
@@ -133,8 +214,8 @@ export function FingerprintSimulator({
       return;
     }
 
-    const currentHand = FINGER_SEQUENCE[currentIndex].hand;
-    const nextHand = FINGER_SEQUENCE[nextIndex].hand;
+    const currentHand = fingerSequence[currentIndex].hand;
+    const nextHand = fingerSequence[nextIndex].hand;
     const handSwitch = currentHand !== nextHand;
 
     lastResultRef.current = null;
@@ -158,7 +239,7 @@ export function FingerprintSimulator({
       setActiveIndex(nextIndex);
       setPhase("idle");
     }
-  }, [clearTimers, onComplete]);
+  }, [clearTimers, fingerSequence]);
 
   const resetCurrentStep = useCallback(() => {
     clearTimers();
@@ -275,16 +356,18 @@ export function FingerprintSimulator({
     }
   }, [advanceAfterFingerRemoval, clearTimers]);
 
-  const activeStep = FINGER_SEQUENCE[activeIndex];
+  const activeStep = fingerSequence[activeIndex];
   const currentHand: "left" | "right" = activeStep.hand;
-  const handDoneCount = completed.filter((i) => FINGER_SEQUENCE[i].hand === currentHand).length;
+  const handDoneCount = completed.filter((i) => fingerSequence[i].hand === currentHand).length;
+  const handTotal = fingerSequence.filter((step) => step.hand === currentHand).length;
 
-  const statusKey: keyof typeof STATUS_COPY = handTransitioning
+  const copySet = flowMode === "quick-verification" ? STATUS_COPY_VERIFICATION : STATUS_COPY_ENROLLMENT;
+  const statusKey: keyof typeof copySet = handTransitioning
     ? "switching"
     : phase === "success" && fingerOnPadRef.current
       ? "remove"
       : phase;
-  const copy = STATUS_COPY[statusKey];
+  const copy = copySet[statusKey];
   const circumference = 2 * Math.PI * 44;
   const dashOffset = circumference - (progress / 100) * circumference;
 
@@ -292,7 +375,7 @@ export function FingerprintSimulator({
     <div className={styles.card} data-phase={phase}>
       <div className={styles.stageHeader}>
         <span className={styles.handLabel}>
-          {currentHand === "left" ? "Mano izquierda" : "Mano derecha"} · {handDoneCount}/5
+          {currentHand === "left" ? "Mano izquierda" : "Mano derecha"} · {handDoneCount}/{handTotal}
         </span>
         <strong className={styles.fingerLabel}>{activeStep.label}</strong>
       </div>
@@ -311,8 +394,9 @@ export function FingerprintSimulator({
             draggable={false}
           />
 
-          {FINGER_SEQUENCE.filter((s) => s.hand === currentHand).map((step) => {
-            const globalIdx = FINGER_SEQUENCE.indexOf(step);
+          {fingerSequence.map((step, globalIdx) => ({ step, globalIdx }))
+            .filter(({ step }) => step.hand === currentHand)
+            .map(({ step, globalIdx }) => {
             const isActive = globalIdx === activeIndex;
             const isDone = completed.includes(globalIdx);
             const level: "idle" | "active" | "success" | "error" | "done" = isActive
@@ -325,9 +409,9 @@ export function FingerprintSimulator({
                 ? "done"
                 : "idle";
 
-            return (
+              return (
               <div
-                key={step.label}
+                key={`${step.label}-${globalIdx}`}
                 data-finger={step.finger}
                 data-level={level}
                 className={styles.fingerHighlight}
@@ -337,8 +421,8 @@ export function FingerprintSimulator({
                   {isDone ? "✓" : globalIdx + 1}
                 </span>
               </div>
-            );
-          })}
+              );
+            })}
         </div>
       </section>
 

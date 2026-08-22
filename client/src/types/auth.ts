@@ -1,5 +1,5 @@
 export type DocumentType = 'CC' | 'DNI' | 'PASSPORT' | 'OTHER';
-export type BiometricMethod = 'DACTILAR' | 'FACIAL' | 'OCULAR';
+export type BiometricMethod = 'DACTILAR' | 'DACTILAR_REGISTRO' | 'DACTILAR_VERIFICACION' | 'FACIAL' | 'OCULAR';
 
 export interface User {
     id: string;

@@ -33,6 +33,7 @@
         "lucia": "^3.2.2",
         "multer": "^2.0.2",
         "nodemailer": "^9.0.3",
+        "pdf-lib": "^1.17.1",
         "pg": "^8.22.0",
         "resend": "^6.9.2",
         "swagger-ui-express": "^5.0.1",

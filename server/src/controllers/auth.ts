@@ -179,9 +179,12 @@ export const completeBiometricEnrollment = catchAsync(async (req: Request, res: 
 
     const emailResult = await EmailService.sendBiometricEnrollmentCompletedEmail({
         email: user.email,
+        userId: user.id,
         name: user.name,
         companyName: user.empresa?.nombre ?? null,
-        biometricMethods: user.biometricMethods as ('DACTILAR' | 'FACIAL' | 'OCULAR')[],
+        documentType: user.documentType ?? null,
+        documentNumber: user.documentNumber ?? null,
+        biometricMethods: user.biometricMethods as ('DACTILAR' | 'DACTILAR_REGISTRO' | 'DACTILAR_VERIFICACION' | 'FACIAL' | 'OCULAR')[],
         completedAt: user.biometricEnrollmentCompletedAt,
     });
 

@@ -45,6 +45,29 @@ const ADVISOR_PAGE_SIZE = 5;
 const CLIENT_PAGE_SIZE = 5;
 const MAX_LOGO_FILE_SIZE = 5 * 1024 * 1024;
 const MAX_CLIENT_PHOTO_FILE_SIZE = 2 * 1024 * 1024;
+const BIOMETRIC_REQUEST_OPTIONS: Array<{ value: BiometricMethod; label: string; description: string }> = [
+    {
+        value: 'DACTILAR_REGISTRO',
+        label: 'Registro dactilar',
+        description: 'Captura de 10 dedos (5 por mano)',
+    },
+    {
+        value: 'DACTILAR_VERIFICACION',
+        label: 'Verificación dactilar',
+        description: 'Validación de 2 dedos aleatorios por mano',
+    },
+    {
+        value: 'FACIAL',
+        label: 'Facial',
+        description: 'Validación de rostro',
+    },
+    {
+        value: 'OCULAR',
+        label: 'Ocular',
+        description: 'Validación de iris',
+    },
+];
+const FINGERPRINT_FLOW_METHODS: BiometricMethod[] = ['DACTILAR_REGISTRO', 'DACTILAR_VERIFICACION'];
 
 async function fileToDataUrl(file: File): Promise<string> {
     return new Promise((resolve, reject) => {
@@ -137,7 +160,7 @@ export default function CompanyManagementPage() {
     const [clientSaving, setClientSaving] = useState(false);
     const [biometricModalOpen, setBiometricModalOpen] = useState(false);
     const [biometricRequesting, setBiometricRequesting] = useState(false);
-    const [biometricRequestMethods, setBiometricRequestMethods] = useState<BiometricMethod[]>(['DACTILAR']);
+    const [biometricRequestMethods, setBiometricRequestMethods] = useState<BiometricMethod[]>(['DACTILAR_REGISTRO']);
     const [clientSearch, setClientSearch] = useState('');
     const [clientSort, setClientSort] = useState<ClientSort>('newest');
     const [clientPage, setClientPage] = useState(1);
@@ -408,7 +431,19 @@ export default function CompanyManagementPage() {
 
     function openBiometricRequestModal(client: User) {
         setSelectedClient(client);
-        setBiometricRequestMethods((client.biometricType ?? ['DACTILAR']) as BiometricMethod[]);
+        const preferredMethods = client.biometricMethods?.length
+            ? client.biometricMethods
+            : client.biometricType
+                ? [client.biometricType]
+                : ['DACTILAR_REGISTRO'];
+
+        const normalizedMethods = preferredMethods.map((method) => method === 'DACTILAR' ? 'DACTILAR_REGISTRO' : method);
+        const fingerprintFlow = normalizedMethods.find((method) => FINGERPRINT_FLOW_METHODS.includes(method as BiometricMethod));
+        const methodsWithoutFingerprint = normalizedMethods.filter((method) => !FINGERPRINT_FLOW_METHODS.includes(method as BiometricMethod));
+        setBiometricRequestMethods([
+            ...(fingerprintFlow ? [fingerprintFlow] : []),
+            ...methodsWithoutFingerprint,
+        ] as BiometricMethod[]);
         setBiometricModalOpen(true);
     }
 
@@ -484,6 +519,12 @@ export default function CompanyManagementPage() {
 
     async function handleSendBiometricRequest() {
         if (!selectedClient || biometricRequestMethods.length === 0) return;
+
+        const selectedFingerprintFlows = biometricRequestMethods.filter((method) => FINGERPRINT_FLOW_METHODS.includes(method));
+        if (selectedFingerprintFlows.length > 1) {
+            toast.error('Selecciona registro dactilar o verificación dactilar, no ambos');
+            return;
+        }
 
         setBiometricRequesting(true);
         try {
@@ -1353,7 +1394,7 @@ export default function CompanyManagementPage() {
                                 <Dialog.Panel className="w-full max-w-xl rounded-3xl border border-white/10 bg-[#0f172a] p-6 shadow-2xl">
                                     <div className="mb-5 flex items-start justify-between gap-4">
                                         <div>
-                                            <Dialog.Title className="text-2xl font-semibold text-white">Solicitar verificación biométrica</Dialog.Title>
+                                            <Dialog.Title className="text-2xl font-semibold text-white">Solicitud biometrica</Dialog.Title>
                                             <p className="mt-1 text-sm text-slate-400">Selecciona el método biometrico que completará el cliente.</p>
                                         </div>
                                         <button onClick={() => setBiometricModalOpen(false)} className="rounded-xl border border-white/10 p-2 text-slate-300 hover:bg-white/10" type="button" aria-label="Cerrar modal de solicitud biométrica">
@@ -1373,25 +1414,30 @@ export default function CompanyManagementPage() {
                                         <div>
                                             <label className="mb-2 block text-sm text-slate-300">Tipo de verificación</label>
                                             <div className="space-y-3">
-                                                {(['DACTILAR', 'FACIAL', 'OCULAR'] as BiometricMethod[]).map((method) => (
+                                                {BIOMETRIC_REQUEST_OPTIONS.map((option) => (
                                                     <label
-                                                        key={method}
-                                                        className="flex cursor-pointer items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-200 hover:bg-white/10 transition-colors"
+                                                        key={option.value}
+                                                        className={`flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-200 transition-colors ${FINGERPRINT_FLOW_METHODS.includes(option.value) && biometricRequestMethods.some((method) => FINGERPRINT_FLOW_METHODS.includes(method) && method !== option.value) ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:bg-white/10'}`}
                                                     >
                                                         <input
                                                             type="checkbox"
-                                                            checked={biometricRequestMethods.includes(method)}
+                                                            checked={biometricRequestMethods.includes(option.value)}
+                                                            disabled={FINGERPRINT_FLOW_METHODS.includes(option.value) && biometricRequestMethods.some((method) => FINGERPRINT_FLOW_METHODS.includes(method) && method !== option.value)}
                                                             onChange={(e) => {
                                                                 if (e.target.checked) {
-                                                                    setBiometricRequestMethods((prev) => [...prev, method]);
+                                                                    setBiometricRequestMethods((prev) => [
+                                                                        ...prev.filter((method) => !FINGERPRINT_FLOW_METHODS.includes(option.value) || !FINGERPRINT_FLOW_METHODS.includes(method)),
+                                                                        option.value,
+                                                                    ]);
                                                                 } else {
-                                                                    setBiometricRequestMethods((prev) => prev.filter((m) => m !== method));
+                                                                    setBiometricRequestMethods((prev) => prev.filter((method) => method !== option.value));
                                                                 }
                                                             }}
                                                             className="h-4 w-4 rounded border-white/20 bg-white/5 text-teal-500 focus:ring-teal-500/50"
                                                         />
-                                                        <span className="font-medium text-white">
-                                                            {method === 'DACTILAR' ? 'Dactilar' : method === 'FACIAL' ? 'Facial' : 'Ocular'}
+                                                        <span className="flex flex-col">
+                                                            <span className="font-medium text-white">{option.label}</span>
+                                                            <span className="text-xs text-slate-400">{option.description}</span>
                                                         </span>
                                                     </label>
                                                 ))}
