@@ -143,6 +143,11 @@ export default function Verification() {
     }
   };
 
+  const CerrarPestaña = () => {
+    window.open("", "_self");
+    window.close();
+  };
+
   if (enrollmentDone) {
     return (
       <main className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.95)_0%,rgba(226,232,240,0.9)_38%,rgba(241,245,249,1)_100%)] px-4 py-6 text-slate-900 sm:px-6 lg:px-8 lg:py-10">
@@ -152,18 +157,18 @@ export default function Verification() {
               Registro completado
             </span>
             <h1 className="mt-4 text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">
-              Su verificación biométrica fue registrada correctamente
+             Solicitud biometrica realizada con éxito
             </h1>
             <p className="mt-3 text-base text-slate-600">
-              Puede cerrar esta pantalla y continuar con el acceso normal a la plataforma.
+              Al correo electronico registrado te llegará el certificado
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
               <button
                 type="button"
                 className="inline-flex h-12 items-center justify-center rounded-xl bg-slate-900 px-5 text-base font-semibold text-white shadow-sm transition hover:bg-slate-800"
-                onClick={() => navigate('/', { replace: true })}
+                onClick={CerrarPestaña}
               >
-                Volver al inicio
+                Cerrar
               </button>
             </div>
           </div>

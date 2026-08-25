@@ -121,7 +121,7 @@ export type FingerprintSimulatorProps = BaseBiometricProps & {
 
 export function FingerprintSimulator({
   onComplete,
-  successRate = 0.88,
+  successRate = 0.75,
   disabled = false,
   flowMode = "full-enrollment",
 }: FingerprintSimulatorProps) {

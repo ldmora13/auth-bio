@@ -2,6 +2,7 @@
   --local-accent: var(--bio-scan);
   --local-ok: var(--bio-ok);
   --local-err: var(--bio-err);
+  margin-top: -10px;
   width: 100%;
   max-width: 640px;
   max-height: 640px;
@@ -33,6 +34,7 @@
     max-height: auto;
   };
   .handCard {
+    margin-top: auto;
     height: 100%;
   };
   .handImage {
@@ -96,6 +98,7 @@
   padding: 5px 5px;
   box-sizing: border-box;
   min-height: 320px;
+  margin-top: -8px;
 }
 
 .handWrapper {
@@ -549,7 +552,7 @@
   .readerMeta { justify-items: center; text-align: center; }
   .readerHint { max-width: 40ch; }
   .status { min-height: unset; }
-  .pad { width: 136px; height: 136px; }
+  .pad { width: 180px; height: 170px; }
 }
 
 @media (max-width: 520px) {

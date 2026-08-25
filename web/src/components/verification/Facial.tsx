@@ -4,8 +4,8 @@ import { CameraStage } from "../../shared/ui/CameraStage";
 import type { BaseBiometricProps } from "../../shared/biometricTypes";
 import styles from "./Facial.module.css";
 
-const ALIGN_DURATION_MS = 1100;
-const SCAN_DURATION_MS = 1500;
+const ALIGN_DURATION_MS = 2500;
+const SCAN_DURATION_MS = 2000;
 
 type FacialPhase = "aligning" | "scanning" | "success" | "error";
 
@@ -13,7 +13,7 @@ export interface FacialSimulatorProps extends BaseBiometricProps {}
 
 export function FacialSimulator({
   onComplete,
-  successRate = 0.99,
+  successRate = 0.80,
   disabled = false,
 }: FacialSimulatorProps) {
   const { videoRef, status: cameraStatus, errorMessage, requestCamera, stopCamera } = useCamera();
@@ -59,7 +59,6 @@ export function FacialSimulator({
     stopCamera();
   }, [stopCamera, videoRef]);
 
-  // Cuando la cámara queda lista, corre la secuencia: alinear -> escanear -> resultado.
   useEffect(() => {
     if (cameraStatus !== "ready" || disabled) return;
 
@@ -138,29 +137,29 @@ export function FacialSimulator({
         showRetry={false}
         onRetry={handleManualRetry}
         overlay={
-          <svg className={styles.overlaySvg} viewBox="0 0 200 240" aria-hidden="true">
+          <svg className={styles.overlaySvg} viewBox="0 0 200 250" aria-hidden="true">
             <defs>
               <mask id={maskId}>
-                <rect width="200" height="240" fill="white" />
-                <ellipse cx="100" cy="120" rx="58" ry="82" fill="black" />
+                <rect width="200" height="250" fill="white" />
+                <ellipse cx="100" cy="125" rx="58" ry="82" fill="black" />
               </mask>
               <clipPath id={clipId}>
-                <ellipse cx="100" cy="120" rx="58" ry="82" />
+                <ellipse cx="100" cy="125" rx="58" ry="82" />
               </clipPath>
             </defs>
 
-            <rect width="200" height="240" fill="rgba(15, 23, 42, 0.68)" mask={`url(#${maskId})`} />
+            <rect width="200" height="250" fill="rgba(15, 23, 42, 0.68)" mask={`url(#${maskId})`} />
 
-            <path className={styles.corner} data-locked={locked} d="M14 40 V16 H38" />
-            <path className={styles.corner} data-locked={locked} d="M186 40 V16 H162" />
-            <path className={styles.corner} data-locked={locked} d="M14 200 V224 H38" />
-            <path className={styles.corner} data-locked={locked} d="M186 200 V224 H162" />
+            <path className={styles.corner} data-locked={locked} d="M14 45 V21 H38" />
+            <path className={styles.corner} data-locked={locked} d="M186 45 V21 H162" />
+            <path className={styles.corner} data-locked={locked} d="M14 205 V229 H38" />
+            <path className={styles.corner} data-locked={locked} d="M186 205 V229 H162" />
 
-            <ellipse className={styles.silhouette} data-locked={locked} cx="100" cy="120" rx="58" ry="82" />
+            <ellipse className={styles.silhouette} data-locked={locked} cx="100" cy="125" rx="58" ry="82" />
 
             {phase === "scanning" && (
               <g clipPath={`url(#${clipId})`}>
-                <line className={styles.scanLine} x1="42" x2="158" y1="120" y2="120" />
+                <line className={styles.scanLine} x1="42" x2="158" y1="125" y2="125" />
               </g>
             )}
           </svg>

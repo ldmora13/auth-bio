@@ -4,7 +4,7 @@ import { CameraStage } from "../../shared/ui/CameraStage";
 import type { BaseBiometricProps } from "../../shared/biometricTypes";
 import styles from "./Iris.module.css";
 
-const ALIGN_DURATION_MS = 1000;
+const ALIGN_DURATION_MS = 2500;
 const SCAN_DURATION_MS = 1700;
 
 type IrisPhase = "aligning" | "scanning" | "success" | "error";
@@ -13,7 +13,7 @@ export interface IrisSimulatorProps extends BaseBiometricProps {}
 
 export function IrisSimulator({
   onComplete,
-  successRate = 0.99,
+  successRate = 0.80,
   disabled = false,
 }: IrisSimulatorProps) {
   const { videoRef, status: cameraStatus, errorMessage, requestCamera, stopCamera } = useCamera();
@@ -136,27 +136,27 @@ export function IrisSimulator({
         showRetry={false}
         onRetry={handleManualRetry}
         overlay={
-          <svg className={styles.overlaySvg} viewBox="0 0 220 140" aria-hidden="true">
+          <svg className={styles.overlaySvg} viewBox="0 0 220 275" aria-hidden="true">
             <defs>
               <mask id={maskId}>
-                <rect width="220" height="140" fill="white" />
-                <rect x="40" y="42" width="140" height="56" rx="4" fill="black" />
+                <rect width="220" height="275" fill="white" />
+                <rect x="40" y="109.5" width="140" height="56" rx="4" fill="black" />
               </mask>
               <clipPath id={clipId}>
-                <rect x="40" y="42" width="140" height="56" rx="4" />
+                <rect x="40" y="109.5" width="140" height="56" rx="4" />
               </clipPath>
             </defs>
 
-            <rect width="220" height="140" fill="rgba(15, 23, 42, 0.78)" mask={`url(#${maskId})`} />
+            <rect width="220" height="275" fill="rgba(15, 23, 42, 0.78)" mask={`url(#${maskId})`} />
 
-            <rect className={styles.window} data-locked={locked} x="40" y="42" width="140" height="56" rx="4" />
+            <rect className={styles.window} data-locked={locked} x="40" y="109.5" width="140" height="56" rx="4" />
 
-            <line className={styles.bridge} x1="98" y1="70" x2="122" y2="70" />
+            <line className={styles.bridge} x1="98" y1="137.5" x2="122" y2="137.5" />
 
             {phase === "scanning" && (
               <g clipPath={`url(#${clipId})`}>
                 <g className={styles.sweepGroup}>
-                  <line className={styles.sweepLine} x1="110" y1="34" x2="110" y2="106" />
+                  <line className={styles.sweepLine} x1="110" y1="101.5" x2="110" y2="173.5" />
                 </g>
               </g>
             )}
