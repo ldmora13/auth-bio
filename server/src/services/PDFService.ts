@@ -1,7 +1,9 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { GetObjectCommand } from '@aws-sdk/client-s3';
 import { PDFDocument, PDFPage, PDFFont, StandardFonts, rgb } from 'pdf-lib';
 import { db } from '../lib/db';
+import { getR2Config } from '../config/r2';
 
 type PDFServiceOptions = { userId?: string; email?: string };
 
@@ -15,6 +17,129 @@ const formatStoredDate = (value: string | null) => {
 	const date = new Date(`${value}T00:00:00`);
 	return Number.isNaN(date.getTime()) ? value : formatDate(date);
 };
+
+type SupportedImageType = 'jpg' | 'png';
+
+function detectImageType(bytes: Uint8Array): SupportedImageType | null {
+	if (bytes.length > 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) {
+		return 'jpg';
+	}
+
+	if (
+		bytes.length > 8 &&
+		bytes[0] === 0x89 &&
+		bytes[1] === 0x50 &&
+		bytes[2] === 0x4e &&
+		bytes[3] === 0x47 &&
+		bytes[4] === 0x0d &&
+		bytes[5] === 0x0a &&
+		bytes[6] === 0x1a &&
+		bytes[7] === 0x0a
+	) {
+		return 'png';
+	}
+
+	return null;
+}
+
+async function loadProfileImageBytes(profilePhotoUrl: string): Promise<Uint8Array | null> {
+	if (!profilePhotoUrl) return null;
+
+	const r2 = getR2Config();
+
+	const readFromR2 = async (objectKey: string) => {
+		if (!r2 || !objectKey) return null;
+		const object = await r2.client.send(new GetObjectCommand({
+			Bucket: r2.bucketName,
+			Key: objectKey,
+		}));
+		if (!object.Body) return null;
+
+		const body = object.Body as any;
+		if (typeof body.transformToByteArray === 'function') {
+			return new Uint8Array(await body.transformToByteArray());
+		}
+
+		const chunks: Buffer[] = [];
+		for await (const chunk of body as AsyncIterable<Uint8Array>) {
+			chunks.push(Buffer.from(chunk));
+		}
+		return new Uint8Array(Buffer.concat(chunks));
+	};
+
+	const getObjectKeyFromRemoteUrl = (rawUrl: string) => {
+		if (!r2) return null;
+		const sourceUrl = new URL(rawUrl);
+		const publicUrl = new URL(r2.publicUrl);
+		if (sourceUrl.hostname !== publicUrl.hostname) {
+			return null;
+		}
+
+		return decodeURIComponent(sourceUrl.pathname.replace(/^\/+/, ''));
+	};
+
+	if (profilePhotoUrl.startsWith('http://') || profilePhotoUrl.startsWith('https://')) {
+		try {
+			const response = await fetch(profilePhotoUrl);
+			if (!response.ok) {
+				throw new Error(`Failed to fetch profile photo: ${response.status}`);
+			}
+			return new Uint8Array(await response.arrayBuffer());
+		} catch (error) {
+			const objectKey = getObjectKeyFromRemoteUrl(profilePhotoUrl);
+			if (objectKey) {
+				const r2ImageBytes = await readFromR2(objectKey);
+				if (r2ImageBytes) return r2ImageBytes;
+			}
+			throw error;
+		}
+	}
+
+	if (profilePhotoUrl.startsWith('/')) {
+		const objectKey = decodeURIComponent(profilePhotoUrl.replace(/^\/+/, ''));
+		const r2ImageBytes = await readFromR2(objectKey);
+		if (r2ImageBytes) return r2ImageBytes;
+		throw new Error(`Failed to load profile photo from R2: ${objectKey}`);
+	}
+
+	return await fs.readFile(path.resolve(profilePhotoUrl));
+}
+
+async function drawUserPhoto(page: PDFPage, pdf: PDFDocument, profilePhotoUrl?: string | null) {
+	if (!profilePhotoUrl) return;
+
+	try {
+		const imageBytes = await loadProfileImageBytes(profilePhotoUrl);
+		if (!imageBytes) return;
+
+		const type = detectImageType(imageBytes);
+		if (!type) {
+			console.warn(`[PDFService] Unsupported profile photo format for ${profilePhotoUrl}. Only JPG/PNG can be embedded.`);
+			return;
+		}
+
+		const embedded = type === 'jpg'
+			? await pdf.embedJpg(imageBytes)
+			: await pdf.embedPng(imageBytes);
+
+		const box = {
+			x: 435,
+			y: 245,
+			width: 155,
+			height: 210,
+		};
+
+		const scale = Math.min(box.width / embedded.width, box.height / embedded.height);
+		const width = embedded.width * scale;
+		const height = embedded.height * scale;
+		const x = box.x + (box.width - width) / 2;
+		const y = box.y + (box.height - height) / 2;
+
+		page.drawImage(embedded, { x, y, width, height });
+	} catch (error) {
+		console.warn('[PDFService] Could not embed profile photo in PDF:', error);
+	}
+}
 
 export default async function PDFService({ userId, email }: PDFServiceOptions): Promise<Buffer> {
 	if (!userId && !email) throw new Error('PDFService requires userId or email');
@@ -59,6 +184,7 @@ export default async function PDFService({ userId, email }: PDFServiceOptions): 
 	write(firstPage, documentNumber, { x: 18, y: 222, width: 170, size: 13, align: 'center' });
 	write(firstPage, `Valid From ${formatStoredDate(user.validFrom)} - Card Expires ${formatStoredDate(user.cardExpires)}`, { x: 18, y: 205, width: 205, size: 8, font: regularFont, align: 'center' });
 	write(firstPage, user.migratoryStatus ?? 'N/D', { x: 225, y: 210, width: 105, size: 10, align: 'center' });
+	await drawUserPhoto(firstPage, pdf, user.profilePhotoUrl);
 
 	write(secondPage, processNumber, { x: 55, y: 400, width: 120, size: 12, align: 'center' });
 	write(secondPage, user.migratoryStatus ?? 'N/D', { x: 185, y: 400, width: 105, size: 10, align: 'center' });

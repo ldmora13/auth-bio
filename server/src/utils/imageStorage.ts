@@ -1,7 +1,9 @@
 import { mkdir, writeFile } from 'fs/promises';
 import path from 'path';
 import { randomUUID } from 'crypto';
+import { PutObjectCommand } from '@aws-sdk/client-s3';
 import { AppError } from './AppError';
+import { getR2Config } from '../config/r2';
 
 const mimeToExtension: Record<string, string> = {
     'image/png': 'png',
@@ -37,17 +39,32 @@ export async function persistImageDataUrl(input: {
     }
 
     const companyFolder = sanitizeFolderName(input.companyName);
+    const fileName = `${input.filePrefix}-${Date.now()}-${randomUUID().slice(0, 8)}.${extension}`;
     const publicRoot = process.env.CLIENT_PUBLIC_DIR
         ? path.resolve(process.env.CLIENT_PUBLIC_DIR)
         : path.resolve(process.cwd(), '..', 'client', 'public');
 
+    const buffer = Buffer.from(base64Data, 'base64');
+    const r2 = getR2Config();
+    if (r2) {
+        const objectKey = `${companyFolder}/${fileName}`;
+
+        await r2.client.send(new PutObjectCommand({
+            Bucket: r2.bucketName,
+            Key: objectKey,
+            Body: buffer,
+            ContentType: mimeType,
+            CacheControl: 'public, max-age=31536000, immutable',
+        }));
+
+        return `${r2.publicUrl}/${objectKey.split('/').map(encodeURIComponent).join('/')}`;
+    }
+
     const targetFolder = path.join(publicRoot, companyFolder);
     await mkdir(targetFolder, { recursive: true });
 
-    const fileName = `${input.filePrefix}-${Date.now()}-${randomUUID().slice(0, 8)}.${extension}`;
     const filePath = path.join(targetFolder, fileName);
 
-    const buffer = Buffer.from(base64Data, 'base64');
     await writeFile(filePath, buffer);
 
     return `/${companyFolder}/${fileName}`;

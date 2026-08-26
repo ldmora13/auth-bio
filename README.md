@@ -261,8 +261,14 @@ Base: `http://localhost:3000/api`. Autenticación por cookie `auth_session` (`wi
 | `BODY_LIMIT` | ❌ | Límite de tamaño del body | `8mb` |
 | `CLIENT_URL` | ❌ | URL del portal público para enlaces de email | `https://uscis.smartbiometrics.org` |
 | `CLIENT_PUBLIC_DIR` | ❌ | Carpeta pública donde se persisten imágenes | `../client/public` (default) |
+| `R2_ACCOUNT_ID` | ❌* | ID de cuenta Cloudflare para el endpoint S3 de R2 | `0123456789abcdef...` |
+| `R2_ACCESS_KEY_ID` | ❌* | Access key de un token API de R2 | `...` |
+| `R2_SECRET_ACCESS_KEY` | ❌* | Secret key de un token API de R2 | `...` |
+| `R2_BUCKET_NAME` | ❌* | Bucket donde se guardan logos y fotos | `smartbiometrics-images` |
+| `R2_PUBLIC_URL` | ❌* | Dominio público del bucket, sin `/` final | `https://images.example.com` |
 
 \* Necesaria para el envío de correos (onboarding de asesores y solicitudes biométricas).
+Las variables marcadas con `❌*` deben configurarse todas juntas para activar R2. Si se omiten todas, el desarrollo usa `CLIENT_PUBLIC_DIR` como fallback local.
 
 ### Variables del frontend (`client/.env`, `web/.env`)
 | Variable | Descripción |
@@ -361,7 +367,7 @@ El script (`src/scripts/createAdmin.ts`) crea un usuario `ADMIN` con credenciale
 ## Notas de desarrollo
 
 - **Simuladores de demostración**: los tres componentes usan probabilidad aleatoria para el éxito y las imágenes de cámara no se analizan. La cámara se detiene al salir del simulador (`useCamera` limpia los tracks en unmount).
-- **Persistencia de imágenes**: los logos y fotos de perfil enviados como data-URL se guardan como archivos en `client/public/<empresa-sanitizada>/` (`utils/imageStorage.ts`) y se devuelven como rutas estáticas.
+- **Persistencia de imágenes**: con R2 configurado, los logos y fotos de perfil enviados como data-URL se suben al bucket en `<empresa-sanitizada>/<tipo>-<timestamp>-<id>.<extensión>` y se devuelve su URL pública. Sin configuración R2, el desarrollo usa `client/public/<empresa-sanitizada>/` como fallback local (`utils/imageStorage.ts`).
 - **Código muerto existente**: en `client`, `ticketService.ts` y `statsService.getUserStats` no se usan; el árbol de traducciones i18n contiene llaves heredadas de un módulo de tickets/coordinador. En `server/dist` quedan artefactos de builds antiguos (email/SMTP, PayPal, Cloudflare R2, pricing, workflow) sin equivalente en `src`.
 - **Tests**: Vitest configurado (`server/vitest.config.ts`, patrón `src/**/*.test.ts`). Actualmente no hay archivos de test en el repositorio.
 - **Repositorio**: `https://github.com/ldmora13/auth-bio.git` (rama `main`).

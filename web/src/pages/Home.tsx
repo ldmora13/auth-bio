@@ -150,7 +150,7 @@ export default function Home() {
                         <div className="flex items-center justify-center">
                             {profile.profilePhotoUrl ? (
                                 <img
-                                    src={`${import.meta.env.VITE_CLIENT_URL}${profile.profilePhotoUrl}`}
+                                    src={profile.profilePhotoUrl}
                                     alt="Foto de perfil"
                                     className="h-50 w-auto rounded-xl border border-slate-200 object-cover shadow-sm"
                                 />
