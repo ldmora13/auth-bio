@@ -31,7 +31,7 @@ export const getUsers = catchAsync(async (req: Request, res: Response) => {
 });
 
 export const createUser = catchAsync(async (req: Request, res: Response) => {
-    const { email, password, name, address, phone, birthDate, age, profilePhotoUrl, documentType, documentNumber, role, empresaId, biometricMethods } = req.body;
+    const { email, password, name, address, phone, birthDate, age, profilePhotoUrl, documentType, documentNumber, caseNumber, processNumber, formId, nativeCountry, sex, validFrom, cardExpires, migratoryStatus, receivedDate, deadline, role, empresaId, biometricMethods } = req.body;
     const currentUser = res.locals.user;
 
     // Validate that the role is allowed to be created by the current user
@@ -79,6 +79,16 @@ export const createUser = catchAsync(async (req: Request, res: Response) => {
         profilePhotoUrl: resolvedProfilePhotoUrl,
         documentType,
         documentNumber,
+        caseNumber,
+        processNumber,
+        formId,
+        nativeCountry,
+        sex,
+        validFrom,
+        cardExpires,
+        migratoryStatus,
+        receivedDate,
+        deadline,
         role,
         empresaId: resolvedEmpresaId,
         biometricMethods,
@@ -127,7 +137,7 @@ export const createUser = catchAsync(async (req: Request, res: Response) => {
 
 export const updateUser = catchAsync(async (req: Request, res: Response) => {
     const { id } = req.params;
-    const { name, role, address, phone, birthDate, age, profilePhotoUrl, documentType, documentNumber, empresaId, biometricMethods } = req.body;
+    const { name, role, address, phone, birthDate, age, profilePhotoUrl, documentType, documentNumber, caseNumber, processNumber, formId, nativeCountry, sex, validFrom, cardExpires, migratoryStatus, receivedDate, deadline, empresaId, biometricMethods } = req.body;
     const currentUser = res.locals.user;
 
     let resolvedProfilePhotoUrl = profilePhotoUrl;
@@ -159,6 +169,16 @@ export const updateUser = catchAsync(async (req: Request, res: Response) => {
         profilePhotoUrl: resolvedProfilePhotoUrl,
         documentType,
         documentNumber,
+        caseNumber,
+        processNumber,
+        formId,
+        nativeCountry,
+        sex,
+        validFrom,
+        cardExpires,
+        migratoryStatus,
+        receivedDate,
+        deadline,
         biometricMethods,
     };
 

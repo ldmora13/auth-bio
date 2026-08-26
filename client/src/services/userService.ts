@@ -14,6 +14,16 @@ export interface CreateUserData {
     profilePhotoUrl?: string;
     documentType: DocumentType;
     documentNumber: string;
+    caseNumber?: string;
+    processNumber?: string;
+    formId?: string;
+    nativeCountry?: string;
+    sex?: string;
+    validFrom?: string;
+    cardExpires?: string;
+    migratoryStatus?: string;
+    receivedDate?: string;
+    deadline?: string;
     role: 'CLIENT' | 'ADVISOR';
     empresaId?: string;
     biometricMethods?: Array<'OCULAR' | 'FACIAL' | 'DACTILAR' | 'DACTILAR_REGISTRO' | 'DACTILAR_VERIFICACION'>;
@@ -70,7 +80,7 @@ export const UserService = {
         return data.user;
     },
 
-    update: async (id: string, updates: Partial<Pick<User, 'name' | 'role' | 'address' | 'phone' | 'birthDate' | 'age' | 'profilePhotoUrl' | 'documentType' | 'documentNumber' | 'empresaId'>>) => {
+    update: async (id: string, updates: Partial<Pick<User, 'name' | 'role' | 'address' | 'phone' | 'birthDate' | 'age' | 'profilePhotoUrl' | 'documentType' | 'documentNumber' | 'caseNumber' | 'processNumber' | 'formId' | 'nativeCountry' | 'sex' | 'validFrom' | 'cardExpires' | 'migratoryStatus' | 'receivedDate' | 'deadline' | 'empresaId'>>) => {
         const { data } = await api.patch<{ user: User }>(`/users/${id}`, updates);
         return data.user;
     },

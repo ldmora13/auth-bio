@@ -14,6 +14,16 @@ type CreateUserInput = {
     profilePhotoUrl?: string | null;
     documentType?: DocumentType | null;
     documentNumber?: string | null;
+    caseNumber?: string | null;
+    processNumber?: string | null;
+    formId?: string | null;
+    nativeCountry?: string | null;
+    sex?: string | null;
+    validFrom?: string | null;
+    cardExpires?: string | null;
+    migratoryStatus?: string | null;
+    receivedDate?: string | null;
+    deadline?: string | null;
     role: Role;
     empresaId?: string | null;
     biometricMethods?: BiometricMethod[];
@@ -64,6 +74,16 @@ export class UserService {
             profilePhotoUrl: data.profilePhotoUrl,
             documentType: data.documentType,
             documentNumber: data.documentNumber,
+            caseNumber: data.caseNumber,
+            processNumber: data.processNumber,
+            formId: data.formId,
+            nativeCountry: data.nativeCountry,
+            sex: data.sex,
+            validFrom: data.validFrom,
+            cardExpires: data.cardExpires,
+            migratoryStatus: data.migratoryStatus,
+            receivedDate: data.receivedDate,
+            deadline: data.deadline,
             role: data.role,
             empresaId: data.empresaId ?? null,
             biometricMethods: data.biometricMethods ?? [],

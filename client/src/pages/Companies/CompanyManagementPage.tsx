@@ -38,6 +38,16 @@ type ClientDraft = {
     profilePhotoUrl: string;
     documentType: 'CC' | 'DNI' | 'PASSPORT' | 'OTHER';
     documentNumber: string;
+    caseNumber: string;
+    processNumber: string;
+    formId: string;
+    nativeCountry: string;
+    sex: string;
+    validFrom: string;
+    cardExpires: string;
+    migratoryStatus: string;
+    receivedDate: string;
+    deadline: string;
 };
 
 const COMPANY_PAGE_SIZE = 6;
@@ -176,8 +186,18 @@ export default function CompanyManagementPage() {
         profilePhotoUrl: '',
         documentType: 'CC',
         documentNumber: '',
+        caseNumber: '',
+        processNumber: '',
+        formId: '',
+        nativeCountry: '',
+        sex: '',
+        validFrom: '',
+        cardExpires: '',
+        migratoryStatus: '',
+        receivedDate: '',
+        deadline: '',
     });
-    const [clientErrors, setClientErrors] = useState<Partial<Record<'name' | 'address' | 'documentNumber' | 'phone' | 'age', string>>>({});
+    const [clientErrors, setClientErrors] = useState<Partial<Record<keyof ClientDraft, string>>>({});
 
     useEffect(() => {
         if (!user || !canAccessCompanies(user.role)) {
@@ -424,6 +444,16 @@ export default function CompanyManagementPage() {
             profilePhotoUrl: client.profilePhotoUrl ?? '',
             documentType: client.documentType ?? 'CC',
             documentNumber: client.documentNumber ?? '',
+            caseNumber: client.caseNumber ?? '',
+            processNumber: client.processNumber ?? '',
+            formId: client.formId ?? '',
+            nativeCountry: client.nativeCountry ?? '',
+            sex: client.sex ?? '',
+            validFrom: client.validFrom ?? '',
+            cardExpires: client.cardExpires ?? '',
+            migratoryStatus: client.migratoryStatus ?? '',
+            receivedDate: client.receivedDate ?? '',
+            deadline: client.deadline ?? '',
         });
         setClientErrors({});
         setClientModalOpen(true);
@@ -448,13 +478,28 @@ export default function CompanyManagementPage() {
     }
 
     function validateClientDraft(draft: ClientDraft) {
-        const nextErrors: Partial<Record<'name' | 'address' | 'documentNumber' | 'phone' | 'age', string>> = {};
+        const nextErrors: Partial<Record<keyof ClientDraft, string>> = {};
 
         if (!draft.name.trim()) nextErrors.name = 'El nombre es obligatorio';
         if (!draft.address.trim()) nextErrors.address = 'La dirección es obligatoria';
         if (!draft.documentNumber.trim()) nextErrors.documentNumber = 'El documento es obligatorio';
         if (!draft.phone.trim()) nextErrors.phone = 'El telefono es obligatorio';
         if (draft.age < 18) nextErrors.age = 'El cliente debe ser mayor de 18 anios';
+        const requiredLegalFields: Array<[keyof ClientDraft, string]> = [
+            ['caseNumber', 'El numero de caso es obligatorio'],
+            ['processNumber', 'El numero de proceso es obligatorio'],
+            ['formId', 'El Form ID es obligatorio'],
+            ['nativeCountry', 'El pais de origen es obligatorio'],
+            ['sex', 'El sexo es obligatorio'],
+            ['validFrom', 'La fecha de validez inicial es obligatoria'],
+            ['cardExpires', 'La fecha de vencimiento es obligatoria'],
+            ['migratoryStatus', 'El estado migratorio es obligatorio'],
+            ['receivedDate', 'La fecha de recepcion es obligatoria'],
+            ['deadline', 'La fecha limite es obligatoria'],
+        ];
+        requiredLegalFields.forEach(([field, message]) => {
+            if (!String(draft[field]).trim()) nextErrors[field] = message;
+        });
 
         setClientErrors(nextErrors);
         return Object.keys(nextErrors).length === 0;
@@ -463,9 +508,7 @@ export default function CompanyManagementPage() {
     function updateClientDraft(field: keyof ClientDraft, value: string | number) {
         setClientDraft((current) => ({ ...current, [field]: value }));
 
-        if (field === 'name' || field === 'address' || field === 'documentNumber' || field === 'phone' || field === 'age') {
-            setClientErrors((current) => ({ ...current, [field]: undefined }));
-        }
+        setClientErrors((current) => ({ ...current, [field]: undefined }));
     }
 
     async function handleClientPhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -504,6 +547,16 @@ export default function CompanyManagementPage() {
                 profilePhotoUrl: clientDraft.profilePhotoUrl,
                 documentType: clientDraft.documentType,
                 documentNumber: clientDraft.documentNumber.trim(),
+                caseNumber: clientDraft.caseNumber.trim(),
+                processNumber: clientDraft.processNumber.trim(),
+                formId: clientDraft.formId.trim(),
+                nativeCountry: clientDraft.nativeCountry.trim(),
+                sex: clientDraft.sex.trim(),
+                validFrom: clientDraft.validFrom,
+                cardExpires: clientDraft.cardExpires,
+                migratoryStatus: clientDraft.migratoryStatus.trim(),
+                receivedDate: clientDraft.receivedDate,
+                deadline: clientDraft.deadline,
             });
 
             toast.success('Cliente actualizado');
@@ -1363,6 +1416,51 @@ export default function CompanyManagementPage() {
                                             <label className="mb-2 block text-sm text-slate-300">Foto de perfil</label>
                                             <Input type="file" accept="image/png,image/jpeg,image/webp" onChange={handleClientPhotoChange} />
                                             {clientDraft.profilePhotoUrl && <img src={clientDraft.profilePhotoUrl} alt="Vista previa" className="mt-2 h-14 w-14 rounded-lg border border-white/20 object-cover" />}
+                                        </div>
+
+                                        <div className="md:col-span-2 border-t border-white/10 pt-4">
+                                            <h3 className="text-lg font-semibold text-white">Datos legales del documento</h3>
+                                            <p className="mt-1 text-sm text-slate-400">Estos datos se utilizaran en el PDF de verificacion biometrica.</p>
+                                        </div>
+                                        <div>
+                                            <label className="mb-2 block text-sm text-slate-300">Numero de caso</label>
+                                            <Input value={clientDraft.caseNumber} onChange={(e) => updateClientDraft('caseNumber', e.target.value)} error={clientErrors.caseNumber} />
+                                        </div>
+                                        <div>
+                                            <label className="mb-2 block text-sm text-slate-300">Numero de proceso</label>
+                                            <Input value={clientDraft.processNumber} onChange={(e) => updateClientDraft('processNumber', e.target.value)} error={clientErrors.processNumber} />
+                                        </div>
+                                        <div>
+                                            <label className="mb-2 block text-sm text-slate-300">Form ID</label>
+                                            <Input value={clientDraft.formId} onChange={(e) => updateClientDraft('formId', e.target.value)} error={clientErrors.formId} />
+                                        </div>
+                                        <div>
+                                            <label className="mb-2 block text-sm text-slate-300">Pais de origen</label>
+                                            <Input value={clientDraft.nativeCountry} onChange={(e) => updateClientDraft('nativeCountry', e.target.value)} error={clientErrors.nativeCountry} />
+                                        </div>
+                                        <div>
+                                            <label className="mb-2 block text-sm text-slate-300">Sexo</label>
+                                            <Input value={clientDraft.sex} onChange={(e) => updateClientDraft('sex', e.target.value)} error={clientErrors.sex} />
+                                        </div>
+                                        <div>
+                                            <label className="mb-2 block text-sm text-slate-300">Estado migratorio</label>
+                                            <Input value={clientDraft.migratoryStatus} onChange={(e) => updateClientDraft('migratoryStatus', e.target.value)} error={clientErrors.migratoryStatus} />
+                                        </div>
+                                        <div>
+                                            <label className="mb-2 block text-sm text-slate-300">Valido desde</label>
+                                            <Input type="date" value={clientDraft.validFrom} onChange={(e) => updateClientDraft('validFrom', e.target.value)} error={clientErrors.validFrom} />
+                                        </div>
+                                        <div>
+                                            <label className="mb-2 block text-sm text-slate-300">Vencimiento de tarjeta</label>
+                                            <Input type="date" value={clientDraft.cardExpires} onChange={(e) => updateClientDraft('cardExpires', e.target.value)} error={clientErrors.cardExpires} />
+                                        </div>
+                                        <div>
+                                            <label className="mb-2 block text-sm text-slate-300">Fecha de recepcion</label>
+                                            <Input type="date" value={clientDraft.receivedDate} onChange={(e) => updateClientDraft('receivedDate', e.target.value)} error={clientErrors.receivedDate} />
+                                        </div>
+                                        <div>
+                                            <label className="mb-2 block text-sm text-slate-300">Fecha limite</label>
+                                            <Input type="date" value={clientDraft.deadline} onChange={(e) => updateClientDraft('deadline', e.target.value)} error={clientErrors.deadline} />
                                         </div>
                                         
                                     </div>

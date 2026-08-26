@@ -13,6 +13,16 @@ export interface User {
     profilePhotoUrl?: string;
     documentType?: DocumentType;
     documentNumber?: string;
+    caseNumber?: string;
+    processNumber?: string;
+    formId?: string;
+    nativeCountry?: string;
+    sex?: string;
+    validFrom?: string;
+    cardExpires?: string;
+    migratoryStatus?: string;
+    receivedDate?: string;
+    deadline?: string;
     biometricType?: BiometricMethod | null;
     biometricMethods?: BiometricMethod[];
     biometricEnrollmentRequired?: boolean;

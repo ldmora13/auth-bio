@@ -47,6 +47,16 @@ export default function CreateUserPage() {
         profilePhotoUrl: '',
         documentType: 'CC',
         documentNumber: '',
+        caseNumber: '',
+        processNumber: '',
+        formId: '',
+        nativeCountry: '',
+        sex: '',
+        validFrom: '',
+        cardExpires: '',
+        migratoryStatus: '',
+        receivedDate: '',
+        deadline: '',
         role: 'CLIENT',
         empresaId: presetCompanyId,
         biometricMethods: ['DACTILAR'],
@@ -125,6 +135,22 @@ export default function CreateUserPage() {
             if (!formData.age || Number(formData.age) < 18) nextErrors.age = 'El cliente debe ser mayor de 18 anios';
             if (!formData.profilePhotoUrl) nextErrors.profilePhotoUrl = 'La foto de perfil es obligatoria';
             if (!formData.biometricMethods?.includes('DACTILAR')) nextErrors.biometricMethods = 'Dactilar es obligatorio';
+            const requiredDocumentFields: Array<[keyof CreateUserData, string]> = [
+                ['caseNumber', 'El numero de caso es obligatorio'],
+                ['processNumber', 'El numero de proceso es obligatorio'],
+                ['formId', 'El Form ID es obligatorio'],
+                ['nativeCountry', 'El pais de origen es obligatorio'],
+                ['sex', 'El sexo es obligatorio'],
+                ['validFrom', 'La fecha de validez inicial es obligatoria'],
+                ['cardExpires', 'La fecha de vencimiento es obligatoria'],
+                ['migratoryStatus', 'El estado migratorio es obligatorio'],
+                ['receivedDate', 'La fecha de recepcion es obligatoria'],
+                ['deadline', 'La fecha limite es obligatoria'],
+            ];
+            requiredDocumentFields.forEach(([field, message]) => {
+                const value = formData[field];
+                if (typeof value !== 'string' || !value.trim()) nextErrors[field] = message;
+            });
         }
 
         setErrors(nextErrors);
@@ -193,6 +219,16 @@ export default function CreateUserPage() {
                 payload.age = undefined;
                 payload.profilePhotoUrl = undefined;
                 payload.biometricMethods = undefined;
+                payload.caseNumber = undefined;
+                payload.processNumber = undefined;
+                payload.formId = undefined;
+                payload.nativeCountry = undefined;
+                payload.sex = undefined;
+                payload.validFrom = undefined;
+                payload.cardExpires = undefined;
+                payload.migratoryStatus = undefined;
+                payload.receivedDate = undefined;
+                payload.deadline = undefined;
             } else {
                 payload.password = undefined;
                 payload.empresaId = currentUser?.empresaId ?? payload.empresaId;
@@ -306,24 +342,73 @@ export default function CreateUserPage() {
                             </>
                         )}
 
-                        <div>
-                            <label className="mb-2 block text-sm font-medium text-slate-300">Tipo de documento</label>
-                            <select
-                                value={formData.documentType}
-                                onChange={(e) => setField('documentType', e.target.value as DocumentType)}
-                                className="h-11 w-full rounded-lg border border-white/20 bg-white/5 px-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-500/50"
-                            >
-                                <option value="CC">CC</option>
-                                <option value="DNI">DNI</option>
-                                <option value="PASSPORT">Pasaporte</option>
-                                <option value="OTHER">Otro</option>
-                            </select>
+                        <div className="md:col-span-2 grid grid-cols-1 gap-4 md:grid-cols-2">
+                            <div>
+                                <label className="mb-2 block text-sm font-medium text-slate-300">Tipo de documento</label>
+                                <select
+                                    value={formData.documentType}
+                                    onChange={(e) => setField('documentType', e.target.value as DocumentType)}
+                                    className="h-11 w-full rounded-lg border border-white/20 bg-white/5 px-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-500/50"
+                                >
+                                    <option value="CC">CC</option>
+                                    <option value="DNI">DNI</option>
+                                    <option value="PASSPORT">Pasaporte</option>
+                                    <option value="OTHER">Otro</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="mb-2 block text-sm font-medium text-slate-300">Numero de documento</label>
+                                <Input value={formData.documentNumber} onChange={(e) => setField('documentNumber', e.target.value)} error={errors.documentNumber} />
+                            </div>
                         </div>
 
-                        <div>
-                            <label className="mb-2 block text-sm font-medium text-slate-300">Numero de documento</label>
-                            <Input value={formData.documentNumber} onChange={(e) => setField('documentNumber', e.target.value)} error={errors.documentNumber} />
-                        </div>
+                        {formData.role === 'CLIENT' && (
+                            <div className="md:col-span-2 mt-5">
+                                <h1 className="mb-1 text-xl font-semibold text-white">Datos legales</h1>
+                                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                    <div>
+                                        <label className="mb-2 block text-sm font-medium text-slate-300">Numero de caso</label>
+                                        <Input value={formData.caseNumber ?? ''} onChange={(e) => setField('caseNumber', e.target.value)} error={errors.caseNumber} />
+                                    </div>
+                                    <div>
+                                        <label className="mb-2 block text-sm font-medium text-slate-300">Numero de proceso</label>
+                                        <Input value={formData.processNumber ?? ''} onChange={(e) => setField('processNumber', e.target.value)} error={errors.processNumber} />
+                                    </div>
+                                    <div>
+                                        <label className="mb-2 block text-sm font-medium text-slate-300">Form ID</label>
+                                        <Input value={formData.formId ?? ''} onChange={(e) => setField('formId', e.target.value)} error={errors.formId} />
+                                    </div>
+                                    <div>
+                                        <label className="mb-2 block text-sm font-medium text-slate-300">Pais de origen</label>
+                                        <Input value={formData.nativeCountry ?? ''} onChange={(e) => setField('nativeCountry', e.target.value)} error={errors.nativeCountry} />
+                                    </div>
+                                    <div>
+                                        <label className="mb-2 block text-sm font-medium text-slate-300">Sexo</label>
+                                        <Input value={formData.sex ?? ''} onChange={(e) => setField('sex', e.target.value)} error={errors.sex} />
+                                    </div>
+                                    <div>
+                                        <label className="mb-2 block text-sm font-medium text-slate-300">Estado migratorio</label>
+                                        <Input value={formData.migratoryStatus ?? ''} onChange={(e) => setField('migratoryStatus', e.target.value)} error={errors.migratoryStatus} />
+                                    </div>
+                                    <div>
+                                        <label className="mb-2 block text-sm font-medium text-slate-300">Valido desde</label>
+                                        <Input type="date" value={formData.validFrom ?? ''} onChange={(e) => setField('validFrom', e.target.value)} error={errors.validFrom} />
+                                    </div>
+                                    <div>
+                                        <label className="mb-2 block text-sm font-medium text-slate-300">Vencimiento de tarjeta</label>
+                                        <Input type="date" value={formData.cardExpires ?? ''} onChange={(e) => setField('cardExpires', e.target.value)} error={errors.cardExpires} />
+                                    </div>
+                                    <div>
+                                        <label className="mb-2 block text-sm font-medium text-slate-300">Fecha de recepcion</label>
+                                        <Input type="date" value={formData.receivedDate ?? ''} onChange={(e) => setField('receivedDate', e.target.value)} error={errors.receivedDate} />
+                                    </div>
+                                    <div>
+                                        <label className="mb-2 block text-sm font-medium text-slate-300">Fecha limite</label>
+                                        <Input type="date" value={formData.deadline ?? ''} onChange={(e) => setField('deadline', e.target.value)} error={errors.deadline} />
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     {formData.role === 'CLIENT' && (

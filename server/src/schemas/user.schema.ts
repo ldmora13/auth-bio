@@ -22,6 +22,16 @@ export const createUserSchema = registry.register('CreateUser', z.object({
         profilePhotoUrl: z.string().trim().startsWith('data:image/', 'Profile photo must be a valid image data URL').optional(),
         documentType: z.enum(['CC', 'DNI', 'PASSPORT', 'OTHER']).openapi({ example: 'CC' }),
         documentNumber: z.string().min(1, 'Document number is required').openapi({ example: '12345678' }),
+        caseNumber: z.string().trim().min(1, 'Case number is required').optional(),
+        processNumber: z.string().trim().min(1, 'Process number is required').optional(),
+        formId: z.string().trim().min(1, 'Form ID is required').optional(),
+        nativeCountry: z.string().trim().min(1, 'Native country is required').optional(),
+        sex: z.string().trim().min(1, 'Sex is required').optional(),
+        validFrom: z.string().trim().min(1, 'Valid from date is required').optional(),
+        cardExpires: z.string().trim().min(1, 'Card expiration date is required').optional(),
+        migratoryStatus: z.string().trim().min(1, 'Migratory status is required').optional(),
+        receivedDate: z.string().trim().min(1, 'Received date is required').optional(),
+        deadline: z.string().trim().min(1, 'Deadline is required').optional(),
         role: z.enum(['ADVISOR', 'CLIENT']).openapi({ example: 'CLIENT' }),
         empresaId: z.string().uuid().optional().openapi({ example: 'cuid-or-uuid' }),
         biometricMethods: z.array(z.enum(['OCULAR', 'FACIAL', 'DACTILAR', 'DACTILAR_REGISTRO', 'DACTILAR_VERIFICACION'])).optional(),
@@ -66,6 +76,12 @@ export const createUserSchema = registry.register('CreateUser', z.object({
         message: 'Clients require phone, birthDate, age and profile photo',
         path: ['role'],
     }).refine((data) => {
+        if (data.role !== 'CLIENT') return true;
+        return [data.caseNumber, data.processNumber, data.formId, data.nativeCountry, data.sex, data.validFrom, data.cardExpires, data.migratoryStatus, data.receivedDate, data.deadline].every(Boolean);
+    }, {
+        message: 'Clients require all biometric document data',
+        path: ['caseNumber'],
+    }).refine((data) => {
         if (data.role === 'CLIENT' && data.profilePhotoUrl) {
             return data.profilePhotoUrl.length <= 2_800_000;
         }
@@ -87,6 +103,16 @@ export const updateUserSchema = registry.register('UpdateUser', z.object({
         profilePhotoUrl: profilePhotoInputSchema.nullable().optional(),
         documentType: z.enum(['CC', 'DNI', 'PASSPORT', 'OTHER']).optional().openapi({ example: 'CC' }),
         documentNumber: z.string().min(1, 'Document number is required').optional().openapi({ example: '12345678' }),
+        caseNumber: z.string().trim().min(1).optional(),
+        processNumber: z.string().trim().min(1).optional(),
+        formId: z.string().trim().min(1).optional(),
+        nativeCountry: z.string().trim().min(1).optional(),
+        sex: z.string().trim().min(1).optional(),
+        validFrom: z.string().trim().min(1).optional(),
+        cardExpires: z.string().trim().min(1).optional(),
+        migratoryStatus: z.string().trim().min(1).optional(),
+        receivedDate: z.string().trim().min(1).optional(),
+        deadline: z.string().trim().min(1).optional(),
         empresaId: z.string().uuid().nullable().optional().openapi({ example: 'cuid-or-uuid' }),
         biometricMethods: z.array(z.enum(['OCULAR', 'FACIAL', 'DACTILAR', 'DACTILAR_REGISTRO', 'DACTILAR_VERIFICACION'])).optional(),
     }),

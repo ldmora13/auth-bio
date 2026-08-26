@@ -61,6 +61,16 @@ model User {
   profilePhotoUrl String?
   documentType    DocumentType?
   documentNumber  String?
+  caseNumber      String?
+  processNumber   String?
+  formId          String?
+  nativeCountry   String?
+  sex             String?
+  validFrom       String?
+  cardExpires     String?
+  migratoryStatus String?
+  receivedDate    String?
+  deadline        String?
   biometricType   BiometricType?  // Only for CLIENT
   biometricMethods String[]        @default([])
   biometricEnrollmentRequired Boolean @default(false)
