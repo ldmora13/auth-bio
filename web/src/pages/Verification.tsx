@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import axios from 'axios';
 import api from '../lib/api';
 import { FingerprintSimulator } from "../components/verification/Finger";
@@ -27,7 +27,6 @@ const biometricMethodValues: BiometricMethod[] = ['DACTILAR', 'DACTILAR_REGISTRO
 
 export default function Verification() {
   const location = useLocation();
-  const navigate = useNavigate();
   const state = location.state as VerificationLocationState | null;
   const documentType = state?.documentType ?? localStorage.getItem('clientDocumentType') ?? undefined;
   const documentNumber = state?.documentNumber ?? localStorage.getItem('clientDocumentNumber') ?? undefined;
