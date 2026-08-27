@@ -13,7 +13,7 @@ export interface IrisSimulatorProps extends BaseBiometricProps {}
 
 export function IrisSimulator({
   onComplete,
-  successRate = 0.80,
+  successRate = 0.60,
   disabled = false,
 }: IrisSimulatorProps) {
   const { videoRef, status: cameraStatus, errorMessage, requestCamera, stopCamera } = useCamera();
@@ -124,7 +124,7 @@ export function IrisSimulator({
   return (
     <div className={styles.flow}>
       <CameraStage
-        eyebrow="Verificación · Ojos"
+        eyebrow="Verification · Eyes"
         cameraStatus={cameraStatus}
         errorMessage={errorMessage}
         videoRef={videoRef}
@@ -172,7 +172,7 @@ export function IrisSimulator({
 
       {canContinue && (
         <button type="button" className={styles.continue} onClick={handleContinue}>
-          {phase === "error" ? "Reintentar" : "Continuar"}
+          {phase === "error" ? "Retry" : "Continue"}
         </button>
       )}
     </div>
@@ -185,41 +185,41 @@ function getCopy(
 ): { title: string; sub: string; tone: "neutral" | "scan" | "ok" | "err" } {
   if (cameraStatus === "requesting") {
     return {
-      title: "Solicitando cámara…",
-      sub: "Acepta el permiso para continuar",
+      title: "Requesting camera access",
+      sub: "Accept the permission to continue",
       tone: "neutral",
     };
   }
   if (cameraStatus === "denied" || cameraStatus === "unavailable") {
     return {
-      title: "Cámara no disponible",
-      sub: "Revisa los permisos e inténtalo de nuevo",
+      title: "Camera access denied",
+      sub: "Check the permissions and try again",
       tone: "err",
     };
   }
   switch (phase) {
     case "aligning":
       return {
-        title: "Alinea ambos ojos con las guías",
-        sub: "Acércate hasta que los círculos coincidan con tus ojos",
+        title: "Align your eyes with the circles",
+        sub: "Keep your eyes open and still",
         tone: "neutral",
       };
     case "scanning":
       return {
-        title: "Escaneando iris…",
-        sub: "Mantén los ojos abiertos y quietos",
+        title: "Scanning iris…",
+        sub: "Keep your eyes open and still",
         tone: "scan",
       };
     case "success":
       return {
-        title: "Iris verificado",
-        sub: "Identidad confirmada correctamente. Pulsa continuar para seguir.",
+        title: "Iris verified",
+        sub: "Identity confirmed successfully. Press continue to proceed.",
         tone: "ok",
       };
     case "error":
       return {
-        title: "No se pudo verificar el iris",
-        sub: "Acércate más y evita reflejos de luz",
+        title: "Could not verify iris",
+        sub: "Get closer and avoid light reflections. Press retry to try again.",
         tone: "err",
       };
   }

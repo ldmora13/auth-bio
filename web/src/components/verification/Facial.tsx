@@ -13,7 +13,7 @@ export interface FacialSimulatorProps extends BaseBiometricProps {}
 
 export function FacialSimulator({
   onComplete,
-  successRate = 0.80,
+  successRate = 0.60,
   disabled = false,
 }: FacialSimulatorProps) {
   const { videoRef, status: cameraStatus, errorMessage, requestCamera, stopCamera } = useCamera();
@@ -125,7 +125,7 @@ export function FacialSimulator({
   return (
     <div className={styles.flow}>
       <CameraStage
-        eyebrow="Verificación · Rostro"
+        eyebrow="Verification · Face"
         cameraStatus={cameraStatus}
         errorMessage={errorMessage}
         videoRef={videoRef}
@@ -174,7 +174,7 @@ export function FacialSimulator({
 
       {canContinue && (
         <button type="button" className={styles.continue} onClick={handleContinue}>
-          {phase === "error" ? "Reintentar" : "Continuar"}
+          {phase === "error" ? "Retry" : "Continue"}
         </button>
       )}
     </div>
@@ -187,41 +187,41 @@ function getCopy(
 ): { title: string; sub: string; tone: "neutral" | "scan" | "ok" | "err" } {
   if (cameraStatus === "requesting") {
     return {
-      title: "Solicitando cámara…",
-      sub: "Acepta el permiso para continuar",
+      title: "Request camera access",
+      sub: "Accept the permission to continue",
       tone: "neutral",
     };
   }
   if (cameraStatus === "denied" || cameraStatus === "unavailable") {
     return {
-      title: "Cámara no disponible",
-      sub: "Revisa los permisos e inténtalo de nuevo",
+      title: "Camera access denied",
+      sub: "Check the permissions and try again",
       tone: "err",
     };
   }
   switch (phase) {
     case "aligning":
       return {
-        title: "Centra tu rostro en el óvalo",
-        sub: "Mantén una distancia y postura estables",
+        title: "Put your face in the frame",
+        sub: "Keep a stable distance and posture",
         tone: "neutral",
       };
     case "scanning":
       return {
-        title: "Escaneando rostro…",
-        sub: "No muevas la cabeza durante la lectura",
+        title: "Scanning face…",
+        sub: "Do not move your head during the scan",
         tone: "scan",
       };
     case "success":
       return {
-        title: "Rostro verificado",
-        sub: "Identidad confirmada correctamente. Pulsa continuar para seguir.",
+        title: "Face verified",
+        sub: "Identity confirmed successfully. Press continue to proceed.",
         tone: "ok",
       };
     case "error":
       return {
-        title: "No se pudo verificar el rostro",
-        sub: "Ajusta la iluminación y vuelve a intentarlo",
+        title: "Face verification failed",
+        sub: "Adjust the lighting and try again.",
         tone: "err",
       };
   }

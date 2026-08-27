@@ -74,8 +74,8 @@ export default function Home() {
                 }
 
                 const message = axios.isAxiosError(error)
-                    ? error.response?.data?.error || 'No pudimos recuperar la información del cliente.'
-                    : 'No pudimos recuperar la información del cliente.';
+                    ? error.response?.data?.error || 'We could not retrieve the client information.'
+                    : 'We could not retrieve the client information.';
                 setProfile(null);
                 setProfileError(message);
             } finally {
@@ -118,19 +118,19 @@ export default function Home() {
             <main className="min-h-screen bg-slate-100 px-4 py-8 text-slate-900 sm:px-6 lg:px-8">
                 <section className="mx-auto w-full max-w-3xl rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
                     <h1 className="text-2xl font-semibold text-slate-900">
-                        {loadingProfile ? 'Cargando información del cliente' : 'No hay información del cliente disponible'}
+                        {loadingProfile ? 'Loading client information' : 'No client information available'}
                     </h1>
                     <p className="mt-3 text-sm text-slate-600">
                         {loadingProfile
-                            ? 'Estamos recuperando los datos desde el enlace compartido.'
-                            : profileError || 'Regrese al inicio para verificar un documento.'}
+                            ? 'We are retrieving the data from the shared link.'
+                            : profileError || 'Return to the home page to verify a document.'}
                     </p>
                     <button
                         type="button"
                         className="mt-6 inline-flex h-12 items-center justify-center rounded-xl bg-slate-900 px-5 text-base font-semibold text-white shadow-sm transition hover:bg-slate-800"
                         onClick={() => navigate('/', { replace: true })}
                     >
-                        Volver al inicio
+                        Back to home
                     </button>
                 </section>
             </main>
@@ -141,8 +141,8 @@ export default function Home() {
         <main className="min-h-screen bg-slate-100 px-4 py-8 text-slate-900 sm:px-6 lg:px-8">
             <section className="mx-auto w-full max-w-3xl rounded-3xl border border-slate-200 bg-white shadow-sm">
                 <div className="border-b border-slate-200 px-6 py-6 sm:px-8">
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Resumen del cliente</p>
-                    <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">Verifique sus datos</h1>
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Client summary</p>
+                    <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">Verify your data</h1>
                 </div>
 
                 <div className="px-6 py-6 sm:px-8 sm:py-8">
@@ -151,7 +151,7 @@ export default function Home() {
                             {profile.profilePhotoUrl ? (
                                 <img
                                     src={profile.profilePhotoUrl}
-                                    alt="Foto de perfil"
+                                    alt="Profile photo"
                                     className="h-50 w-auto rounded-xl border border-slate-200 object-cover shadow-sm"
                                 />
                             ) : null}
@@ -159,49 +159,49 @@ export default function Home() {
 
                         <dl className="grid gap-4 sm:grid-cols-2">
                             <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
-                                <dt className="text-sm font-semibold text-slate-700">Nombre completo</dt>
+                                <dt className="text-sm font-semibold text-slate-700">Full name</dt>
                                 <dd className="mt-1 text-base font-medium text-slate-900">{profile.name}</dd>
                             </div>
                             <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
-                                <dt className="text-sm font-semibold text-slate-700">Tipo de documento</dt>
+                                <dt className="text-sm font-semibold text-slate-700">Document type</dt>
                                 <dd className="mt-1 text-base font-medium text-slate-900">{profile.documentType || 'No registrado'}</dd>
                             </div>
                             <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
-                                <dt className="text-sm font-semibold text-slate-700">Número de documento</dt>
+                                <dt className="text-sm font-semibold text-slate-700">Document number</dt>
                                 <dd className="mt-1 text-base font-medium text-slate-900">{profile.documentNumber || 'No registrado'}</dd>
                             </div>
                             <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
-                                <dt className="text-sm font-semibold text-slate-700">Dirección</dt>
+                                <dt className="text-sm font-semibold text-slate-700">Address</dt>
                                 <dd className="mt-1 text-base font-medium text-slate-900">{profile.address || 'No registrada'}</dd>
                             </div>
                             <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
-                                <dt className="text-sm font-semibold text-slate-700">Correo electrónico</dt>
+                                <dt className="text-sm font-semibold text-slate-700">Email Address</dt>
                                 <dd className="mt-1 text-base font-medium text-slate-900">{profile.email}</dd>
                             </div>
                             <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
-                                <dt className="text-sm font-semibold text-slate-700">Tipo de biometría</dt>
+                                <dt className="text-sm font-semibold text-slate-700">Biometric Methods to verify</dt>
                                 <dd className="mt-1 text-base font-medium text-slate-900">
                                     {resolveBiometricMethods(profile).map(getBiometricMethodLabel).join(' · ')}
                                 </dd>
                             </div>
                             <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
-                                <dt className="text-sm font-semibold text-slate-700">Estado de registro</dt>
+                                <dt className="text-sm font-semibold text-slate-700">Registration Status</dt>
                                 <dd className="mt-1 text-base font-medium text-slate-900">
                                     {profile.biometricEnrollmentRequired ? 'Pendiente de completar' : 'Completado'}
                                 </dd>
                             </div>
                             <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
-                                <dt className="text-sm font-semibold text-slate-700">Fecha de registro</dt>
+                                <dt className="text-sm font-semibold text-slate-700">Registration Date</dt>
                                 <dd className="mt-1 text-base font-medium text-slate-900">{new Date(profile.createdAt).toLocaleDateString('es-CO')}</dd>
                             </div>
                             <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
-                                <dt className="text-sm font-semibold text-slate-700">Última actualización</dt>
+                                <dt className="text-sm font-semibold text-slate-700">Last Update</dt>
                                 <dd className="mt-1 text-base font-medium text-slate-900">{new Date(profile.updatedAt).toLocaleDateString('es-CO')}</dd>
                             </div>
                         </dl>
 
                         <span className="block text-sm font-semibold text-slate-700">
-                            Si alguno de estos datos es incorrecto, por favor comuníquese con su asesor.
+                            If the information is correct, click the button below to verify your data. Otherwise, please contact the company that provided you with this link.
                         </span>
 
                         <div className="flex flex-col gap-3 sm:flex-row">
@@ -211,7 +211,7 @@ export default function Home() {
                                 type="button"
                                 onClick={handleConfirm}
                             >
-                                Verificar mis datos
+                                Verify my data
                             </button>
                         </div>
                     </section>

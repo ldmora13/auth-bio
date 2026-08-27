@@ -125,6 +125,59 @@
   transform: scaleX(-1);
 }
 
+.resultOverlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  border-radius: 18px;
+  pointer-events: none;
+  animation: resultOverlayReveal 2000ms ease-out forwards;
+  width: 100%;
+  height: 100%;
+}
+
+.resultOverlay[data-result="success"] {
+  background: rgba(22, 163, 74, 0.34);
+  color: #166534;
+}
+
+.resultOverlay[data-result="error"] {
+  background: rgba(220, 38, 38, 0.32);
+  color: #991b1b;
+}
+
+.resultIcon {
+  width: 68px;
+  height: 68px;
+  display: grid;
+  place-items: center;
+  border: 3px solid currentColor;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.82);
+  font-family: var(--bio-font-body);
+  font-size: 42px;
+  font-weight: 800;
+  line-height: 1;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.16);
+}
+
+@keyframes resultOverlayReveal {
+  0% {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  18% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.015);
+  }
+}
+
 .handFadeIn {
   animation: handFadeIn 280ms ease forwards;
 }

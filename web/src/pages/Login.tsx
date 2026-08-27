@@ -24,10 +24,10 @@ type ClientProfile = {
 };
 
 const documentOptions: Array<{ value: DocumentType; label: string }> = [
-  { value: 'CC', label: 'Cédula de ciudadanía' },
-  { value: 'DNI', label: 'Documento nacional de identidad' },
-  { value: 'PASSPORT', label: 'Pasaporte' },
-  { value: 'OTHER', label: 'Otro documento válido' },
+  { value: 'CC', label: 'Citizenship card' },
+  { value: 'DNI', label: 'National identity document' },
+  { value: 'PASSPORT', label: 'Passport' },
+  { value: 'OTHER', label: 'Other valid document' },
 ];
 
 const initialFieldErrors = {
@@ -49,15 +49,15 @@ export default function Login() {
 
   const validateField = (name: 'documentType' | 'documentNumber', value: string) => {
     if (name === 'documentType') {
-      return value ? '' : 'Seleccione el tipo de documento.';
+      return value ? '' : 'Select the document type.';
     }
 
     if (!value.trim()) {
-      return 'Escriba el número de documento.';
+      return 'Enter the document number.';
     }
 
     if (!/^[0-9]+$/.test(value.trim())) {
-      return 'Use solo números en este campo.';
+      return 'Use only numbers in this field.';
     }
 
     return '';
@@ -120,8 +120,8 @@ export default function Login() {
       });
     } catch (error: unknown) {
       const message = axios.isAxiosError(error)
-        ? error.response?.data?.error || 'No encontramos un cliente con esos datos. Revisa e intenta otra vez.'
-        : 'No encontramos un cliente con esos datos. Revisa e intenta otra vez.';
+        ? error.response?.data?.error || 'We could not find a client with that information. Please check and try again.'
+        : 'We could not find a client with that information. Please check and try again.';
       setFormError(message);
     } finally {
       setLoading(false);
@@ -133,15 +133,15 @@ export default function Login() {
     <main className="min-h-screen bg-slate-100 px-4 py-8 text-slate-900 sm:px-6 lg:px-8">
       <section className="mx-auto w-full max-w-3xl rounded-3xl border border-slate-200 bg-white shadow-sm">
         <div className="border-b border-slate-200 px-6 py-6 sm:px-8">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Acceso para clientes</p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">Verifique sus datos</h1>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Access for clients</p>
+          <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">Verify your data</h1>
         </div>
 
         <div className="px-6 py-6 sm:px-8 sm:py-8">
           <form className="space-y-5" onSubmit={handleSubmit} noValidate>
             <div className="space-y-2">
               <label htmlFor="documentType" className="block text-sm font-semibold text-slate-800">
-                Tipo de documento
+                Document type
               </label>
               <select
                 id="documentType"
@@ -152,7 +152,7 @@ export default function Login() {
                 aria-describedby={fieldErrors.documentType ? 'documentType-error' : undefined}
                 className="h-12 w-full rounded-xl border border-slate-300 bg-white px-4 text-base text-slate-900 shadow-sm outline-none transition focus:border-slate-500 focus:ring-4 focus:ring-slate-200"
               >
-                <option value="">Seleccione una opción</option>
+                <option value="">Select an option</option>
                 {documentOptions.map((option) => (
                   <option key={option.value} value={option.value}>
                     {option.label}
@@ -168,7 +168,7 @@ export default function Login() {
 
             <div className="space-y-2">
               <label htmlFor="documentNumber" className="block text-sm font-semibold text-slate-800">
-                Número de documento
+                Document number
               </label>
               <input
                 id="documentNumber"
@@ -200,7 +200,7 @@ export default function Login() {
               type="submit"
               disabled={!canSubmit}
             >
-              {loading ? 'Buscando...' : 'Ingresar'}
+              {loading ? 'Searching...' : 'Enter'}
             </button>
           </form>
         </div>

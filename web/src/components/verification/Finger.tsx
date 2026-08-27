@@ -4,7 +4,7 @@ import type { BaseBiometricProps, BiometricPhase, BiometricResult } from "../../
 import styles from "./Finger.module.css";
 
 const SCAN_DURATION_MS = 1700;
-const RESULT_HOLD_MS = 450;
+const RESULT_HOLD_MS = 2000;
 const HAND_FADE_MS = 280;
 const MAX_AUTO_RETRIES = 1;
 const RIDGE_RADII = [38, 32, 26, 20, 14, 9] as const;
@@ -21,69 +21,69 @@ type FingerStep = {
 };
 
 const FULL_FINGER_SEQUENCE: FingerStep[] = [
-  { hand: "left", finger: "thumb", label: "Pulgar izquierdo", short: "Pulgar" },
-  { hand: "left", finger: "index", label: "Índice izquierdo", short: "Índice" },
-  { hand: "left", finger: "middle", label: "Medio izquierdo", short: "Medio" },
-  { hand: "left", finger: "ring", label: "Anular izquierdo", short: "Anular" },
-  { hand: "left", finger: "pinky", label: "Meñique izquierdo", short: "Meñique" },
-  { hand: "right", finger: "thumb", label: "Pulgar derecho", short: "Pulgar" },
-  { hand: "right", finger: "index", label: "Índice derecho", short: "Índice" },
-  { hand: "right", finger: "middle", label: "Medio derecho", short: "Medio" },
-  { hand: "right", finger: "ring", label: "Anular derecho", short: "Anular" },
-  { hand: "right", finger: "pinky", label: "Meñique derecho", short: "Meñique" },
+  { hand: "left", finger: "thumb", label: "Left thumb", short: "Thumb" },
+  { hand: "left", finger: "index", label: "Left index", short: "Index" },
+  { hand: "left", finger: "middle", label: "Left middle", short: "Middle" },
+  { hand: "left", finger: "ring", label: "Left ring", short: "Ring" },
+  { hand: "left", finger: "pinky", label: "Left pinky", short: "Pinky" },
+  { hand: "right", finger: "thumb", label: "Right thumb", short: "Thumb" },
+  { hand: "right", finger: "index", label: "Right index", short: "Index" },
+  { hand: "right", finger: "middle", label: "Right middle", short: "Middle" },
+  { hand: "right", finger: "ring", label: "Right ring", short: "Ring" },
+  { hand: "right", finger: "pinky", label: "Right pinky", short: "Pinky" },
 ];
 
 const STATUS_COPY_ENROLLMENT: Record<BiometricPhase | "remove" | "switching", { title: string; sub: string }> = {
   idle: {
-    title: "Coloca el dedo en el lector",
-    sub: "Mantén el dedo sobre el panel.",
+    title: "Place your finger on the reader",
+    sub: "Keep your finger on the panel.",
   },
   scanning: {
-    title: "Leyendo huella…",
-    sub: "Mantén la posición. No muevas el dedo.",
+    title: "Reading fingerprint",
+    sub: "Keep your finger in position",
   },
   success: {
-    title: "Huella registrada correctamente",
-    sub: "Quita el dedo del lector para continuar con el siguiente.",
+    title: "Fingerprint registered successfully",
+    sub: "Remove your finger from the reader to continue with the next.",
   },
   error: {
-    title: "No se pudo leer la huella",
-    sub: "Quita el dedo y vuelve a colocarlo para reintentar.",
+    title: "Fingerprint could not be registered",
+    sub: "Remove your finger from the reader and try again.",
   },
   remove: {
-    title: "Retira el dedo del lector",
-    sub: "Una vez retirado, se preparará el siguiente dedo.",
+    title: "Remove your finger from the reader",
+    sub: "Once removed, the next finger will be prepared.",
   },
   switching: {
-    title: "Cambiando de mano…",
-    sub: "Preparando la siguiente mano. Por favor espera.",
+    title: "Switching hands",
+    sub: "Preparing the next hand. Please wait.",
   },
 };
 
 const STATUS_COPY_VERIFICATION: Record<BiometricPhase | "remove" | "switching", { title: string; sub: string }> = {
   idle: {
-    title: "Coloca el dedo para verificar",
-    sub: "Debes validar 2 dedos aleatorios por mano.",
+    title: "Place your finger to verify",
+    sub: "You must validate 2 random fingers per hand.",
   },
   scanning: {
-    title: "Validando huella…",
-    sub: "Mantén la posición. No muevas el dedo.",
+    title: "Validating fingerprint…",
+    sub: "Keep the position. Do not move the finger.",
   },
   success: {
-    title: "Huella validada correctamente",
-    sub: "Quita el dedo del lector para continuar con el siguiente.",
+    title: "Fingerprint validated successfully",
+    sub: "Remove your finger from the reader to continue with the next.",
   },
   error: {
-    title: "No se pudo validar la huella",
-    sub: "Quita el dedo y vuelve a colocarlo para reintentar.",
+    title: "Fingerprint could not be validated",
+    sub: "Remove your finger and place it again to retry.",
   },
   remove: {
-    title: "Retira el dedo del lector",
-    sub: "Una vez retirado, se preparará el siguiente dedo.",
+    title: "Remove your finger from the reader",
+    sub: "Once removed, the next finger will be prepared.",
   },
   switching: {
-    title: "Cambiando de mano…",
-    sub: "Preparando la siguiente mano. Por favor espera.",
+    title: "Switching hands…",
+    sub: "Preparing the next hand. Please wait.",
   },
 };
 
@@ -115,13 +115,149 @@ function buildVerificationSequence(): FingerStep[] {
   ];
 }
 
+function playPhaseSound(phase: BiometricPhase) {
+  if (phase !== "success" && phase !== "error") return;
+
+  const AudioContextConstructor = window.AudioContext;
+  if (!AudioContextConstructor) return;
+
+  const audioContext = new AudioContextConstructor();
+
+  if (audioContext.state === "suspended") {
+    void audioContext.resume();
+  }
+
+  const now = audioContext.currentTime;
+
+  const masterGain = audioContext.createGain();
+  masterGain.gain.setValueAtTime(0.0001, now);
+  masterGain.connect(audioContext.destination);
+
+  const playTone = ({
+    frequency,
+    duration,
+    volume = 0.12,
+    type = "sine",
+    delay = 0,
+    pitchEnd,
+  }: {
+    frequency: number;
+    duration: number;
+    volume?: number;
+    type?: OscillatorType;
+    delay?: number;
+    pitchEnd?: number;
+  }) => {
+    const oscillator = audioContext.createOscillator();
+    const gain = audioContext.createGain();
+
+    const start = now + delay;
+    const end = start + duration;
+
+    oscillator.type = type;
+
+    oscillator.frequency.setValueAtTime(frequency, start);
+
+    if (pitchEnd) {
+      oscillator.frequency.exponentialRampToValueAtTime(
+        pitchEnd,
+        end
+      );
+    }
+
+    // Ataque extremadamente corto y suave
+    gain.gain.setValueAtTime(0.0001, start);
+
+    gain.gain.exponentialRampToValueAtTime(
+      volume,
+      start + 0.015
+    );
+
+    gain.gain.exponentialRampToValueAtTime(
+      0.0001,
+      end
+    );
+
+    oscillator.connect(gain);
+    gain.connect(masterGain);
+
+    oscillator.start(start);
+    oscillator.stop(end);
+  };
+
+  if (phase === "success") {
+
+    playTone({
+      frequency: 659.25, // E5
+      duration: 0.20,
+      volume: 0.09,
+      type: "sine",
+      pitchEnd: 676,
+    });
+
+    playTone({
+      frequency: 830.61, // G#5
+      duration: 0.22,
+      volume: 0.075,
+      type: "sine",
+      delay: 0.055,
+      pitchEnd: 850,
+    });
+
+    playTone({
+      frequency: 987.77, // B5
+      duration: 0.30,
+      volume: 0.065,
+      type: "sine",
+      delay: 0.11,
+      pitchEnd: 1000,
+    });
+
+  } else {
+    playTone({
+      frequency: 392.0, // G4
+      duration: 0.18,
+      volume: 0.09,
+      type: "triangle",
+      pitchEnd: 375,
+    });
+
+    playTone({
+      frequency: 261.63, // C4
+      duration: 0.26,
+      volume: 0.075,
+      type: "triangle",
+      delay: 0.10,
+      pitchEnd: 245,
+    });
+  }
+
+  // Fade out general
+  masterGain.gain.setValueAtTime(0.0001, now);
+  masterGain.gain.exponentialRampToValueAtTime(
+    1,
+    now + 0.01
+  );
+
+  masterGain.gain.exponentialRampToValueAtTime(
+    0.0001,
+    now + (phase === "success" ? 0.48 : 0.38)
+  );
+
+  const totalDuration = phase === "success" ? 0.55 : 0.45;
+
+  window.setTimeout(() => {
+    void audioContext.close();
+  }, totalDuration * 1000);
+}
+
 export type FingerprintSimulatorProps = BaseBiometricProps & {
   flowMode?: FingerFlowMode;
 };
 
 export function FingerprintSimulator({
   onComplete,
-  successRate = 0.75,
+  successRate = 0.6,
   disabled = false,
   flowMode = "full-enrollment",
 }: FingerprintSimulatorProps) {
@@ -151,6 +287,9 @@ export function FingerprintSimulator({
     : FULL_FINGER_SEQUENCE;
 
   useEffect(() => {
+    if (phase !== phaseRef.current) {
+      playPhaseSound(phase);
+    }
     phaseRef.current = phase;
   }, [phase]);
   useEffect(() => {
@@ -375,12 +514,21 @@ export function FingerprintSimulator({
     <div className={styles.card} data-phase={phase}>
       <div className={styles.stageHeader}>
         <span className={styles.handLabel}>
-          {currentHand === "left" ? "Mano izquierda" : "Mano derecha"} · {handDoneCount}/{handTotal}
+          {currentHand === "left" ? "Left hand" : "Right hand"} · {handDoneCount}/{handTotal}
         </span>
         <strong className={styles.fingerLabel}>{activeStep.label}</strong>
       </div>
 
-      <section className={styles.handCard} aria-label={currentHand === "left" ? "Mano izquierda" : "Mano derecha"}>
+      <section className={styles.handCard} aria-label={currentHand === "left" ? "Left hand" : "Right hand"}>
+        {(phase === "success" || phase === "error") && (
+            <div
+              className={styles.resultOverlay}
+              data-result={phase}
+              aria-hidden="true"
+            >
+              <span className={styles.resultIcon}>{phase === "success" ? "✓" : "×"}</span>
+            </div>
+          )}
         <div
           className={`${styles.handWrapper} ${
             handTransitioning ? styles.handFadeOut : styles.handFadeIn
@@ -389,7 +537,7 @@ export function FingerprintSimulator({
         >
           <img
             src={handImage}
-            alt={`Guía visual de la mano ${currentHand === "left" ? "izquierda" : "derecha"}`}
+            alt={`Visual guide for the ${currentHand === "left" ? "left" : "right"} hand`}
             className={`${styles.handImage} ${currentHand === "left" ? styles.handMirror : ""}`}
             draggable={false}
           />
@@ -435,7 +583,7 @@ export function FingerprintSimulator({
 
       <div className={styles.readerPanel}>
         <div className={styles.readerMeta}>
-          <span className={styles.focusLabel}>Dedo actual</span>
+          <span className={styles.focusLabel}>Current finger</span>
           <strong className={styles.readerFinger}>{activeStep.label}</strong>
         </div>
         <div
@@ -509,7 +657,7 @@ export function FingerprintSimulator({
 
       {canContinue && (
         <button type="button" className={styles.continue} onClick={handleContinue}>
-          Continuar
+          Continue
         </button>
       )}
     </div>

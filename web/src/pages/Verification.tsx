@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import axios from 'axios';
 import api from '../lib/api';
 import { FingerprintSimulator } from "../components/verification/Finger";
@@ -26,6 +26,7 @@ const biometricComponentMap = {
 const biometricMethodValues: BiometricMethod[] = ['DACTILAR', 'DACTILAR_REGISTRO', 'DACTILAR_VERIFICACION', 'FACIAL', 'OCULAR'];
 
 export default function Verification() {
+  const navigate = useNavigate();
   const location = useLocation();
   const state = location.state as VerificationLocationState | null;
   const documentType = state?.documentType ?? localStorage.getItem('clientDocumentType') ?? undefined;
@@ -142,11 +143,6 @@ export default function Verification() {
     }
   };
 
-  const CerrarPestaña = () => {
-    window.open("", "_self");
-    window.close();
-  };
-
   if (enrollmentDone) {
     return (
       <main className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.95)_0%,rgba(226,232,240,0.9)_38%,rgba(241,245,249,1)_100%)] px-4 py-6 text-slate-900 sm:px-6 lg:px-8 lg:py-10">
@@ -165,7 +161,7 @@ export default function Verification() {
               <button
                 type="button"
                 className="inline-flex h-12 items-center justify-center rounded-xl bg-slate-900 px-5 text-base font-semibold text-white shadow-sm transition hover:bg-slate-800"
-                onClick={CerrarPestaña}
+                onClick={() => navigate('/')}
               >
                 Cerrar
               </button>
