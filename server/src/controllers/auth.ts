@@ -118,7 +118,15 @@ export const completeBiometricEnrollment = catchAsync(async (req: Request, res: 
     let currentUserId: string | null = null;
     let resolvedVia: 'bearer' | 'document' | 'clientId' | 'cookie' | null = null;
 
-    if (bearerSessionId) {
+    if (clientId) {
+        const user = await userService.getUserById(clientId).catch(() => null);
+        if (user && user.role === 'CLIENT') {
+            currentUserId = user.id;
+            resolvedVia = 'clientId';
+        }
+    }
+
+    if (!currentUserId && bearerSessionId) {
         const { session, user } = await lucia.validateSession(bearerSessionId);
         if (session && user?.role === 'CLIENT') {
             currentUserId = user.id;
@@ -135,14 +143,6 @@ export const completeBiometricEnrollment = catchAsync(async (req: Request, res: 
         }
     }
 
-    if (!currentUserId && clientId) {
-        const user = await userService.getUserById(clientId).catch(() => null);
-        if (user && user.role === 'CLIENT') {
-            currentUserId = user.id;
-            resolvedVia = 'clientId';
-        }
-    }
-
     if (!currentUserId && cookieSessionId) {
         const { session, user } = await lucia.validateSession(cookieSessionId);
         if (session && user?.role === 'CLIENT') {
@@ -153,10 +153,6 @@ export const completeBiometricEnrollment = catchAsync(async (req: Request, res: 
                 `[completeBiometricEnrollment] Cookie de sesión pertenece a rol=${user.role} userId=${user.id}; ignorada para este endpoint de cliente.`
             );
         }
-    }
-
-    if (currentUserId && clientId && resolvedVia !== 'clientId' && currentUserId !== clientId) {
-        throw new AppError('Session/client identity mismatch', 409);
     }
 
     if (!currentUserId) {
