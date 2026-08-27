@@ -6,7 +6,7 @@
     "scripts": {
         "test": "vitest run",
         "test:watch": "vitest",
-        "build": "tsc",
+        "build": "tsc && node scripts/copy-template.cjs",
         "start": "prisma migrate deploy && node dist/index.js",
         "dev": "tsx watch src/index.ts",
         "prisma:generate": "prisma generate",

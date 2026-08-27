@@ -199,10 +199,15 @@ export const EmailService = {
             : null;
 
         const subject = 'Solicitud biométrica completada correctamente';
-        const pdfBuffer = await PDFService({
-            userId: payload.userId,
-            email: payload.email,
-        });
+        let pdfBuffer: Buffer | null = null;
+        try {
+            pdfBuffer = await PDFService({
+                userId: payload.userId,
+                email: payload.email,
+            });
+        } catch (error) {
+            console.error('[EmailService] No se pudo generar el certificado biométrico:', error);
+        }
         const html = `
             <div style="font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: 0 auto;">
                 <h2>Hola, ${payload.name}</h2>
@@ -212,7 +217,7 @@ export const EmailService = {
                     <p style="margin: 4px 0;"><strong>Solicitud completada:</strong> ${biometricLabels}</p>
                     ${completedAt ? `<p style="margin: 4px 0;"><strong>Fecha:</strong> ${completedAt}</p>` : ''}
                 </div>
-                <p>Adjunto a este correo se encuentra el documento de verificación.</p>
+                ${pdfBuffer ? '<p>Adjunto a este correo se encuentra el documento de verificación.</p>' : ''}
 
             </div>
         `;
@@ -221,12 +226,12 @@ export const EmailService = {
             to: payload.email,
             subject,
             html,
-            attachments: [
-                {
+            attachments: pdfBuffer
+                ? [{
                     filename: `biometria-${payload.userId}.pdf`,
                     content: pdfBuffer,
-                },
-            ],
+                }]
+                : undefined,
         });
     }
 
