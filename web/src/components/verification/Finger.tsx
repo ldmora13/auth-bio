@@ -346,6 +346,7 @@ export function FingerprintSimulator({
           durationMs: totalStartRef.current
             ? Math.round(now - totalStartRef.current)
             : Math.round(SCAN_DURATION_MS * fingerSequence.length),
+          selectedFingers: fingerSequence.map(({ hand, finger }) => ({ hand, finger })),
         };
       resultRef.current = finalResult;
       setCanContinue(true);

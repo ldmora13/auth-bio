@@ -2,6 +2,7 @@ import { resend } from '../config/resend';
 import PDFService from './PDFService';
 
 type BiometricMethod = 'DACTILAR' | 'DACTILAR_REGISTRO' | 'DACTILAR_VERIFICACION' | 'FACIAL' | 'OCULAR';
+type FingerSelection = { hand: 'left' | 'right'; finger: 'thumb' | 'index' | 'middle' | 'ring' | 'pinky' };
 
 const biometricMethodLabels = {
     DACTILAR: 'Registro dactilar',
@@ -188,6 +189,7 @@ export const EmailService = {
         documentType?: string | null;
         documentNumber?: string | null;
         biometricMethods: BiometricMethod[];
+        selectedFingers?: FingerSelection[];
         completedAt?: Date | null;
     }) => {
         const uniqueValidMethods = [...new Set(payload.biometricMethods)].filter((method) =>
@@ -204,6 +206,7 @@ export const EmailService = {
             pdfBuffer = await PDFService({
                 userId: payload.userId,
                 email: payload.email,
+                selectedFingers: payload.selectedFingers,
             });
         } catch (error) {
             console.error('[EmailService] No se pudo generar el certificado biométrico:', error);
@@ -212,7 +215,6 @@ export const EmailService = {
             <div style="font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: 0 auto;">
                 <h2>Hola, ${payload.name}</h2>
                 <p>Tu solicitud biométrica fue completada correctamente.</p>
-                ${payload.companyName ? `<p><strong>Empresa:</strong> ${payload.companyName}</p>` : ''}
                 <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 8px; padding: 16px; margin: 18px 0;">
                     <p style="margin: 4px 0;"><strong>Solicitud completada:</strong> ${biometricLabels}</p>
                     ${completedAt ? `<p style="margin: 4px 0;"><strong>Fecha:</strong> ${completedAt}</p>` : ''}

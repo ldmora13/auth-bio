@@ -6,6 +6,7 @@ import { FingerprintSimulator } from "../components/verification/Finger";
 import { FacialSimulator } from "../components/verification/Facial";
 import { IrisSimulator } from "../components/verification/Iris";
 import { normalizeBiometricMethods, type BiometricMethod } from "../shared/biometricMethods";
+import type { BiometricResult, FingerSelection } from "../shared/biometricTypes";
 
 type VerificationLocationState = {
   biometricMethods?: BiometricMethod[] | null;
@@ -65,12 +66,14 @@ export default function Verification() {
 
   const [currentMethodIndex, setCurrentMethodIndex] = useState(0);
   const [completedMethods, setCompletedMethods] = useState<BiometricMethod[]>([]);
+  const [selectedFingers, setSelectedFingers] = useState<FingerSelection[]>([]);
   const [enrollmentDone, setEnrollmentDone] = useState(false);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
 
   useEffect(() => {
     setCurrentMethodIndex(0);
     setCompletedMethods([]);
+    setSelectedFingers([]);
     setEnrollmentDone(false);
   }, [biometricMethods]);
 
@@ -78,13 +81,15 @@ export default function Verification() {
   const BiometricComponent = activeMethod ? biometricComponentMap[activeMethod] : null;
   const fingerprintFlowMode = activeMethod === 'DACTILAR_VERIFICACION' ? 'quick-verification' : 'full-enrollment';
 
-  const handleComplete = async (result: { success: boolean; durationMs: number }) => {
+  const handleComplete = async (result: BiometricResult) => {
     if (!result.success || !activeMethod) {
       return;
     }
 
     const nextCompleted = normalizeBiometricMethods([...completedMethods, activeMethod]);
     setCompletedMethods(nextCompleted);
+    const nextSelectedFingers = result.selectedFingers?.length ? result.selectedFingers : selectedFingers;
+    setSelectedFingers(nextSelectedFingers);
 
     if (currentMethodIndex + 1 < biometricMethods.length) {
       setCurrentMethodIndex((current) => current + 1);
@@ -97,6 +102,7 @@ export default function Verification() {
         documentType,
         documentNumber,
         clientId,
+        selectedFingers: nextSelectedFingers,
       }
     );
     setEnrollmentDone(true);
@@ -123,6 +129,7 @@ export default function Verification() {
             documentType,
             documentNumber,
             clientId,
+            selectedFingers: nextSelectedFingers,
           });
 
           setEnrollmentDone(true);

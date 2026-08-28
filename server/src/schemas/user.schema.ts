@@ -127,6 +127,14 @@ export const completeBiometricEnrollmentSchema = registry.register('CompleteBiom
         documentType: z.enum(['CC', 'DNI', 'PASSPORT', 'OTHER']).optional(),
         documentNumber: z.string().min(1).optional(),
         clientId: z.string().uuid().optional(), // NUEVO
+        selectedFingers: z.array(z.object({
+            hand: z.enum(['left', 'right']),
+            finger: z.enum(['thumb', 'index', 'middle', 'ring', 'pinky']),
+        })).length(4).refine((fingers) =>
+            fingers.filter(({ hand }) => hand === 'left').length === 2
+            && fingers.filter(({ hand }) => hand === 'right').length === 2,
+            'Exactly two fingers per hand are required'
+        ).optional(),
     }),
 }));
 

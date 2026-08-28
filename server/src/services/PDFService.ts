@@ -5,9 +5,14 @@ import { PDFDocument, PDFPage, PDFFont, StandardFonts, rgb } from 'pdf-lib';
 import { db } from '../lib/db';
 import { getR2Config } from '../config/r2';
 
-type PDFServiceOptions = { userId?: string; email?: string };
+type PDFServiceOptions = { userId?: string; email?: string; biometricMethod?: 'DACTILAR_REGISTRO' | 'DACTILAR_VERIFICACION' };
+type FingerSelection = { hand: 'left' | 'right'; finger: 'thumb' | 'index' | 'middle' | 'ring' | 'pinky' };
 
-const TEMPLATE_PATH = path.resolve(__dirname, '../template/Template.pdf');
+const TEMPLATE_PATHS = {
+	registration: path.resolve(__dirname, '../template/template_r.pdf'),
+	verification: path.resolve(__dirname, '../template/template_v.pdf'),
+} as const;
+const FINGER_ASSET_PATH = path.resolve(__dirname, '../assets');
 const formatDate = (value: Date | null) => value
 	? value.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })
 	: 'N/D';
@@ -141,7 +146,43 @@ async function drawUserPhoto(page: PDFPage, pdf: PDFDocument, profilePhotoUrl?: 
 	}
 }
 
-export default async function PDFService({ userId, email }: PDFServiceOptions): Promise<Buffer> {
+async function drawVerificationFingers(page: PDFPage, pdf: PDFDocument, fingers: FingerSelection[]) {
+	const slotIndex: Record<FingerSelection['finger'], number> = {
+		thumb: 0,
+		index: 1,
+		middle: 2,
+		ring: 3,
+		pinky: 4,
+	};
+	const slotX = [15, 114, 227, 364, 499] as const;
+	const slotWidths = [99, 113, 137, 135, 99] as const;
+	const slot = (selection: FingerSelection) => {
+		const index = slotIndex[selection.finger];
+		return {
+			x: slotX[index],
+			y: selection.hand === 'right' ? 68 : 613,
+			width: slotWidths[index],
+			height: 80,
+		};
+	};
+
+	for (const selection of fingers) {
+		const imageBytes = await fs.readFile(path.join(FINGER_ASSET_PATH, `${selection.finger}.png`));
+		const image = await pdf.embedPng(imageBytes);
+		const box = slot(selection);
+		const scale = Math.min((box.width - 32) / image.width, box.height / image.height);
+		const width = image.width * scale;
+		const height = image.height * scale;
+		page.drawImage(image, {
+			x: box.x + (box.width - width) / 2,
+			y: box.y + (box.height - height) / 2,
+			width,
+			height,
+		});
+	}
+}
+
+export default async function PDFService({ userId, email, biometricMethod, selectedFingers }: PDFServiceOptions & { selectedFingers?: FingerSelection[] }): Promise<Buffer> {
 	if (!userId && !email) throw new Error('PDFService requires userId or email');
 
 	const user = userId
@@ -149,7 +190,10 @@ export default async function PDFService({ userId, email }: PDFServiceOptions): 
 		: await db.user.findUnique({ where: { email: email! }, include: { empresa: true } });
 	if (!user) throw new Error(`User not found for PDF generation: ${userId ?? email}`);
 
-	const pdf = await PDFDocument.load(await fs.readFile(TEMPLATE_PATH));
+	const isVerification = biometricMethod
+		? biometricMethod === 'DACTILAR_VERIFICACION'
+		: user.biometricMethods.includes('DACTILAR_VERIFICACION');
+	const pdf = await PDFDocument.load(await fs.readFile(isVerification ? TEMPLATE_PATHS.verification : TEMPLATE_PATHS.registration));
 	const [firstPage, secondPage] = pdf.getPages();
 	const boldFont = await pdf.embedFont(StandardFonts.HelveticaBold);
 	const regularFont = await pdf.embedFont(StandardFonts.Helvetica);
@@ -185,6 +229,10 @@ export default async function PDFService({ userId, email }: PDFServiceOptions): 
 	write(firstPage, `Valid From ${formatStoredDate(user.validFrom)} - Card Expires ${formatStoredDate(user.cardExpires)}`, { x: 18, y: 205, width: 205, size: 8, font: regularFont, align: 'center' });
 	write(firstPage, user.migratoryStatus ?? 'N/D', { x: 225, y: 210, width: 105, size: 10, align: 'center' });
 	await drawUserPhoto(firstPage, pdf, user.profilePhotoUrl);
+	if (isVerification && selectedFingers?.length) {
+		await drawVerificationFingers(firstPage, pdf, selectedFingers.filter(({ hand }) => hand === 'right'));
+		await drawVerificationFingers(secondPage, pdf, selectedFingers.filter(({ hand }) => hand === 'left'));
+	}
 
 	write(secondPage, processNumber, { x: 55, y: 400, width: 120, size: 12, align: 'center' });
 	write(secondPage, user.migratoryStatus ?? 'N/D', { x: 185, y: 400, width: 105, size: 10, align: 'center' });

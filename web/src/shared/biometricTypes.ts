@@ -5,7 +5,13 @@ export type BiometricPhase = "idle" | "scanning" | "success" | "error";
 export interface BiometricResult {
   success: boolean;
   durationMs: number;
+  selectedFingers?: FingerSelection[];
 }
+
+export type FingerSelection = {
+  hand: "left" | "right";
+  finger: "thumb" | "index" | "middle" | "ring" | "pinky";
+};
 
 /** Props base que comparten los tres simuladores. */
 export interface BaseBiometricProps {

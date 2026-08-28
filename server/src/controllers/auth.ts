@@ -111,7 +111,7 @@ export const getClientById = catchAsync(async (req: Request, res: Response) => {
 });
 
 export const completeBiometricEnrollment = catchAsync(async (req: Request, res: Response) => {
-    const { completedMethods, documentType, documentNumber, clientId } = req.body;
+    const { completedMethods, documentType, documentNumber, clientId, selectedFingers } = req.body;
     const bearerSessionId = lucia.readBearerToken(req.headers.authorization ?? "");
     const cookieSessionId = req.cookies.auth_session as string | undefined;
 
@@ -181,6 +181,7 @@ export const completeBiometricEnrollment = catchAsync(async (req: Request, res: 
         documentType: user.documentType ?? null,
         documentNumber: user.documentNumber ?? null,
         biometricMethods: user.biometricMethods as ('DACTILAR' | 'DACTILAR_REGISTRO' | 'DACTILAR_VERIFICACION' | 'FACIAL' | 'OCULAR')[],
+        selectedFingers,
         completedAt: user.biometricEnrollmentCompletedAt,
     });
 

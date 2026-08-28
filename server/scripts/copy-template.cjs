@@ -1,12 +1,14 @@
 const fs = require('node:fs/promises');
 const path = require('node:path');
 
-const source = path.resolve(__dirname, '../src/template/Template.pdf');
 const destinationDirectory = path.resolve(__dirname, '../dist/template');
-const destination = path.join(destinationDirectory, 'Template.pdf');
+const templateNames = ['template_r.pdf', 'template_v.pdf'];
 
 fs.mkdir(destinationDirectory, { recursive: true })
-    .then(() => fs.copyFile(source, destination))
+    .then(() => Promise.all(templateNames.map((templateName) => fs.copyFile(
+        path.resolve(__dirname, '../src/template', templateName),
+        path.join(destinationDirectory, templateName),
+    ))))
     .catch((error) => {
         console.error(`Failed to copy PDF template: ${error.message}`);
         process.exitCode = 1;
