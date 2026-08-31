@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import axios from 'axios';
 import api from '../lib/api';
@@ -78,6 +78,7 @@ export default function Verification() {
   const [enrollmentDone, setEnrollmentDone] = useState(false);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const isSubmittingRef = useRef(false);
 
   useEffect(() => {
     setCurrentMethodIndex(0);
@@ -91,7 +92,7 @@ export default function Verification() {
   const fingerprintFlowMode = activeMethod === 'DACTILAR_VERIFICACION' ? 'quick-verification' : 'full-enrollment';
 
   const handleComplete = async (result: BiometricResult) => {
-    if (!result.success || !activeMethod || isSubmitting) {
+    if (!result.success || !activeMethod || isSubmittingRef.current) {
       return;
     }
 
@@ -105,6 +106,7 @@ export default function Verification() {
       return;
     }
 
+    isSubmittingRef.current = true;
     setIsSubmitting(true);
     setSubmissionError(null);
 
@@ -158,6 +160,7 @@ export default function Verification() {
       setSubmissionError(message);
       console.error(message);
     } finally {
+      isSubmittingRef.current = false;
       setIsSubmitting(false);
     }
   };
@@ -201,13 +204,6 @@ export default function Verification() {
           {submissionError ? (
             <div className="max-w-2xl rounded-3xl border border-red-200 bg-red-50 px-6 py-5 text-red-800 shadow-sm">
               {submissionError}
-            </div>
-          ) : null}
-          {isSubmitting ? (
-            <div className="mx-auto flex max-w-md flex-col items-center justify-center rounded-3xl border border-slate-200 bg-white px-6 py-8 text-center shadow-sm">
-              <div className="h-12 w-12 animate-spin rounded-full border-4 border-slate-200 border-t-slate-900" aria-hidden="true" />
-              <h2 className="mt-4 text-xl font-semibold text-slate-900">Processing biometric enrollment</h2>
-              <p className="mt-2 text-sm text-slate-600">Please wait while we complete the final verification.</p>
             </div>
           ) : null}
           {BiometricComponent ? (

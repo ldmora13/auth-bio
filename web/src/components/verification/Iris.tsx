@@ -110,13 +110,15 @@ export function IrisSimulator({
   }, [clearAll]);
 
   const handleContinue = useCallback(() => {
+    if (disabled) return;
+
     if (phase === "error") {
       handleManualRetry();
       return;
     }
 
     if (resultRef.current) onComplete(resultRef.current);
-  }, [handleManualRetry, onComplete, phase]);
+  }, [disabled, handleManualRetry, onComplete, phase]);
 
   const locked = phase === "scanning" || phase === "success" || phase === "error";
   const { title, sub, tone } = getCopy(cameraStatus, phase);
@@ -171,8 +173,18 @@ export function IrisSimulator({
       </CameraStage>
 
       {canContinue && (
-        <button type="button" className={styles.continue} onClick={handleContinue}>
-          {phase === "error" ? "Retry" : "Continue"}
+        <button
+          type="button"
+          className={`${styles.continue} ${disabled ? "cursor-not-allowed opacity-70" : ""}`}
+          onClick={handleContinue}
+          disabled={disabled}
+        >
+          {disabled ? (
+            <span className="inline-flex items-center gap-2">
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/60 border-t-white" aria-hidden="true" />
+              Processing...
+            </span>
+          ) : phase === "error" ? "Retry" : "Continue"}
         </button>
       )}
     </div>
