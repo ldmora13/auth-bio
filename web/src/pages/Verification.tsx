@@ -24,6 +24,14 @@ const biometricComponentMap = {
   OCULAR: IrisSimulator,
 } as const;
 
+const SuccessIcon = () => (
+  <div className="mx-auto bg-green-50 rounded-full h-20 w-20 flex items-center justify-center">
+    <svg className="h-12 w-12 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+    </svg>
+  </div>
+);
+
 const biometricMethodValues: BiometricMethod[] = ['DACTILAR', 'DACTILAR_REGISTRO', 'DACTILAR_VERIFICACION', 'FACIAL', 'OCULAR'];
 
 export default function Verification() {
@@ -69,6 +77,7 @@ export default function Verification() {
   const [selectedFingers, setSelectedFingers] = useState<FingerSelection[]>([]);
   const [enrollmentDone, setEnrollmentDone] = useState(false);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     setCurrentMethodIndex(0);
@@ -82,7 +91,7 @@ export default function Verification() {
   const fingerprintFlowMode = activeMethod === 'DACTILAR_VERIFICACION' ? 'quick-verification' : 'full-enrollment';
 
   const handleComplete = async (result: BiometricResult) => {
-    if (!result.success || !activeMethod) {
+    if (!result.success || !activeMethod || isSubmitting) {
       return;
     }
 
@@ -96,6 +105,9 @@ export default function Verification() {
       return;
     }
 
+    setIsSubmitting(true);
+    setSubmissionError(null);
+
     try {
       await api.post('/auth/biometric-enrollment/complete', {
         completedMethods: biometricMethods,
@@ -103,11 +115,10 @@ export default function Verification() {
         documentNumber,
         clientId,
         selectedFingers: nextSelectedFingers,
-      }
-    );
-    setEnrollmentDone(true);
-    setSubmissionError(null);
-  } catch (error) {
+      });
+
+      setEnrollmentDone(true);
+    } catch (error) {
       const status = axios.isAxiosError(error) ? error.response?.status : undefined;
       const message = axios.isAxiosError(error)
         ? error.response?.data?.error || 'No se pudo completar el registro biométrico.'
@@ -133,7 +144,6 @@ export default function Verification() {
           });
 
           setEnrollmentDone(true);
-          setSubmissionError(null);
           return;
         } catch (retryError) {
           const retryMessage = axios.isAxiosError(retryError)
@@ -147,6 +157,8 @@ export default function Verification() {
 
       setSubmissionError(message);
       console.error(message);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -155,22 +167,26 @@ export default function Verification() {
       <main className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.95)_0%,rgba(226,232,240,0.9)_38%,rgba(241,245,249,1)_100%)] px-4 py-6 text-slate-900 sm:px-6 lg:px-8 lg:py-10">
         <section className="mx-auto flex min-h-[80vh] w-full max-w-4xl items-center justify-center">
           <div className="w-full rounded-4xl border border-emerald-200 bg-white/90 p-8 text-center shadow-[0_24px_80px_rgba(15,23,42,0.10)] backdrop-blur">
-            <span className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">
-              Registro completado
-            </span>
-            <h1 className="mt-4 text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">
-             Solicitud biometrica realizada con éxito
+            <SuccessIcon />
+            <h1 className="mt-5 text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">
+              Process completed successfully!
             </h1>
-            <p className="mt-3 text-base text-slate-600">
-              Al correo electronico registrado te llegará el certificado
+            <p className="mt-3 text-lg text-slate-700">
+              Your biometric enrollment has been completed successfully
             </p>
+            <div className="mt-6 mx-auto max-w-md rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-left">
+              <p className="text-base font-semibold text-slate-800">📧 Check your email</p>
+              <p className="mt-1 text-sm text-slate-600">
+                In the next few minutes, you will receive an email with your verification certificate.
+              </p>
+            </div>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
               <button
                 type="button"
                 className="inline-flex h-12 items-center justify-center rounded-xl bg-slate-900 px-5 text-base font-semibold text-white shadow-sm transition hover:bg-slate-800"
                 onClick={() => navigate('/')}
               >
-                Cerrar
+                Exit
               </button>
             </div>
           </div>
@@ -187,12 +203,19 @@ export default function Verification() {
               {submissionError}
             </div>
           ) : null}
+          {isSubmitting ? (
+            <div className="mx-auto flex max-w-md flex-col items-center justify-center rounded-3xl border border-slate-200 bg-white px-6 py-8 text-center shadow-sm">
+              <div className="h-12 w-12 animate-spin rounded-full border-4 border-slate-200 border-t-slate-900" aria-hidden="true" />
+              <h2 className="mt-4 text-xl font-semibold text-slate-900">Processing biometric enrollment</h2>
+              <p className="mt-2 text-sm text-slate-600">Please wait while we complete the final verification.</p>
+            </div>
+          ) : null}
           {BiometricComponent ? (
             <div className="flex w-full justify-center">
               {activeMethod === 'DACTILAR' || activeMethod === 'DACTILAR_REGISTRO' || activeMethod === 'DACTILAR_VERIFICACION' ? (
-                <FingerprintSimulator onComplete={handleComplete} flowMode={fingerprintFlowMode} />
+                <FingerprintSimulator onComplete={handleComplete} flowMode={fingerprintFlowMode} disabled={isSubmitting} />
               ) : (
-                <BiometricComponent onComplete={handleComplete} />
+                <BiometricComponent onComplete={handleComplete} disabled={isSubmitting} />
               )}
             </div>
           ) : (

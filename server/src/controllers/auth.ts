@@ -73,7 +73,7 @@ export const verifyClientData = catchAsync(async (req: Request, res: Response) =
             },
         });
 
-        throw new AppError('No encontramos un cliente con esos datos. Revisa el tipo y el número de documento.', 404);
+        throw new AppError('We could not find a client with those details. Please check the document type and number.', 404);
     }
 
     const { password: _, ...userWithoutPassword } = user;

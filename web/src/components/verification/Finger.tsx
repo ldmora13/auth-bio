@@ -8,6 +8,7 @@ const RESULT_HOLD_MS = 2000;
 const HAND_FADE_MS = 280;
 const MAX_AUTO_RETRIES = 1;
 const RIDGE_RADII = [38, 32, 26, 20, 14, 9] as const;
+const HAND_COMPLETE_HOLD_MS = 3000;
 
 type FingerKey = "thumb" | "index" | "middle" | "ring" | "pinky";
 
@@ -282,6 +283,9 @@ export function FingerprintSimulator({
   const canContinueRef = useRef(false);
   const verificationSequenceRef = useRef<FingerStep[]>(buildVerificationSequence());
 
+  const [completedHands, setCompletedHands] = useState<Set<"left" | "right">>(new Set());
+  const [justCompletedHand, setJustCompletedHand] = useState<"left" | "right" | null>(null);
+
   const fingerSequence = flowMode === "quick-verification"
     ? verificationSequenceRef.current
     : FULL_FINGER_SEQUENCE;
@@ -329,57 +333,69 @@ export function FingerprintSimulator({
     completedRef.current = [];
     fingerOnPadRef.current = false;
     canContinueRef.current = false;
+    setCompletedHands(new Set());
+  setJustCompletedHand(null);
   }, [clearTimers, flowMode]);
 
-  const advanceAfterFingerRemoval = useCallback(() => {
-    const currentIndex = activeIndexRef.current;
-    clearTimers();
-    const now = performance.now();
-    if (!completedRef.current.includes(currentIndex)) {
-      setCompleted((prev) => (prev.includes(currentIndex) ? prev : [...prev, currentIndex]));
-    }
+const advanceAfterFingerRemoval = useCallback(() => {
+  const currentIndex = activeIndexRef.current;
+  clearTimers();
+  const now = performance.now();
+  if (!completedRef.current.includes(currentIndex)) {
+    setCompleted((prev) => (prev.includes(currentIndex) ? prev : [...prev, currentIndex]));
+  }
 
-    const nextIndex = currentIndex + 1;
-    if (nextIndex >= fingerSequence.length) {
-      const finalResult = lastResultRef.current ?? {
-          success: true,
-          durationMs: totalStartRef.current
-            ? Math.round(now - totalStartRef.current)
-            : Math.round(SCAN_DURATION_MS * fingerSequence.length),
-          selectedFingers: fingerSequence.map(({ hand, finger }) => ({ hand, finger })),
-        };
-      resultRef.current = finalResult;
-      setCanContinue(true);
-      setPhase("success");
-      return;
-    }
+  const nextIndex = currentIndex + 1;
+  const finishedHand = fingerSequence[currentIndex].hand;
 
-    const currentHand = fingerSequence[currentIndex].hand;
-    const nextHand = fingerSequence[nextIndex].hand;
-    const handSwitch = currentHand !== nextHand;
+  if (nextIndex >= fingerSequence.length) {
+    setCompletedHands((prev) => new Set(prev).add(finishedHand));
+    const finalResult = lastResultRef.current ?? {
+        success: true,
+        durationMs: totalStartRef.current
+          ? Math.round(now - totalStartRef.current)
+          : Math.round(SCAN_DURATION_MS * fingerSequence.length),
+        selectedFingers: fingerSequence.map(({ hand, finger }) => ({ hand, finger })),
+      };
+    resultRef.current = finalResult;
+    setCanContinue(true);
+    setPhase("success");
+    return;
+  }
 
-    lastResultRef.current = null;
-    retriesRef.current = 0;
-    resultRef.current = null;
-    setCanContinue(false);
-    setProgress(0);
+  const currentHand = finishedHand;
+  const nextHand = fingerSequence[nextIndex].hand;
+  const handSwitch = currentHand !== nextHand;
 
-    if (handSwitch) {
+  lastResultRef.current = null;
+  retriesRef.current = 0;
+  resultRef.current = null;
+  setCanContinue(false);
+  setProgress(0);
+
+  if (handSwitch) {
+    setCompletedHands((prev) => new Set(prev).add(currentHand));
+    setJustCompletedHand(currentHand);
+    setPhase("idle");
+
+    const holdTimeout = window.setTimeout(() => {
+      setJustCompletedHand(null);
       setHandTransitioning(true);
-      setPhase("idle");
-      const t1 = window.setTimeout(() => {
+      const fadeOutTimeout = window.setTimeout(() => {
         setActiveIndex(nextIndex);
-        const t2 = window.setTimeout(() => {
+        const fadeInTimeout = window.setTimeout(() => {
           setHandTransitioning(false);
         }, HAND_FADE_MS);
-        timeoutsRef.current.push(t2);
+        timeoutsRef.current.push(fadeInTimeout);
       }, HAND_FADE_MS);
-      timeoutsRef.current.push(t1);
-    } else {
-      setActiveIndex(nextIndex);
-      setPhase("idle");
-    }
-  }, [clearTimers, fingerSequence]);
+      timeoutsRef.current.push(fadeOutTimeout);
+    }, HAND_COMPLETE_HOLD_MS);
+    timeoutsRef.current.push(holdTimeout);
+  } else {
+    setActiveIndex(nextIndex);
+    setPhase("idle");
+  }
+}, [clearTimers, fingerSequence]);
 
   const resetCurrentStep = useCallback(() => {
     clearTimers();
@@ -498,8 +514,6 @@ export function FingerprintSimulator({
 
   const activeStep = fingerSequence[activeIndex];
   const currentHand: "left" | "right" = activeStep.hand;
-  const handDoneCount = completed.filter((i) => fingerSequence[i].hand === currentHand).length;
-  const handTotal = fingerSequence.filter((step) => step.hand === currentHand).length;
 
   const copySet = flowMode === "quick-verification" ? STATUS_COPY_VERIFICATION : STATUS_COPY_ENROLLMENT;
   const statusKey: keyof typeof copySet = handTransitioning
@@ -507,20 +521,47 @@ export function FingerprintSimulator({
     : phase === "success" && fingerOnPadRef.current
       ? "remove"
       : phase;
-  const copy = copySet[statusKey];
+  const copy = justCompletedHand
+    ? {
+        title: `¡Mano ${justCompletedHand === "left" ? "izquierda" : "derecha"} ${flowMode === "quick-verification" ? "validada" : "completada"}!`,
+        sub: `Ahora continuaremos con tu mano ${justCompletedHand === "left" ? "derecha" : "izquierda"}.`,
+      }
+    : copySet[statusKey];
+
   const circumference = 2 * Math.PI * 44;
   const dashOffset = circumference - (progress / 100) * circumference;
 
   return (
     <div className={styles.card} data-phase={phase}>
       <div className={styles.stageHeader}>
-        <span className={styles.handLabel}>
-          {currentHand === "left" ? "Left hand" : "Right hand"} · {handDoneCount}/{handTotal}
-        </span>
+        <div className={styles.handStepper}>
+          <span className={`${styles.handStepPill} ${completedHands.has("left") ? styles.handStepDone : currentHand === "left" ? styles.handStepActive : ""}`}>
+            {completedHands.has("left") ? "✓" : "1"} Left hand
+          </span>
+          <span className={styles.handStepArrow}>→</span>
+          <span className={`${styles.handStepPill} ${completedHands.has("right") ? styles.handStepDone : currentHand === "right" ? styles.handStepActive : ""}`}>
+            {completedHands.has("right") ? "✓" : "2"} Right hand
+          </span>
+        </div>
         <strong className={styles.fingerLabel}>{activeStep.label}</strong>
       </div>
 
       <section className={styles.handCard} aria-label={currentHand === "left" ? "Left hand" : "Right hand"}>
+        {justCompletedHand && (
+          <div className={styles.handCompleteOverlay} role="status" aria-live="polite">
+            <div className={styles.handCompleteIconWrap}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className={styles.handCompleteIcon}>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <p className={styles.handCompleteTitle}>
+              Hand {justCompletedHand === "left" ? "left" : "right"} {flowMode === "quick-verification" ? "validated" : "completed"}
+            </p>
+            <p className={styles.handCompleteSub}>
+              Now we will continue with your {justCompletedHand === "left" ? "right" : "left"} hand.
+            </p>
+          </div>
+        )}
         {(phase === "success" || phase === "error") && (
             <div
               className={styles.resultOverlay}

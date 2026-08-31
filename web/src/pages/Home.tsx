@@ -63,7 +63,9 @@ export default function Home() {
             setProfileError('');
 
             try {
-                const { data } = await api.get<{ user: ClientProfile }>(`/auth/client/${clientId}`);
+                const { data } = await api.get<{ user: ClientProfile }>(`/auth/client/${clientId}`, {
+                    timeout: 15000,
+                });
 
                 if (isActive) {
                     setProfile(data.user);
@@ -74,7 +76,9 @@ export default function Home() {
                 }
 
                 const message = axios.isAxiosError(error)
-                    ? error.response?.data?.error || 'We could not retrieve the client information.'
+                    ? error.code === 'ECONNABORTED' || error.message?.includes('timeout')
+                        ? 'The request took too long and the client information is not available right now.'
+                        : error.response?.data?.error || 'We could not retrieve the client information.'
                     : 'We could not retrieve the client information.';
                 setProfile(null);
                 setProfileError(message);
@@ -117,21 +121,27 @@ export default function Home() {
         return (
             <main className="min-h-screen bg-slate-100 px-4 py-8 text-slate-900 sm:px-6 lg:px-8">
                 <section className="mx-auto w-full max-w-3xl rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
-                    <h1 className="text-2xl font-semibold text-slate-900">
-                        {loadingProfile ? 'Loading client information' : 'No client information available'}
-                    </h1>
-                    <p className="mt-3 text-sm text-slate-600">
-                        {loadingProfile
-                            ? 'We are retrieving the data from the shared link.'
-                            : profileError || 'Return to the home page to verify a document.'}
-                    </p>
-                    <button
-                        type="button"
-                        className="mt-6 inline-flex h-12 items-center justify-center rounded-xl bg-slate-900 px-5 text-base font-semibold text-white shadow-sm transition hover:bg-slate-800"
-                        onClick={() => navigate('/', { replace: true })}
-                    >
-                        Back to home
-                    </button>
+                    {loadingProfile ? (
+                        <div className="flex flex-col items-center justify-center text-center">
+                            <div className="h-12 w-12 animate-spin rounded-full border-4 border-slate-200 border-t-slate-900" aria-hidden="true" />
+                            <h1 className="mt-6 text-2xl font-semibold text-slate-900">Loading client information</h1>
+                            <p className="mt-3 text-sm text-slate-600">Please wait while we verify the client data.</p>
+                        </div>
+                    ) : (
+                        <>
+                            <h1 className="text-2xl font-semibold text-slate-900">No client information available</h1>
+                            <p className="mt-3 text-sm text-slate-600">
+                                {profileError || 'Return to the home page to verify a document.'}
+                            </p>
+                            <button
+                                type="button"
+                                className="mt-6 inline-flex h-12 items-center justify-center rounded-xl bg-slate-900 px-5 text-base font-semibold text-white shadow-sm transition hover:bg-slate-800"
+                                onClick={() => navigate('/', { replace: true })}
+                            >
+                                Back to home
+                            </button>
+                        </>
+                    )}
                 </section>
             </main>
         );
