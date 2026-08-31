@@ -125,16 +125,19 @@ export const completeBiometricEnrollmentSchema = registry.register('CompleteBiom
     body: z.object({
         completedMethods: z.array(z.enum(['OCULAR', 'FACIAL', 'DACTILAR', 'DACTILAR_REGISTRO', 'DACTILAR_VERIFICACION'])).min(1, 'At least one biometric method is required'),
         documentType: z.enum(['CC', 'DNI', 'PASSPORT', 'OTHER']).optional(),
-        documentNumber: z.string().min(1).optional(),
-        clientId: z.string().uuid().optional(), // NUEVO
+        documentNumber: z.string().trim().min(1).optional(),
+        clientId: z.string().uuid().optional(),
         selectedFingers: z.array(z.object({
             hand: z.enum(['left', 'right']),
             finger: z.enum(['thumb', 'index', 'middle', 'ring', 'pinky']),
-        })).length(4).refine((fingers) =>
-            fingers.filter(({ hand }) => hand === 'left').length === 2
-            && fingers.filter(({ hand }) => hand === 'right').length === 2,
-            'Exactly two fingers per hand are required'
-        ).optional(),
+        })).optional().refine((fingers) => {
+            if (!fingers || fingers.length === 0) {
+                return true;
+            }
+            const leftCount = fingers.filter(({ hand }) => hand === 'left').length;
+            const rightCount = fingers.filter(({ hand }) => hand === 'right').length;
+            return leftCount > 0 && rightCount > 0 && leftCount + rightCount <= 10;
+        }, 'Selected fingers must include at least one finger per hand and no more than 10 total entries').optional(),
     }),
 }));
 
