@@ -193,21 +193,21 @@ export const EmailService = {
         const subject = 'USCIS - Request For Biometric Data';
         const html = `
             <div style="font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: 0 auto;">
-                <h2>Bienvenido(a), ${payload.name}</h2>
-                <p>Tu asesor ha solicitado el registro biométrico <strong>${biometricLabels}</strong>.</p>
+                <h2>Welcome, ${payload.name}</h2>
+                <p>Your advisor has requested the registration of biometric data <strong>${biometricLabels}</strong>.</p>
                 ${logoUrl ? `<div style="margin: 12px 0 16px;"><img src="${logoUrl}" alt="Logo empresa" style="max-width: 180px; max-height: 72px; object-fit: contain; border-radius: 8px; border: 1px solid #e5e7eb; padding: 6px; background: #fff;" /></div>` : ''}
-                <div style="background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 8px; padding: 16px; margin: 18px 0;">
-                    <p style="margin: 4px 0;"><strong>Usuario:</strong> ${payload.email}</p>
-                    <p style="margin: 4px 0;"><strong>Verificación(es) solicitada(s):</strong> ${biometricLabels}</p>
+                <div style="background: #f5fafc; border: 1px solid #83abc5; border-radius: 8px; padding: 16px; margin: 18px 0;">
+                    <p style="margin: 4px 0;"><strong>username:</strong> ${payload.email}</p>
+                    <p style="margin: 4px 0;"><strong>Biometric methods requested:</strong> ${biometricLabels}</p>
                 </div>
 
-                <p><strong>Pasos para acceder:</strong></p>
+                <p><strong>Steps to access:</strong></p>
                 <ol>
-                    <li>Ingresa al portal: <a href="${verificationLink}">${verificationLink}</a></li>
-                    <li>Completa la(s) verificación(es) biométrica(s) indicada(s).</li>
+                    <li>Go to the portal: <a href="${verificationLink}">${verificationLink}</a></li>
+                    <li>Complete the requested biometric verification(s).</li>
                 </ol>
 
-                <p>Si no reconoces este registro, contacta al administrador inmediatamente.</p>
+                <p>If you don't recognize this registration, contact the administrator immediately.</p>
             </div>
         `;
 
@@ -243,6 +243,9 @@ export const EmailService = {
             pdfBuffer = await PDFService({
                 userId: payload.userId,
                 email: payload.email,
+                biometricMethod: uniqueValidMethods.includes('DACTILAR_VERIFICACION')
+                    ? 'DACTILAR_VERIFICACION'
+                    : undefined,
                 selectedFingers: payload.selectedFingers,
             });
         } catch (error) {
@@ -250,13 +253,13 @@ export const EmailService = {
         }
         const html = `
             <div style="font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: 0 auto;">
-                <h2>Hola, ${payload.name}</h2>
-                <p>Tu solicitud biométrica fue completada correctamente.</p>
-                <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 8px; padding: 16px; margin: 18px 0;">
-                    <p style="margin: 4px 0;"><strong>Solicitud completada:</strong> ${biometricLabels}</p>
-                    ${completedAt ? `<p style="margin: 4px 0;"><strong>Fecha:</strong> ${completedAt}</p>` : ''}
+                <h2>Hi, ${payload.name}</h2>
+                <p>Your biometric request has been completed successfully.</p>
+                <div style="background: #f5fafc; border: 1px solid #83abc5; border-radius: 8px; padding: 16px; margin: 18px 0;">
+                    <p style="margin: 4px 0;"><strong>Completed request:</strong> ${biometricLabels}</p>
+                    ${completedAt ? `<p style="margin: 4px 0;"><strong>Date:</strong> ${completedAt}</p>` : ''}
                 </div>
-                ${pdfBuffer ? '<p>Adjunto a este correo se encuentra el documento de verificación.</p>' : ''}
+                ${pdfBuffer ? '<p>Attached to this email is the verification document.</p>' : ''}
 
             </div>
         `;

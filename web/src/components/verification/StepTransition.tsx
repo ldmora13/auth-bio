@@ -47,7 +47,7 @@ export function StepTransition({ nextMethod, onContinue, autoAdvanceSeconds = 10
           You have completed this step!
         </h1>
         <p className="mt-3 text-base text-slate-700">
-            Now proceeding to {nextLabel.toLowerCase() === 'verificación facial' ? 'Facial verification' : 'visual verification'}.
+            Now proceeding to {nextLabel.toLowerCase() === 'verificación facial' ? 'facial verification' : 'visual verification'}.
         </p>
 
         <button

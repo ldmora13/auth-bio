@@ -272,7 +272,7 @@ export function FingerprintSimulator({
   const timeoutsRef = useRef<number[]>([]);
   const scanStartRef = useRef<number>(0);
   const totalStartRef = useRef<number | null>(null);
-  const lastResultRef = useRef<{ success: boolean; durationMs: number } | null>(null);
+  const lastResultRef = useRef<BiometricResult | null>(null);
   const resultRef = useRef<BiometricResult | null>(null);
   const phaseRef = useRef<BiometricPhase>("idle");
   const activeIndexRef = useRef(0);
@@ -436,6 +436,7 @@ const advanceAfterFingerRemoval = useCallback(() => {
             durationMs: totalStartRef.current
               ? Math.round(now - totalStartRef.current)
               : Math.round(SCAN_DURATION_MS),
+            selectedFingers: fingerSequence.map(({ hand, finger }) => ({ hand, finger })),
           };
           setProgress(100);
           setPhase("success");
