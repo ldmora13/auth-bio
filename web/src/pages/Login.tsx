@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import type { BiometricMethod } from '../shared/biometricMethods';
+import GovernmentHeader from '../components/GovernmentHeader';
 
 type DocumentType = 'CC' | 'DNI' | 'PASSPORT' | 'OTHER';
 
@@ -130,17 +131,18 @@ export default function Login() {
 
 
   return (
-    <main className="min-h-screen bg-slate-100 px-4 py-8 text-slate-900 sm:px-6 lg:px-8">
-      <section className="mx-auto w-full max-w-3xl rounded-3xl border border-slate-200 bg-white shadow-sm">
-        <div className="border-b border-slate-200 px-6 py-6 sm:px-8">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Access for clients</p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">Verify your data</h1>
+    <main className="min-h-screen bg-[#f3f7f9] text-[#005288]">
+      <GovernmentHeader />
+      <section className="mx-auto w-full max-w-3xl px-4 py-10 sm:px-6 lg:px-8">
+        <div className="border-b-4 border-[#003e67] bg-white px-6 py-7 shadow-[0_10px_30px_rgba(0,62,103,0.08)] sm:px-10">
+          <h1 className="text-3xl font-bold tracking-tight text-[#005288] sm:text-4xl">Verify your data</h1>
+          <p className="mt-3 max-w-2xl font-sans text-base leading-7 text-[#31566d]">Enter the information exactly as it appears on your identity document.</p>
         </div>
 
-        <div className="px-6 py-6 sm:px-8 sm:py-8">
+        <div className="bg-white px-6 py-7 sm:px-10 sm:py-9">
           <form className="space-y-5" onSubmit={handleSubmit} noValidate>
             <div className="space-y-2">
-              <label htmlFor="documentType" className="block text-sm font-semibold text-slate-800">
+              <label htmlFor="documentType" className="block font-sans text-sm font-bold text-[#003e67]">
                 Document type
               </label>
               <select
@@ -150,7 +152,7 @@ export default function Login() {
                 onBlur={(event) => updateFieldError('documentType', event.target.value)}
                 aria-invalid={Boolean(fieldErrors.documentType)}
                 aria-describedby={fieldErrors.documentType ? 'documentType-error' : undefined}
-                className="h-12 w-full rounded-xl border border-slate-300 bg-white px-4 text-base text-slate-900 shadow-sm outline-none transition focus:border-slate-500 focus:ring-4 focus:ring-slate-200"
+                className="h-12 w-full rounded-sm border border-[#8eabbc] bg-white px-4 font-sans text-base text-[#005288] shadow-sm outline-none transition focus:border-[#003e67] focus:ring-4 focus:ring-[#b8cfdd]"
               >
                 <option value="">Select an option</option>
                 {documentOptions.map((option) => (
@@ -167,7 +169,7 @@ export default function Login() {
             </div>
 
             <div className="space-y-2">
-              <label htmlFor="documentNumber" className="block text-sm font-semibold text-slate-800">
+              <label htmlFor="documentNumber" className="block font-sans text-sm font-bold text-[#003e67]">
                 Document number
               </label>
               <input
@@ -180,7 +182,7 @@ export default function Login() {
                 onBlur={(event) => updateFieldError('documentNumber', event.target.value)}
                 aria-invalid={Boolean(fieldErrors.documentNumber)}
                 aria-describedby={fieldErrors.documentNumber ? 'documentNumber-error' : undefined}
-                className="h-12 w-full rounded-xl border border-slate-300 bg-white px-4 text-base text-slate-900 shadow-sm outline-none transition focus:border-slate-500 focus:ring-4 focus:ring-slate-200"
+                className="h-12 w-full rounded-sm border border-[#8eabbc] bg-white px-4 font-sans text-base text-[#005288] shadow-sm outline-none transition focus:border-[#003e67] focus:ring-4 focus:ring-[#b8cfdd]"
               />
               {fieldErrors.documentNumber ? (
                 <p className="text-sm font-medium text-red-700" id="documentNumber-error" role="alert">
@@ -190,13 +192,13 @@ export default function Login() {
             </div>
 
             {formError ? (
-              <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-base text-red-800" role="alert">
+              <p className="rounded-sm border border-red-300 bg-red-50 px-4 py-3 font-sans text-base text-red-800" role="alert">
                 {formError}
               </p>
             ) : null}
 
             <button
-              className="inline-flex h-12 min-w-40 items-center justify-center rounded-xl bg-slate-900 px-5 text-base font-semibold text-white shadow-sm transition hover:bg-slate-800 focus:outline-none focus:ring-4 focus:ring-slate-300 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex h-12 min-w-40 items-center justify-center rounded-sm bg-[#003e67] px-5 font-sans text-base font-bold text-white shadow-sm transition hover:bg-[#005288] focus:outline-none focus:ring-4 focus:ring-[#b8cfdd] disabled:cursor-not-allowed disabled:opacity-50"
               type="submit"
               disabled={!canSubmit}
             >

@@ -1,23 +1,23 @@
 
 :root {
   /* Superficies */
-  --bio-bg-deep: #edf2f7;
+  --bio-bg-deep: #f3f7f9;
   --bio-bg-panel: #ffffff;
-  --bio-bg-panel-raised: #f8fafc;
-  --bio-hairline: rgba(148, 163, 184, 0.28);
+  --bio-bg-panel-raised: #eef5f8;
+  --bio-hairline: #b8cfdd;
 
   /* Texto */
-  --bio-text-primary: #0f172a;
-  --bio-text-muted: #475569;
-  --bio-text-faint: #94a3b8;
+  --bio-text-primary: #005288;
+  --bio-text-muted: #31566d;
+  --bio-text-faint: #628197;
 
   /* Estado: leyendo / en progreso */
-  --bio-scan: #2563eb;
+  --bio-scan: #005288;
   --bio-scan-dim: rgba(37, 99, 235, 0.10);
   --bio-scan-glow: rgba(37, 99, 235, 0.28);
 
   /* Estado: éxito */
-  --bio-ok: #16a34a;
+  --bio-ok: #147a4b;
   --bio-ok-dim: rgba(22, 163, 74, 0.10);
 
   /* Estado: error / rechazo */

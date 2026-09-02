@@ -58,29 +58,30 @@
 }
 
 .continue {
-  border: 1px solid rgba(15, 23, 42, 0.16);
-  background: linear-gradient(180deg, rgba(15, 23, 42, 0.98) 0%, rgba(30, 41, 59, 0.96) 100%);
+  border: 1px solid #003e67;
+  background: #003e67;
   color: #fff;
-  font-family: var(--bio-font-body);
-  font-size: 14px;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 16px;
   font-weight: 700;
-  padding: var(--bio-space-3) var(--bio-space-5);
-  border-radius: var(--bio-radius-md);
+  padding: 12px 20px;
+  border-radius: 16px;
   cursor: pointer;
   min-width: 220px;
   align-self: center;
-  box-shadow: 0 14px 28px rgba(15, 23, 42, 0.16);
-  transition: transform 180ms ease, box-shadow 180ms ease, filter 180ms ease;
+  box-shadow: 0 8px 18px rgba(0, 62, 103, 0.16);
+  transition: background-color 180ms ease, border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
 }
 
 .continue:hover {
+  background: #005288;
+  border-color: #005288;
   transform: translateY(-1px);
-  box-shadow: 0 18px 34px rgba(15, 23, 42, 0.2);
-  filter: brightness(1.02);
+  box-shadow: 0 10px 22px rgba(0, 62, 103, 0.22);
 }
 
 .continue:focus-visible {
-  outline: 2px solid var(--bio-scan);
+  outline: 3px solid #b8cfdd;
   outline-offset: 4px;
 }
 

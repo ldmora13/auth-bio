@@ -7,6 +7,8 @@ import { FingerprintSimulator } from "../components/verification/Finger";
 import { FacialSimulator } from "../components/verification/Facial";
 import { IrisSimulator } from "../components/verification/Iris";
 import { StepTransition } from "../components/verification/StepTransition";
+import GovernmentHeader from "../components/GovernmentHeader";
+import logo from "../assets/USCIS_Signature_Preferred_FC.png";
 
 import { normalizeBiometricMethods, type BiometricMethod } from "../shared/biometricMethods";
 import type { BiometricResult, FingerSelection } from "../shared/biometricTypes";
@@ -29,8 +31,8 @@ const biometricComponentMap = {
 } as const;
 
 const SuccessIcon = () => (
-  <div className="mx-auto bg-green-50 rounded-full h-20 w-20 flex items-center justify-center">
-    <svg className="h-12 w-12 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+  <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-[#eef5f8]">
+    <svg className="h-12 w-12 text-[#147a4b]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
     </svg>
   </div>
@@ -195,40 +197,41 @@ export default function Verification() {
 
   if (enrollmentDone) {
     return (
-      <main className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.95)_0%,rgba(226,232,240,0.9)_38%,rgba(241,245,249,1)_100%)] px-4 py-6 text-slate-900 sm:px-6 lg:px-8 lg:py-10">
-        <section className="mx-auto flex min-h-[80vh] w-full max-w-4xl items-center justify-center">
-          <div className="w-full rounded-4xl border border-emerald-200 bg-white/90 p-8 text-center shadow-[0_24px_80px_rgba(15,23,42,0.10)] backdrop-blur gap-y-5 items-center">
-            <img src="https://media.smartbiometrics.org/USCIS_Signature_Preferred_FC.png" alt="U.S. Citizenship and Immigration Services" className="w-50 h-auto mb-5"></img>
+      <main className="min-h-screen bg-[#f3f7f9] px-4 py-6 text-[#005288] sm:px-6 lg:px-8 lg:py-10">
+        <section className="mx-auto flex min-h-[80vh] w-full max-w-4xl items-center justify-center"><div className="w-full">
+          <GovernmentHeader compact />
+          <div className="w-full border-b-4 border-[#003e67] bg-white p-8 text-center shadow-[0_24px_80px_rgba(0,62,103,0.12)] gap-y-5 items-center">
+            <img src={logo} alt="U.S. Citizenship and Immigration Services" className="mx-auto mb-5 h-auto w-56" />
             <SuccessIcon />
-            <h1 className="mt-5 text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">
+            <h1 className="mt-5 text-3xl font-bold tracking-tight text-[#005288] sm:text-4xl">
               Process completed successfully!
             </h1>
-            <p className="mt-3 text-lg text-slate-700">
+            <p className="mt-3 font-sans text-lg text-[#31566d]">
               Your biometric enrollment has been completed successfully
             </p>
-            <div className="mt-6 mx-auto max-w-md rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-left">
-              <p className="text-base font-semibold text-slate-800">📧 Check your email</p>
-              <p className="mt-1 text-sm text-slate-600">
+            <div className="mt-6 mx-auto max-w-md rounded-sm border border-[#b8cfdd] bg-[#eef5f8] px-5 py-4 text-left">
+              <p className="font-sans text-base font-bold text-[#003e67]">Check your email</p>
+              <p className="mt-1 font-sans text-sm text-[#31566d]">
                 In the next few minutes, you will receive an email with your verification certificate.
               </p>
             </div>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
               <button
                 type="button"
-                className="inline-flex h-12 items-center justify-center rounded-xl bg-slate-900 px-5 text-base font-semibold text-white shadow-sm transition hover:bg-slate-800"
+                className="inline-flex h-12 items-center justify-center rounded-sm bg-[#003e67] px-5 font-sans text-base font-bold text-white shadow-sm transition hover:bg-[#005288]"
                 onClick={() => navigate('/')}
               >
                 Exit
               </button>
             </div>
-          </div>
+          </div></div>
         </section>
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.95)_0%,rgba(226,232,240,0.9)_38%,rgba(241,245,249,1)_100%)] px-4 py-6 text-slate-900 sm:px-6 lg:px-8 lg:py-10">
+    <main className="min-h-screen bg-[#f3f7f9] px-4 py-6 text-[#005288] sm:px-6 lg:px-8 lg:py-10">
       <section className="mx-auto grid w-full max-w-6xl gap-8">
           {submissionError ? (
             <div className="max-w-2xl rounded-3xl border border-red-200 bg-red-50 px-6 py-5 text-red-800 shadow-sm">
@@ -245,7 +248,7 @@ export default function Verification() {
             </div>
           ) : (
             <div className="max-w-md rounded-3xl border border-amber-200 bg-amber-50 px-6 py-5 text-amber-900 shadow-sm">
-              No se encontró un tipo biométrico válido para este cliente. Contacte al asesor.
+              Contact your administrator to configure the biometric methods for you.
             </div>
           )}
       </section>
