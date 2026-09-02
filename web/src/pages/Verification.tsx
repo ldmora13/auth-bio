@@ -198,8 +198,7 @@ export default function Verification() {
   if (enrollmentDone) {
     return (
       <main className="min-h-screen bg-[#f3f7f9] px-4 py-6 text-[#005288] sm:px-6 lg:px-8 lg:py-10">
-        <section className="mx-auto flex min-h-[80vh] w-full max-w-4xl items-center justify-center"><div className="w-full">
-          <GovernmentHeader compact />
+        <section className="mx-auto flex min-h-[80vh] w-full max-w-4xl items-center justify-center">
           <div className="w-full border-b-4 border-[#003e67] bg-white p-8 text-center shadow-[0_24px_80px_rgba(0,62,103,0.12)] gap-y-5 items-center">
             <img src={logo} alt="U.S. Citizenship and Immigration Services" className="mx-auto mb-5 h-auto w-56" />
             <SuccessIcon />
@@ -224,7 +223,7 @@ export default function Verification() {
                 Exit
               </button>
             </div>
-          </div></div>
+          </div>
         </section>
       </main>
     );
