@@ -118,6 +118,10 @@ function buildVerificationSequence(): FingerStep[] {
 function playPhaseSound(phase: BiometricPhase) {
   if (phase !== "success" && phase !== "error") return;
 
+  if (phase === "error" && typeof navigator.vibrate === "function") {
+    navigator.vibrate([150, 80, 150]);
+  }
+
   const AudioContextConstructor = window.AudioContext;
   if (!AudioContextConstructor) return;
 
