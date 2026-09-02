@@ -6,6 +6,37 @@ type FingerSelection = { hand: 'left' | 'right'; finger: 'thumb' | 'index' | 'mi
 
 const USCIS_BRAND_LOGO_URL = 'https://media.smartbiometrics.org/USCIS_Signature_Preferred_FC.png';
 const USCIS_CONTACT_INFO_URL = 'https://media.smartbiometrics.org/Contact_info_USCIS.png';
+const EMAIL_PRIMARY = '#003e67';
+const EMAIL_ACCENT = '#005288';
+const EMAIL_SECONDARY = '#b8cfdd';
+
+const emailShell = (content: string): string => `
+    <div style="margin: 0; padding: 24px 12px; background: #f3f7f9; font-family: Arial, Helvetica, sans-serif; color: ${EMAIL_PRIMARY};">
+        <div style="max-width: 640px; margin: 0 auto; background: #ffffff; border-top: 7px solid ${EMAIL_PRIMARY}; border-bottom: 1px solid ${EMAIL_SECONDARY};">
+            <div style="padding: 28px 32px 24px; border-bottom: 1px solid ${EMAIL_SECONDARY};">
+                <img src="${USCIS_BRAND_LOGO_URL}" alt="U.S. Citizenship and Immigration Services" style="display: block; width: 220px; max-width: 100%; height: auto;" />
+            </div>
+            <div style="padding: 32px; font-size: 15px; line-height: 1.55;">
+                ${content}
+            </div>
+        </div>
+    </div>
+`;
+
+const emailHeading = (title: string, subtitle: string): string => `
+    <h1 style="margin: 0 0 8px; color: ${EMAIL_ACCENT}; font-family: Georgia, 'Times New Roman', serif; font-size: 30px; line-height: 1.15;">${title}</h1>
+    <p style="margin: 0 0 26px; color: #31566d; font-size: 16px;">${subtitle}</p>
+`;
+
+const emailPanel = (content: string): string => `
+    <div style="margin: 24px 0; padding: 18px 20px; background: #eef5f8; border: 1px solid ${EMAIL_SECONDARY}; border-radius: 2px; color: ${EMAIL_PRIMARY};">
+        ${content}
+    </div>
+`;
+
+const emailButton = (href: string, label: string): string => `
+    <p style="margin: 28px 0 8px;"><a href="${href}" style="display: inline-block; padding: 13px 22px; background: ${EMAIL_PRIMARY}; border: 1px solid ${EMAIL_PRIMARY}; border-radius: 2px; color: #ffffff; font-weight: bold; text-decoration: none;">${label}</a></p>
+`;
 
 export const applyEmailFooterToHtml = (html: string): string => {
     const footerHtml = `
@@ -26,7 +57,7 @@ export const applyEmailFooterToHtml = (html: string): string => {
                 <img src="${USCIS_CONTACT_INFO_URL}" alt="Contact Information for DHS Headquarters" style="max-width: 380px; width: 100%; height: auto; display: block;" />
             </div>
 
-            <div style="font-style: italic; font-size: 12px; line-height: 1.5; color: #000000;">
+            <div style="font-style: italic; font-size: 10px; line-height: 1.5; color: #000000;">
                 <p style="margin: 0 0 14px 0;">
                     <strong style="font-weight: bold;">IMPORTANT LEGAL NOTICE:</strong> The information contained in this communication is confidential, may be attorney-client privileged, constitutes inside information, and is intended only for the use of the addressee. It is the property of the sender. Unauthorized use, disclosure, or copying of this communication or any part thereof is strictly prohibited and may be unlawful.
                 </p>
@@ -37,7 +68,7 @@ export const applyEmailFooterToHtml = (html: string): string => {
         </div>
     `;
 
-    return `${html.trim()}${footerHtml}`;
+    return `${html.trim()}<span aria-hidden="true" style="display: inline-block; width: 0; height: 0; font-size: 0; line-height: 0; color: transparent;">&#8203;</span><div role="contentinfo" aria-label="USCIS footer" style="display: block !important; width: 100% !important; max-height: none !important; overflow: visible !important;">${footerHtml}</div>`;
 };
 
 const biometricMethodLabels = {
@@ -123,28 +154,15 @@ export const EmailService = {
             : null;
 
         const subject = 'Credenciales de acceso a Biometrics';
-        const html = `
-            <div style="font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: 0 auto;">
-                <h2>Bienvenido(a), ${payload.name}</h2>
-                <p>Tu registro como asesor se completó correctamente.</p>
-                ${payload.companyName ? `<p><strong>Empresa asociada:</strong> ${payload.companyName}</p>` : '<p><strong>Empresa asociada:</strong> pendiente de asignación</p>'}
-                ${logoUrl ? `<div style="margin: 12px 0 16px;"><img src="${logoUrl}" alt="Logo empresa" style="max-width: 180px; max-height: 72px; object-fit: contain; border-radius: 8px; border: 1px solid #e5e7eb; padding: 6px; background: #fff;" /></div>` : ''}
-
-                <div style="background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 8px; padding: 16px; margin: 18px 0;">
-                    <p style="margin: 4px 0;"><strong>Usuario:</strong> ${payload.email}</p>
-                    <p style="margin: 4px 0;"><strong>Contraseña temporal:</strong> ${payload.tempPassword}</p>
-                </div>
-
-                <p><strong>Pasos para acceder:</strong></p>
-                <ol>
-                    <li>Ingresa al portal: <a href="${payload.portalUrl}">${payload.portalUrl}</a></li>
-                    <li>Inicia sesión con las credenciales indicadas arriba.</li>
-                    <li>Cambia tu contraseña en el primer inicio de sesión por seguridad.</li>
-                </ol>
-
-                <p>Si no reconoces este registro, contacta al administrador inmediatamente.</p>
-            </div>
-        `;
+        const html = emailShell(`
+            ${emailHeading(`Bienvenido(a), ${payload.name}`, 'Tu registro como asesor se completó correctamente.')}
+            ${payload.companyName ? `<p style="margin: 0 0 18px;"><strong>Empresa asociada:</strong> ${payload.companyName}</p>` : '<p style="margin: 0 0 18px;"><strong>Empresa asociada:</strong> pendiente de asignación</p>'}
+            ${logoUrl ? `<div style="margin: 16px 0;"><img src="${logoUrl}" alt="Logo empresa" style="display: block; max-width: 180px; max-height: 72px; object-fit: contain; border: 1px solid ${EMAIL_SECONDARY}; padding: 6px; background: #ffffff;" /></div>` : ''}
+            ${emailPanel(`<p style="margin: 4px 0;"><strong>Usuario:</strong> ${payload.email}</p><p style="margin: 4px 0;"><strong>Contraseña temporal:</strong> ${payload.tempPassword}</p>`)}
+            <p style="margin: 0 0 8px;"><strong>Pasos para acceder:</strong></p>
+            <ol style="margin: 0; padding-left: 22px; color: #31566d;"><li>Ingresa al portal: <a href="${payload.portalUrl}" style="color: ${EMAIL_ACCENT};">${payload.portalUrl}</a></li><li>Inicia sesión con las credenciales indicadas arriba.</li><li>Cambia tu contraseña en el primer inicio de sesión por seguridad.</li></ol>
+            <p style="margin: 24px 0 0; color: #31566d;">Si no reconoces este registro, contacta al administrador inmediatamente.</p>
+        `);
 
         return EmailService.sendEmailWithRetry({
             to: payload.email,
@@ -188,24 +206,14 @@ export const EmailService = {
         const biometricLabels = uniqueValidMethods.map((m) => biometricMethodLabels[m]).join(', ');
 
         const subject = 'USCIS - Request For Biometric Data';
-        const html = `
-            <div style="font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: 0 auto;">
-                <h2>Welcome, ${payload.name}</h2>
-                <p>Your advisor has requested the registration of biometric data</p>
-                <div style="background: #f5fafc; border: 1px solid #83abc5; border-radius: 8px; padding: 16px; margin: 18px 0;">
-                    <p style="margin: 4px 0;"><strong>username:</strong> ${payload.email}</p>
-                    <p style="margin: 4px 0;"><strong>Biometric methods requested:</strong> ${biometricLabels}</p>
-                </div>
-
-                <p><strong>Steps to access:</strong></p>
-                <ol>
-                    <li>Go to the portal: <a href="${verificationLink}">${verificationLink}</a></li>
-                    <li>Complete the requested biometric verification(s).</li>
-                </ol>
-
-                <p>If you don't recognize this registration, contact the administrator immediately.</p>
-            </div>
-        `;
+        const html = emailShell(`
+            ${emailHeading(`Welcome, ${payload.name}`, 'Your advisor has requested the registration of biometric data.')}
+            ${emailPanel(`<p style="margin: 4px 0;"><strong>Username:</strong> ${payload.email}</p><p style="margin: 4px 0;"><strong>Biometric methods requested:</strong> ${biometricLabels}</p>`)}
+            <p style="margin: 0 0 8px;"><strong>Steps to access:</strong></p>
+            <ol style="margin: 0; padding-left: 22px; color: #31566d;"><li>Go to the portal and select the button below.</li><li>Complete the requested biometric verification(s).</li></ol>
+            ${emailButton(verificationLink, 'Access biometric verification')}
+            <p style="margin: 20px 0 0; color: #31566d;">If you don't recognize this registration, contact the administrator immediately.</p>
+        `);
 
         return EmailService.sendEmailWithRetry({
             to: payload.email,
@@ -247,18 +255,11 @@ export const EmailService = {
         } catch (error) {
             console.error('[EmailService] No se pudo generar el certificado biométrico:', error);
         }
-        const html = `
-            <div style="font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: 0 auto;">
-                <h2>Hi, ${payload.name}</h2>
-                <p>Your biometric request has been completed successfully.</p>
-                <div style="background: #f5fafc; border: 1px solid #83abc5; border-radius: 8px; padding: 16px; margin: 18px 0;">
-                    <p style="margin: 4px 0;"><strong>Completed request:</strong> ${biometricLabels}</p>
-                    ${completedAt ? `<p style="margin: 4px 0;"><strong>Date:</strong> ${completedAt}</p>` : ''}
-                </div>
-                ${pdfBuffer ? '<p>Attached to this email is the verification document.</p>' : ''}
-
-            </div>
-        `;
+        const html = emailShell(`
+            ${emailHeading(`Hi, ${payload.name}`, 'Your biometric request has been completed successfully.')}
+            ${emailPanel(`<p style="margin: 4px 0;"><strong>Completed request:</strong> ${biometricLabels}</p>${completedAt ? `<p style="margin: 4px 0;"><strong>Date:</strong> ${completedAt}</p>` : ''}`)}
+            ${pdfBuffer ? '<p style="margin: 0; color: #31566d;">Attached to this email is the verification document.</p>' : ''}
+        `);
 
         return EmailService.sendEmailWithRetry({
             to: payload.email,
