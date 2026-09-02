@@ -6,7 +6,6 @@ import styles from "./Finger.module.css";
 const SCAN_DURATION_MS = 1700;
 const RESULT_HOLD_MS = 2000;
 const HAND_FADE_MS = 280;
-const MAX_AUTO_RETRIES = 1;
 const RIDGE_RADII = [38, 32, 26, 20, 14, 9] as const;
 const HAND_COMPLETE_HOLD_MS = 3000;
 
@@ -454,17 +453,6 @@ const advanceAfterFingerRemoval = useCallback(() => {
         lastResultRef.current = null;
         setPhase("error");
 
-        if (retriesRef.current > MAX_AUTO_RETRIES) {
-          const t = window.setTimeout(() => {
-            if (!fingerOnPadRef.current) {
-              advanceAfterFingerRemoval();
-            } else {
-              setPhase("success");
-            }
-          }, RESULT_HOLD_MS);
-          timeoutsRef.current.push(t);
-          return;
-        }
 
         const t = window.setTimeout(() => {
           if (!fingerOnPadRef.current) {
