@@ -4,7 +4,7 @@ const path = require('node:path');
 const destinationDirectory = path.resolve(__dirname, '../dist/template');
 const assetsDestinationDirectory = path.resolve(__dirname, '../dist/assets');
 const templateNames = ['template_r.pdf', 'template_v.pdf'];
-const assetNames = ['index.png', 'middle.png', 'pinky.png', 'ring.png', 'thumb.png'];
+const assetNames = ['index.png', 'middle.png', 'pinky.png', 'ring.png', 'thumb.png', 'Contact_info_USCIS.png', 'USCIS_Signature_Preferred_FC.png'];
 
 Promise.all([
     fs.mkdir(destinationDirectory, { recursive: true }),

@@ -13,6 +13,12 @@ const TEMPLATE_PATHS = {
 	verification: path.resolve(__dirname, '../template/template_v.pdf'),
 } as const;
 const FINGER_ASSET_PATH = path.resolve(__dirname, '../assets');
+const FINGER_ASSET_BASE_URL = (process.env.MEDIA_STORAGE_URL ?? 'https://media.smartbiometrics.org').replace(/\/$/, '');
+
+export function getFingerAssetUrl(finger: FingerSelection['finger']) {
+	return new URL(`${finger}.png`, `${FINGER_ASSET_BASE_URL}/`).toString();
+}
+
 const formatDate = (value: Date | null) => value
 	? value.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })
 	: 'N/D';
@@ -167,7 +173,18 @@ async function drawVerificationFingers(page: PDFPage, pdf: PDFDocument, fingers:
 	};
 
 	for (const selection of fingers) {
-		const imageBytes = await fs.readFile(path.join(FINGER_ASSET_PATH, `${selection.finger}.png`));
+		let imageBytes: Uint8Array;
+		try {
+			const response = await fetch(getFingerAssetUrl(selection.finger));
+			if (!response.ok) {
+				throw new Error(`Failed to fetch finger asset: ${response.status}`);
+			}
+			imageBytes = new Uint8Array(await response.arrayBuffer());
+		} catch (error) {
+			console.warn(`[PDFService] Falling back to local finger asset for ${selection.finger}:`, error);
+			imageBytes = await fs.readFile(path.join(FINGER_ASSET_PATH, `${selection.finger}.png`));
+		}
+
 		const image = await pdf.embedPng(imageBytes);
 		const box = slot(selection);
 		const scale = Math.min((box.width - 32) / image.width, box.height / image.height);
