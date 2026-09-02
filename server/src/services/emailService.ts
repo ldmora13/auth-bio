@@ -21,7 +21,7 @@ export const applyEmailFooterToHtml = (html: string): string => {
                     Notice: The information in this email is confidential and intended for the exclusive use of the recipient.
                 </p>
             </div>
->
+            
             <div style="margin-bottom: 25px;">
                 <img src="${USCIS_CONTACT_INFO_URL}" alt="Contact Information for DHS Headquarters" style="max-width: 380px; width: 100%; height: auto; display: block;" />
             </div>

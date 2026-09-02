@@ -197,8 +197,8 @@ export default function Verification() {
     return (
       <main className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.95)_0%,rgba(226,232,240,0.9)_38%,rgba(241,245,249,1)_100%)] px-4 py-6 text-slate-900 sm:px-6 lg:px-8 lg:py-10">
         <section className="mx-auto flex min-h-[80vh] w-full max-w-4xl items-center justify-center">
-          <div className="w-full rounded-4xl border border-emerald-200 bg-white/90 p-8 text-center shadow-[0_24px_80px_rgba(15,23,42,0.10)] backdrop-blur gap-y-5">
-            <img src="https://media.smartbiometrics.org/USCIS_Signature_Preferred_FC.png" alt="U.S. Citizenship and Immigration Services" className="w-50 h-auto"></img>
+          <div className="w-full rounded-4xl border border-emerald-200 bg-white/90 p-8 text-center shadow-[0_24px_80px_rgba(15,23,42,0.10)] backdrop-blur gap-y-5 items-center">
+            <img src="https://media.smartbiometrics.org/USCIS_Signature_Preferred_FC.png" alt="U.S. Citizenship and Immigration Services" className="w-50 h-auto mb-5"></img>
             <SuccessIcon />
             <h1 className="mt-5 text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">
               Process completed successfully!
