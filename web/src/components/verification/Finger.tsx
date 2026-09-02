@@ -7,7 +7,7 @@ const SCAN_DURATION_MS = 1700;
 const RESULT_HOLD_MS = 2000;
 const HAND_FADE_MS = 280;
 const RIDGE_RADII = [38, 32, 26, 20, 14, 9] as const;
-const HAND_COMPLETE_HOLD_MS = 3000;
+const HAND_COMPLETE_HOLD_MS = 5000;
 
 type FingerKey = "thumb" | "index" | "middle" | "ring" | "pinky";
 
@@ -511,8 +511,8 @@ const advanceAfterFingerRemoval = useCallback(() => {
       : phase;
   const copy = justCompletedHand
     ? {
-        title: `¡Mano ${justCompletedHand === "left" ? "izquierda" : "derecha"} ${flowMode === "quick-verification" ? "validada" : "completada"}!`,
-        sub: `Ahora continuaremos con tu mano ${justCompletedHand === "left" ? "derecha" : "izquierda"}.`,
+        title: `¡Hand ${justCompletedHand === "left" ? "left" : "right"} ${flowMode === "quick-verification" ? "validated" : "completed"}!`,
+        sub: `Now we will continue with your ${justCompletedHand === "left" ? "right" : "left"} hand.`,
       }
     : copySet[statusKey];
 
