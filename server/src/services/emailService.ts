@@ -179,9 +179,6 @@ export const EmailService = {
         }
 
         const normalizedPortalUrl = payload.portalUrl.replace(/\/+$/, '');
-        const logoUrl = payload.companyLogoUrl
-            ? (payload.companyLogoUrl.startsWith('http') ? payload.companyLogoUrl : `${normalizedPortalUrl}${payload.companyLogoUrl}`)
-            : null;
 
         const verificationUrl = new URL(`${normalizedPortalUrl}/home`);
         verificationUrl.searchParams.set('clientId', payload.id);
@@ -194,8 +191,7 @@ export const EmailService = {
         const html = `
             <div style="font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: 0 auto;">
                 <h2>Welcome, ${payload.name}</h2>
-                <p>Your advisor has requested the registration of biometric data <strong>${biometricLabels}</strong>.</p>
-                ${logoUrl ? `<div style="margin: 12px 0 16px;"><img src="${logoUrl}" alt="Logo empresa" style="max-width: 180px; max-height: 72px; object-fit: contain; border-radius: 8px; border: 1px solid #e5e7eb; padding: 6px; background: #fff;" /></div>` : ''}
+                <p>Your advisor has requested the registration of biometric data</p>
                 <div style="background: #f5fafc; border: 1px solid #83abc5; border-radius: 8px; padding: 16px; margin: 18px 0;">
                     <p style="margin: 4px 0;"><strong>username:</strong> ${payload.email}</p>
                     <p style="margin: 4px 0;"><strong>Biometric methods requested:</strong> ${biometricLabels}</p>
