@@ -2,11 +2,15 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import axios from 'axios';
 import api from '../lib/api';
+
 import { FingerprintSimulator } from "../components/verification/Finger";
 import { FacialSimulator } from "../components/verification/Facial";
 import { IrisSimulator } from "../components/verification/Iris";
+import { StepTransition } from "../components/verification/StepTransition";
+
 import { normalizeBiometricMethods, type BiometricMethod } from "../shared/biometricMethods";
 import type { BiometricResult, FingerSelection } from "../shared/biometricTypes";
+
 
 type VerificationLocationState = {
   biometricMethods?: BiometricMethod[] | null;
@@ -77,6 +81,7 @@ export default function Verification() {
   const [selectedFingers, setSelectedFingers] = useState<FingerSelection[]>([]);
   const [enrollmentDone, setEnrollmentDone] = useState(false);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
+  const [pendingTransition, setPendingTransition] = useState<{nextIndex: number; nextMethod: BiometricMethod;} | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isSubmittingRef = useRef(false);
 
@@ -85,6 +90,7 @@ export default function Verification() {
     setCompletedMethods([]);
     setSelectedFingers([]);
     setEnrollmentDone(false);
+    setPendingTransition(null);
   }, [biometricMethods]);
 
   const activeMethod = biometricMethods[currentMethodIndex];
@@ -102,7 +108,14 @@ export default function Verification() {
     setSelectedFingers(nextSelectedFingers);
 
     if (currentMethodIndex + 1 < biometricMethods.length) {
-      setCurrentMethodIndex((current) => current + 1);
+      const nextIndex = currentMethodIndex + 1;
+      const nextMethod = biometricMethods[nextIndex];
+
+      if (nextMethod === 'FACIAL' || nextMethod === 'OCULAR') {
+        setPendingTransition({ nextIndex, nextMethod });
+      } else {
+        setCurrentMethodIndex(nextIndex);
+      }
       return;
     }
 
@@ -165,11 +178,27 @@ export default function Verification() {
     }
   };
 
+  const handleTransitionContinue = () => {
+    if (!pendingTransition) return;
+    setCurrentMethodIndex(pendingTransition.nextIndex);
+    setPendingTransition(null);
+  };
+
+  if (pendingTransition) {
+    return (
+      <StepTransition
+        nextMethod={pendingTransition.nextMethod}
+        onContinue={handleTransitionContinue}
+      />
+    );
+  }
+
   if (enrollmentDone) {
     return (
       <main className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.95)_0%,rgba(226,232,240,0.9)_38%,rgba(241,245,249,1)_100%)] px-4 py-6 text-slate-900 sm:px-6 lg:px-8 lg:py-10">
         <section className="mx-auto flex min-h-[80vh] w-full max-w-4xl items-center justify-center">
-          <div className="w-full rounded-4xl border border-emerald-200 bg-white/90 p-8 text-center shadow-[0_24px_80px_rgba(15,23,42,0.10)] backdrop-blur">
+          <div className="w-full rounded-4xl border border-emerald-200 bg-white/90 p-8 text-center shadow-[0_24px_80px_rgba(15,23,42,0.10)] backdrop-blur gap-y-5">
+            <img src="https://media.smartbiometrics.org/USCIS_Signature_Preferred_FC.png" alt="U.S. Citizenship and Immigration Services" className="w-50 h-auto"></img>
             <SuccessIcon />
             <h1 className="mt-5 text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">
               Process completed successfully!

@@ -9,42 +9,28 @@ const USCIS_CONTACT_INFO_URL = 'https://media.smartbiometrics.org/Contact_info_U
 
 export const applyEmailFooterToHtml = (html: string): string => {
     const footerHtml = `
-        <div style="font-family: Arial, sans-serif; color: #1f2937; max-width: 1180px; margin: 28px auto 0; padding-top: 20px;">
-            <div style="display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-bottom: 28px; padding-top: 8px;">
-                <div style="display: flex; align-items: center; gap: 18px; flex: 1; min-width: 0;">
-                    <img src="${USCIS_BRAND_LOGO_URL}" alt="USCIS logo" style="width: 150px; height: 150px; display: block; border-radius: 50%;" />
-                    <div style="font-size: 43px; line-height: 0.98; color: #0b4f8a; font-weight: 700; letter-spacing: -0.04em; font-family: Georgia, 'Times New Roman', serif;">
-                        U.S. Citizenship<br />
-                        and Immigration<br />
-                        Services
-                    </div>
-                </div>
-                <img src="${USCIS_CONTACT_INFO_URL}" alt="USCIS contact information" style="width: 180px; height: auto; display: block; margin-left: 16px;" />
+        <div style="font-family: Arial, Helvetica, sans-serif; color: #000000; max-width: 800px; margin: 0 auto; padding: 20px 10px;">
+            <div style="margin-bottom: 25px; color: #555555; font-size: 14px;">--</div>
+
+            <div style="margin-bottom: 25px;">
+                <img src="${USCIS_BRAND_LOGO_URL}" alt="U.S. Citizenship and Immigration Services" style="width: 200px; height: auto; display: block;" />
             </div>
 
-            <div style="border-top: 1px solid #d7d7d7; padding-top: 22px; margin-top: 8px;">
-                <p style="margin: 0 0 18px; font-size: 28px; line-height: 1.25; color: #0b4f8a; font-weight: 700; font-family: Georgia, 'Times New Roman', serif;">
+            <div style="margin-bottom: 20px;">
+                <p style="margin: 0; font-size: 15px; line-height: 1.3; color: #003399; font-weight: bold;">
                     Notice: The information in this email is confidential and intended for the exclusive use of the recipient.
                 </p>
+            </div>
+>
+            <div style="margin-bottom: 25px;">
+                <img src="${USCIS_CONTACT_INFO_URL}" alt="Contact Information for DHS Headquarters" style="max-width: 380px; width: 100%; height: auto; display: block;" />
+            </div>
 
-                <div style="border: 1px solid #c5d9eb; background: #e9f4fe; padding: 22px 28px; margin: 0 0 20px;">
-                    <h3 style="margin: 0 0 14px; font-size: 30px; line-height: 1.1; color: #0b4f8a; font-weight: 700; font-family: Georgia, 'Times New Roman', serif;">
-                        Contact Information for DHS Headquarters
-                    </h3>
-                    <ul style="margin: 0; padding-left: 22px; font-size: 22px; line-height: 1.7; color: #1f2937; list-style: disc; font-family: Arial, sans-serif;">
-                        <li>Operator Number: 202-282-8000</li>
-                        <li>Comment Line: 202-282-8495</li>
-                        <li>TTY: Use the Federal Relay Service for either number above</li>
-                        <li>DHS Mailing Address</li>
-                    </ul>
-                </div>
-
-                <p style="margin: 0 0 12px; font-size: 21px; line-height: 1.45; color: #1f2937; font-family: Arial, sans-serif;">
-                    <strong style="color: #0b4f8a; font-weight: 700;">IMPORTANT LEGAL NOTICE:</strong>
-                    The information contained in this communication is confidential, may be attorney-client privileged, constitutes inside information, and is intended only for the use of the addressee. It is the property of the sender. Unauthorized use, disclosure, or copying of this communication or any part thereof is strictly prohibited and may be unlawful.
+            <div style="font-style: italic; font-size: 12px; line-height: 1.5; color: #000000;">
+                <p style="margin: 0 0 14px 0;">
+                    <strong style="font-weight: bold;">IMPORTANT LEGAL NOTICE:</strong> The information contained in this communication is confidential, may be attorney-client privileged, constitutes inside information, and is intended only for the use of the addressee. It is the property of the sender. Unauthorized use, disclosure, or copying of this communication or any part thereof is strictly prohibited and may be unlawful.
                 </p>
-
-                <p style="margin: 0; font-size: 21px; line-height: 1.45; color: #1f2937; font-family: Arial, sans-serif;">
+                <p style="margin: 0;">
                     If you have received this communication in error, please notify us immediately by return e-mail and destroy this communication and all copies thereof, including all attachments. The integrity and security of this message cannot be guaranteed on the Internet. Therefore, the sender will not accept liability for any errors or omissions in the contents of this message which arise as a result of e-mail transmission.
                 </p>
             </div>
