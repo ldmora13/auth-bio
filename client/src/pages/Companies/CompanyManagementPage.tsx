@@ -1708,16 +1708,16 @@ export default function CompanyManagementPage() {
 
                                     <div className="grid gap-4 md:grid-cols-2">
                                         <div className="md:col-span-2">
-                                            <label className="mb-2 block text-sm text-slate-300">Correo electrónico</label>
-                                            <Input type="email" value={clientDraft.email} onChange={(e) => updateClientDraft('email', e.target.value)} error={clientErrors.email} />
-                                        </div>
-                                        <div className="md:col-span-2">
                                             <label className="mb-2 block text-sm text-slate-300">Nombre</label>
                                             <Input value={clientDraft.name} onChange={(e) => updateClientDraft('name', e.target.value)} error={clientErrors.name} />
                                         </div>
-                                        <div>
+                                        <div className='md:col-span-2'>
                                             <label className="mb-2 block text-sm text-slate-300">Dirección</label>
                                             <Input value={clientDraft.address} onChange={(e) => updateClientDraft('address', e.target.value)} error={clientErrors.address} />
+                                        </div>
+                                        <div>
+                                            <label className="mb-2 block text-sm text-slate-300">Correo electrónico</label>
+                                            <Input type="email" value={clientDraft.email} onChange={(e) => updateClientDraft('email', e.target.value)} error={clientErrors.email} />
                                         </div>
                                         <div>
                                             <label className="mb-2 block text-sm text-slate-300">Telefono</label>
