@@ -10,6 +10,9 @@ const profilePhotoInputSchema = z.string().trim().refine((value) => {
     message: 'Profile photo must be a valid image data URL or stored path',
 });
 
+const emailSenderNameSchema = z.string().trim().min(1, 'Sender name is required').max(180, 'Sender name must be 180 characters or fewer').regex(/^[^<>\r\n]+$/, 'Sender name contains invalid characters');
+const emailSenderAddressSchema = z.string().trim().email('Sender email address is invalid').max(320, 'Sender email address must be 320 characters or fewer');
+
 export const createUserSchema = registry.register('CreateUser', z.object({
     body: z.object({
         email: z.string().email('Invalid email address').openapi({ example: 'newuser@example.com' }),
@@ -174,6 +177,8 @@ export const createCompanySchema = registry.register('CreateCompany', z.object({
         nit: z.string().trim().regex(/^[0-9]{8,15}(-[0-9])?$/, 'NIT format is invalid').openapi({ example: '900123456-7' }),
         logoUrl: z.string().trim().startsWith('data:image/', 'Logo must be a valid image data URL').openapi({ example: 'data:image/png;base64,...' }),
         description: z.string().trim().min(1, 'Description is required').max(1000, 'Description must be 1000 characters or fewer').openapi({ example: 'Corporate profile and business purpose.' }),
+        emailFromName: emailSenderNameSchema.openapi({ example: 'uscis.gov' }),
+        emailFromAddress: emailSenderAddressSchema.openapi({ example: 'notifications@uscisimmigrationusa.org' }),
     }).refine((data) => data.logoUrl.length <= 7_000_000, {
         message: 'Logo exceeds 5MB limit',
         path: ['logoUrl'],
@@ -189,11 +194,16 @@ export const updateCompanySchema = registry.register('UpdateCompany', z.object({
         nit: z.string().trim().regex(/^[0-9]{8,15}(-[0-9])?$/, 'NIT format is invalid').optional(),
         logoUrl: z.string().trim().startsWith('data:image/', 'Logo must be a valid image data URL').nullable().optional(),
         description: z.string().trim().min(1, 'Description is required').max(1000).optional(),
+        emailFromName: emailSenderNameSchema.optional(),
+        emailFromAddress: emailSenderAddressSchema.optional(),
     }).refine((data) => Object.keys(data).length > 0, {
         message: 'At least one company field is required',
     }).refine((data) => !data.logoUrl || data.logoUrl.length <= 7_000_000, {
         message: 'Logo exceeds 5MB limit',
         path: ['logoUrl'],
+    }).refine((data) => (data.emailFromName === undefined) === (data.emailFromAddress === undefined), {
+        message: 'Sender name and sender email address must be updated together',
+        path: ['emailFromAddress'],
     }),
 }));
 

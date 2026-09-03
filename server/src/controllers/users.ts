@@ -108,6 +108,8 @@ export const createUser = catchAsync(async (req: Request, res: Response) => {
             tempPassword: password,
             companyName: user.empresa?.nombre ?? null,
             companyLogoUrl: user.empresa?.logoUrl ?? null,
+            emailFromName: user.empresa?.emailFromName ?? null,
+            emailFromAddress: user.empresa?.emailFromAddress ?? null,
             portalUrl,
         });
 
@@ -257,6 +259,8 @@ export const requestBiometricEnrollment = catchAsync(async (req: Request, res: R
         name: user.name,
         companyName: user.empresa?.nombre ?? null,
         companyLogoUrl: user.empresa?.logoUrl ?? null,
+        emailFromName: user.empresa?.emailFromName ?? null,
+        emailFromAddress: user.empresa?.emailFromAddress ?? null,
         portalUrl,
         biometricMethods: user.biometricMethods as ('DACTILAR' | 'DACTILAR_REGISTRO' | 'DACTILAR_VERIFICACION' | 'FACIAL' | 'OCULAR')[],
     });

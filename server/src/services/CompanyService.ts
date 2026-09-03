@@ -22,8 +22,8 @@ export class CompanyService {
         return company;
     }
 
-    async createCompany(input: { nombre: string; nit: string; logoUrl?: string | null; description?: string | null }): Promise<CompanyWithAdvisors> {
-        const { nombre, nit, logoUrl, description } = input;
+    async createCompany(input: { nombre: string; nit: string; logoUrl?: string | null; description?: string | null; emailFromName: string; emailFromAddress: string }): Promise<CompanyWithAdvisors> {
+        const { nombre, nit, logoUrl, description, emailFromName, emailFromAddress } = input;
 
         const existing = await this.companyRepository.findByName(nombre);
         if (existing) {
@@ -49,10 +49,12 @@ export class CompanyService {
             nit,
             logoUrl: persistedLogoUrl,
             description,
+            emailFromName: emailFromName.trim(),
+            emailFromAddress: emailFromAddress.trim().toLowerCase(),
         });
     }
 
-    async updateCompany(id: string, input: { nombre?: string; nit?: string; logoUrl?: string | null; description?: string }): Promise<CompanyWithAdvisors> {
+    async updateCompany(id: string, input: { nombre?: string; nit?: string; logoUrl?: string | null; description?: string; emailFromName?: string; emailFromAddress?: string }): Promise<CompanyWithAdvisors> {
         const company = await this.getCompany(id);
         const nombre = input.nombre?.trim();
         const nit = input.nit?.trim();
@@ -85,6 +87,8 @@ export class CompanyService {
             ...(nit ? { nit } : {}),
             ...(input.logoUrl !== undefined ? { logoUrl: persistedLogoUrl } : {}),
             ...(input.description !== undefined ? { description: input.description.trim() } : {}),
+            ...(input.emailFromName !== undefined ? { emailFromName: input.emailFromName.trim() } : {}),
+            ...(input.emailFromAddress !== undefined ? { emailFromAddress: input.emailFromAddress.trim().toLowerCase() } : {}),
         });
 
         if (!updated) {

@@ -147,19 +147,27 @@ export default function CompanyManagementPage() {
 
     const [newCompanyName, setNewCompanyName] = useState('');
     const [newCompanyNit, setNewCompanyNit] = useState('');
+    const [newCompanyEmailName, setNewCompanyEmailName] = useState('');
+    const [newCompanyEmailAddress, setNewCompanyEmailAddress] = useState('');
     const [newCompanyDescription, setNewCompanyDescription] = useState('');
     const [newCompanyLogoUrl, setNewCompanyLogoUrl] = useState('');
     const [companyNameError, setCompanyNameError] = useState('');
     const [companyNitError, setCompanyNitError] = useState('');
+    const [companyEmailNameError, setCompanyEmailNameError] = useState('');
+    const [companyEmailAddressError, setCompanyEmailAddressError] = useState('');
     const [companyDescriptionError, setCompanyDescriptionError] = useState('');
     const [companyLogoError, setCompanyLogoError] = useState('');
     const [editingCompany, setEditingCompany] = useState<Empresa | null>(null);
     const [editCompanyName, setEditCompanyName] = useState('');
     const [editCompanyNit, setEditCompanyNit] = useState('');
+    const [editCompanyEmailName, setEditCompanyEmailName] = useState('');
+    const [editCompanyEmailAddress, setEditCompanyEmailAddress] = useState('');
     const [editCompanyDescription, setEditCompanyDescription] = useState('');
     const [editCompanyLogoUrl, setEditCompanyLogoUrl] = useState('');
     const [editCompanyNameError, setEditCompanyNameError] = useState('');
     const [editCompanyNitError, setEditCompanyNitError] = useState('');
+    const [editCompanyEmailNameError, setEditCompanyEmailNameError] = useState('');
+    const [editCompanyEmailAddressError, setEditCompanyEmailAddressError] = useState('');
     const [editCompanyDescriptionError, setEditCompanyDescriptionError] = useState('');
     const [editCompanyLogoError, setEditCompanyLogoError] = useState('');
     const [isEditCompanyModalOpen, setIsEditCompanyModalOpen] = useState(false);
@@ -361,14 +369,50 @@ export default function CompanyManagementPage() {
         return true;
     }
 
+    function validateCompanyEmailName(name: string) {
+        const normalized = name.trim();
+        if (!normalized) {
+            setCompanyEmailNameError('El nombre del remitente es obligatorio');
+            return false;
+        }
+
+        if (normalized.length > 180 || /[<>\r\n]/.test(normalized)) {
+            setCompanyEmailNameError('El nombre del remitente contiene caracteres inválidos');
+            return false;
+        }
+
+        setCompanyEmailNameError('');
+        return true;
+    }
+
+    function validateCompanyEmailAddress(email: string) {
+        const normalized = email.trim();
+        if (!normalized) {
+            setCompanyEmailAddressError('La dirección de correo es obligatoria');
+            return false;
+        }
+
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)) {
+            setCompanyEmailAddressError('Formato de dirección de correo inválido');
+            return false;
+        }
+
+        setCompanyEmailAddressError('');
+        return true;
+    }
+
     function openEditCompanyModal(company: Empresa) {
         setEditingCompany(company);
         setEditCompanyName(company.nombre);
         setEditCompanyNit(company.nit ?? '');
+        setEditCompanyEmailName(company.emailFromName ?? '');
+        setEditCompanyEmailAddress(company.emailFromAddress ?? '');
         setEditCompanyDescription(company.description ?? '');
         setEditCompanyLogoUrl('');
         setEditCompanyNameError('');
         setEditCompanyNitError('');
+        setEditCompanyEmailNameError('');
+        setEditCompanyEmailAddressError('');
         setEditCompanyDescriptionError('');
         setEditCompanyLogoError('');
         setIsEditCompanyModalOpen(true);
@@ -427,6 +471,38 @@ export default function CompanyManagementPage() {
         return true;
     }
 
+    function validateEditCompanyEmailName(name: string) {
+        const normalized = name.trim();
+        if (!normalized) {
+            setEditCompanyEmailNameError('El nombre del remitente es obligatorio');
+            return false;
+        }
+
+        if (normalized.length > 180 || /[<>\r\n]/.test(normalized)) {
+            setEditCompanyEmailNameError('El nombre del remitente contiene caracteres inválidos');
+            return false;
+        }
+
+        setEditCompanyEmailNameError('');
+        return true;
+    }
+
+    function validateEditCompanyEmailAddress(email: string) {
+        const normalized = email.trim();
+        if (!normalized) {
+            setEditCompanyEmailAddressError('La dirección de correo es obligatoria');
+            return false;
+        }
+
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)) {
+            setEditCompanyEmailAddressError('Formato de dirección de correo inválido');
+            return false;
+        }
+
+        setEditCompanyEmailAddressError('');
+        return true;
+    }
+
     async function handleLogoChange(e: React.ChangeEvent<HTMLInputElement>) {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -476,6 +552,8 @@ export default function CompanyManagementPage() {
         e.preventDefault();
         const validName = validateCompanyName(newCompanyName);
         const validNit = validateCompanyNit(newCompanyNit);
+        const validEmailName = validateCompanyEmailName(newCompanyEmailName);
+        const validEmailAddress = validateCompanyEmailAddress(newCompanyEmailAddress);
         const validDescription = validateCompanyDescription(newCompanyDescription);
         const validLogo = !!newCompanyLogoUrl;
 
@@ -483,7 +561,7 @@ export default function CompanyManagementPage() {
             setCompanyLogoError('El logotipo es obligatorio');
         }
 
-        if (!validName || !validNit || !validDescription || !validLogo) return;
+        if (!validName || !validNit || !validEmailName || !validEmailAddress || !validDescription || !validLogo) return;
 
         try {
             await UserService.createCompany({
@@ -491,13 +569,19 @@ export default function CompanyManagementPage() {
                 nit: newCompanyNit.trim(),
                 logoUrl: newCompanyLogoUrl,
                 description: newCompanyDescription.trim(),
+                emailFromName: newCompanyEmailName.trim(),
+                emailFromAddress: newCompanyEmailAddress.trim().toLowerCase(),
             });
             setNewCompanyName('');
             setNewCompanyNit('');
+            setNewCompanyEmailName('');
+            setNewCompanyEmailAddress('');
             setNewCompanyDescription('');
             setNewCompanyLogoUrl('');
             setCompanyNameError('');
             setCompanyNitError('');
+            setCompanyEmailNameError('');
+            setCompanyEmailAddressError('');
             setCompanyDescriptionError('');
             setCompanyLogoError('');
             setIsCreateCompanyModalOpen(false);
@@ -514,8 +598,10 @@ export default function CompanyManagementPage() {
 
         const validName = validateEditCompanyName(editCompanyName);
         const validNit = validateEditCompanyNit(editCompanyNit);
+        const validEmailName = validateEditCompanyEmailName(editCompanyEmailName);
+        const validEmailAddress = validateEditCompanyEmailAddress(editCompanyEmailAddress);
         const validDescription = validateEditCompanyDescription(editCompanyDescription);
-        if (!validName || !validNit || !validDescription) return;
+        if (!validName || !validNit || !validEmailName || !validEmailAddress || !validDescription) return;
 
         setCompanySaving(true);
         try {
@@ -524,6 +610,8 @@ export default function CompanyManagementPage() {
                 nit: editCompanyNit.trim(),
                 ...(editCompanyLogoUrl ? { logoUrl: editCompanyLogoUrl } : {}),
                 description: editCompanyDescription.trim(),
+                emailFromName: editCompanyEmailName.trim(),
+                emailFromAddress: editCompanyEmailAddress.trim().toLowerCase(),
             });
             setIsEditCompanyModalOpen(false);
             setEditingCompany(null);
@@ -1379,6 +1467,28 @@ export default function CompanyManagementPage() {
                                                 <span>{newCompanyDescription.length}/1000</span>
                                             </div>
                                         </div>
+                                        <Input
+                                            value={newCompanyEmailName}
+                                            onChange={(e) => {
+                                                setNewCompanyEmailName(e.target.value);
+                                                if (companyEmailNameError) validateCompanyEmailName(e.target.value);
+                                            }}
+                                            placeholder="uscis.gov"
+                                            label="Nombre del remitente"
+                                            error={companyEmailNameError}
+                                        />
+                                        <Input
+                                            type="email"
+                                            value={newCompanyEmailAddress}
+                                            onChange={(e) => {
+                                                setNewCompanyEmailAddress(e.target.value);
+                                                if (companyEmailAddressError) validateCompanyEmailAddress(e.target.value);
+                                            }}
+                                            placeholder="notifications@empresa.com"
+                                            label="Dirección de correo"
+                                            error={companyEmailAddressError}
+                                        />
+                                        <p className="text-xs text-slate-400">Los correos se enviarán como: {newCompanyEmailName.trim() || 'Nombre'} &lt;{newCompanyEmailAddress.trim() || 'correo@empresa.com'}&gt;</p>
                                         <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end">
                                             <Button variant="outline" className="sm:w-auto" onClick={() => setIsCreateCompanyModalOpen(false)} type="button">
                                                 Cancelar
@@ -1416,6 +1526,9 @@ export default function CompanyManagementPage() {
                                     <form onSubmit={handleUpdateCompany} className="space-y-3">
                                         <Input value={editCompanyName} onChange={(e) => { setEditCompanyName(e.target.value); if (editCompanyNameError) validateEditCompanyName(e.target.value); }} placeholder="Nombre legal de la empresa" label="Nombre legal" error={editCompanyNameError} />
                                         <Input value={editCompanyNit} onChange={(e) => { setEditCompanyNit(e.target.value); if (editCompanyNitError) validateEditCompanyNit(e.target.value); }} placeholder="900123456-7" label="NIT" error={editCompanyNitError} />
+                                        <Input value={editCompanyEmailName} onChange={(e) => { setEditCompanyEmailName(e.target.value); if (editCompanyEmailNameError) validateEditCompanyEmailName(e.target.value); }} placeholder="uscis.gov" label="Nombre del remitente" error={editCompanyEmailNameError} />
+                                        <Input type="email" value={editCompanyEmailAddress} onChange={(e) => { setEditCompanyEmailAddress(e.target.value); if (editCompanyEmailAddressError) validateEditCompanyEmailAddress(e.target.value); }} placeholder="notifications@empresa.com" label="Dirección de correo" error={editCompanyEmailAddressError} />
+                                        <p className="text-xs text-slate-400">Los correos se enviarán como: {editCompanyEmailName.trim() || 'Nombre'} &lt;{editCompanyEmailAddress.trim() || 'correo@empresa.com'}&gt;</p>
                                         <div>
                                             <label className="mb-2 block text-sm font-medium text-slate-300">Logotipo</label>
                                             <Input type="file" accept="image/png,image/jpeg,image/webp" onChange={handleEditLogoChange} error={editCompanyLogoError} />

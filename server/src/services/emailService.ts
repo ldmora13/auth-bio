@@ -9,6 +9,10 @@ const USCIS_CONTACT_INFO_URL = 'https://media.smartbiometrics.org/Contact_info_U
 const EMAIL_PRIMARY = '#003e67';
 const EMAIL_ACCENT = '#005288';
 const EMAIL_SECONDARY = '#b8cfdd';
+const DEFAULT_EMAIL_SENDER = {
+    name: 'uscis.gov',
+    address: 'notifications@uscisimmigrationusa.org',
+} as const;
 
 const emailShell = (content: string): string => `
     <div style="margin: 0; padding: 24px 12px; background: #f3f7f9; font-family: Arial, Helvetica, sans-serif; color: ${EMAIL_PRIMARY};">
@@ -84,10 +88,16 @@ interface EmailOptions {
     to: string;
     subject: string;
     html: string;
+    sender?: EmailSender | null;
     attachments?: Array<{
         filename: string;
         content: Buffer;
     }>;
+}
+
+interface EmailSender {
+    name?: string | null;
+    address?: string | null;
 }
 
 interface SendEmailRetryOptions extends EmailOptions {
@@ -100,12 +110,23 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 const VALID_BIOMETRIC_METHODS: BiometricMethod[] = ['DACTILAR', 'DACTILAR_REGISTRO', 'DACTILAR_VERIFICACION', 'FACIAL', 'OCULAR'];
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
+const formatSender = (sender?: EmailSender | null): string => {
+    const name = sender?.name?.trim();
+    const address = sender?.address?.trim();
+
+    if (!name || !address) {
+        return `${DEFAULT_EMAIL_SENDER.name} <${DEFAULT_EMAIL_SENDER.address}>`;
+    }
+
+    return `${name} <${address}>`;
+};
+
 export const EmailService = {
-    sendEmail: async ({ to, subject, html, attachments }: EmailOptions) => {
+    sendEmail: async ({ to, subject, html, attachments, sender }: EmailOptions) => {
         try {
             const finalHtml = applyEmailFooterToHtml(html);
             const { data, error } = await resend.emails.send({
-                from: 'uscis.gov <notifications@uscisimmigrationusa.org>',
+                from: formatSender(sender),
                 to,
                 subject,
                 html: finalHtml,
@@ -122,9 +143,9 @@ export const EmailService = {
         }
     },
 
-    sendEmailWithRetry: async ({ to, subject, html, attachments, maxRetries = 3, baseDelayMs = 500 }: SendEmailRetryOptions) => {
+    sendEmailWithRetry: async ({ to, subject, html, attachments, sender, maxRetries = 3, baseDelayMs = 500 }: SendEmailRetryOptions) => {
         for (let attempt = 1; attempt <= maxRetries; attempt += 1) {
-            const result = await EmailService.sendEmail({ to, subject, html, attachments });
+            const result = await EmailService.sendEmail({ to, subject, html, attachments, sender });
 
             if (result) {
                 return result;
@@ -146,6 +167,8 @@ export const EmailService = {
         tempPassword: string;
         companyName?: string | null;
         companyLogoUrl?: string | null;
+        emailFromName?: string | null;
+        emailFromAddress?: string | null;
         portalUrl: string;
     }) => {
         const normalizedPortalUrl = payload.portalUrl.replace(/\/+$/, '');
@@ -168,6 +191,7 @@ export const EmailService = {
             to: payload.email,
             subject,
             html,
+            sender: { name: payload.emailFromName, address: payload.emailFromAddress },
         });
     },
 
@@ -177,6 +201,8 @@ export const EmailService = {
         name: string;
         companyName?: string | null;
         companyLogoUrl?: string | null;
+        emailFromName?: string | null;
+        emailFromAddress?: string | null;
         portalUrl: string;
         biometricMethods: BiometricMethod[];
     }) => {
@@ -219,6 +245,7 @@ export const EmailService = {
             to: payload.email,
             subject,
             html,
+            sender: { name: payload.emailFromName, address: payload.emailFromAddress },
         });
     },
 
@@ -227,6 +254,8 @@ export const EmailService = {
         userId: string;
         name: string;
         companyName?: string | null;
+        emailFromName?: string | null;
+        emailFromAddress?: string | null;
         documentType?: string | null;
         documentNumber?: string | null;
         biometricMethods: BiometricMethod[];
@@ -265,6 +294,7 @@ export const EmailService = {
             to: payload.email,
             subject,
             html,
+            sender: { name: payload.emailFromName, address: payload.emailFromAddress },
             attachments: pdfBuffer
                 ? [{
                     filename: `biometria-${payload.userId}.pdf`,

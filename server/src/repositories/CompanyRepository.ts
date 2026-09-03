@@ -156,13 +156,15 @@ export class CompanyRepository {
         return db.empresa.findUnique({ where: { nit } });
     }
 
-    async create(data: { nombre: string; nit: string; logoUrl?: string | null; description?: string | null }): Promise<CompanyWithAdvisors> {
+    async create(data: { nombre: string; nit: string; logoUrl?: string | null; description?: string | null; emailFromName?: string | null; emailFromAddress?: string | null }): Promise<CompanyWithAdvisors> {
         return db.empresa.create({
             data: {
                 nombre: data.nombre,
                 nit: data.nit,
                 logoUrl: data.logoUrl ?? null,
                 description: data.description ?? null,
+                emailFromName: data.emailFromName ?? null,
+                emailFromAddress: data.emailFromAddress ?? null,
             },
             include: {
                 users: {
@@ -181,7 +183,7 @@ export class CompanyRepository {
         });
     }
 
-    async update(id: string, data: { nombre?: string; nit?: string; logoUrl?: string | null; description?: string }): Promise<CompanyWithAdvisors | null> {
+    async update(id: string, data: { nombre?: string; nit?: string; logoUrl?: string | null; description?: string; emailFromName?: string; emailFromAddress?: string }): Promise<CompanyWithAdvisors | null> {
         return db.empresa.update({
             where: { id },
             data,

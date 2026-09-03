@@ -16,6 +16,8 @@ export const getCompanies = catchAsync(async (req: Request, res: Response) => {
             nit: company.nit,
             logoUrl: company.logoUrl,
             description: company.description,
+            emailFromName: company.emailFromName,
+            emailFromAddress: company.emailFromAddress,
             createdAt: company.createdAt,
             updatedAt: company.updatedAt,
             advisors: company.users.filter((user) => user.role === 'ADVISOR'),
@@ -56,6 +58,8 @@ export const getCompany = catchAsync(async (req: Request, res: Response) => {
             nit: company.nit,
             logoUrl: company.logoUrl,
             description: company.description,
+            emailFromName: company.emailFromName,
+            emailFromAddress: company.emailFromAddress,
             createdAt: company.createdAt,
             updatedAt: company.updatedAt,
             advisors,
@@ -90,7 +94,7 @@ export const getCompanyAuditLogs = catchAsync(async (req: Request, res: Response
 });
 
 export const createCompany = catchAsync(async (req: Request, res: Response) => {
-    const { nombre, nit, logoUrl, description } = req.body;
+    const { nombre, nit, logoUrl, description, emailFromName, emailFromAddress } = req.body;
 
     if (!nombre?.trim()) {
         throw new AppError('Company name is required', 400);
@@ -105,6 +109,8 @@ export const createCompany = catchAsync(async (req: Request, res: Response) => {
         nit: nit.trim(),
         logoUrl: logoUrl?.trim(),
         description: description?.trim(),
+        emailFromName: emailFromName?.trim(),
+        emailFromAddress: emailFromAddress?.trim(),
     });
 
     await AuditLogService.log({
@@ -122,6 +128,8 @@ export const createCompany = catchAsync(async (req: Request, res: Response) => {
             nit: company.nit,
             logoUrl: company.logoUrl,
             description: company.description,
+            emailFromName: company.emailFromName,
+            emailFromAddress: company.emailFromAddress,
             createdAt: company.createdAt,
             updatedAt: company.updatedAt,
             advisors: company.users.filter((user) => user.role === 'ADVISOR'),

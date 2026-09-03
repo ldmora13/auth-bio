@@ -44,6 +44,8 @@ export interface Empresa {
     nit?: string;
     logoUrl?: string;
     description?: string;
+    emailFromName?: string | null;
+    emailFromAddress?: string | null;
     createdAt: string;
     updatedAt: string;
     advisorCount?: number;

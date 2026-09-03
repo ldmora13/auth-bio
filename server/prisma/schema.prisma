@@ -34,13 +34,15 @@ enum BiometricMethod {
 }
 
 model Empresa {
-  id          String   @id @default(uuid())
-  nombre      String   @unique
-  nit         String   @unique
-  logoUrl     String?
-  description String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id               String   @id @default(uuid())
+  nombre           String   @unique
+  nit              String   @unique
+  logoUrl          String?
+  description      String?
+  emailFromName    String?
+  emailFromAddress String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   users User[]
 

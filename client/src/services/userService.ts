@@ -34,6 +34,8 @@ export interface CreateCompanyData {
     nit: string;
     logoUrl: string;
     description: string;
+    emailFromName: string;
+    emailFromAddress: string;
 }
 
 export type UpdateCompanyData = Partial<CreateCompanyData>;
