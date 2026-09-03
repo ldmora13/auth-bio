@@ -288,6 +288,7 @@ export function FingerprintSimulator({
 
   const [completedHands, setCompletedHands] = useState<Set<"left" | "right">>(new Set());
   const [justCompletedHand, setJustCompletedHand] = useState<"left" | "right" | null>(null);
+  const [handCountdown, setHandCountdown] = useState<number | null>(null);
   const justCompletedHandRef = useRef<"left" | "right" | null>(null);
 
   const fingerSequence = flowMode === "quick-verification"
@@ -315,6 +316,20 @@ export function FingerprintSimulator({
 
   useEffect(() => {
     justCompletedHandRef.current = justCompletedHand;
+  }, [justCompletedHand]);
+
+  useEffect(() => {
+    if (!justCompletedHand) {
+      setHandCountdown(null);
+      return;
+    }
+
+    setHandCountdown(Math.ceil(HAND_COMPLETE_HOLD_MS / 1000));
+    const interval = window.setInterval(() => {
+      setHandCountdown((current) => (current !== null && current > 1 ? current - 1 : current));
+    }, 1000);
+
+    return () => window.clearInterval(interval);
   }, [justCompletedHand]);
 
   const clearTimers = useCallback(() => {
@@ -345,7 +360,8 @@ export function FingerprintSimulator({
     fingerOnPadRef.current = false;
     canContinueRef.current = false;
     setCompletedHands(new Set());
-  setJustCompletedHand(null);
+    setJustCompletedHand(null);
+    setHandCountdown(null);
   }, [clearTimers, flowMode]);
 
 const advanceAfterFingerRemoval = useCallback(() => {
@@ -560,7 +576,7 @@ const advanceAfterFingerRemoval = useCallback(() => {
               Hand {justCompletedHand === "left" ? "left" : "right"} {flowMode === "quick-verification" ? "validated" : "completed"}
             </p>
             <p className={styles.handCompleteSub}>
-              Now we will continue with your {justCompletedHand === "left" ? "right" : "left"} hand.
+              Now we will continue with your {justCompletedHand === "left" ? "right" : "left"} hand in {handCountdown ?? Math.ceil(HAND_COMPLETE_HOLD_MS / 1000)} seconds.
             </p>
           </div>
         )}
