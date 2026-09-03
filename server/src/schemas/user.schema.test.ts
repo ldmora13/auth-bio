@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { completeBiometricEnrollmentSchema } from './user.schema';
+import { completeBiometricEnrollmentSchema, updateUserSchema } from './user.schema';
 
 describe('completeBiometricEnrollmentSchema', () => {
   it('accepts a full enrollment payload with ten selected fingers', async () => {
@@ -44,6 +44,40 @@ describe('completeBiometricEnrollmentSchema', () => {
     await expect(completeBiometricEnrollmentSchema.parseAsync(payload)).resolves.toMatchObject({
       body: {
         completedMethods: ['FACIAL'],
+      },
+    });
+  });
+});
+
+describe('updateUserSchema', () => {
+  it('accepts empty optional fields sent by the client editor', async () => {
+    await expect(updateUserSchema.parseAsync({
+      body: {
+        email: 'updated@example.com',
+        name: 'Updated Client',
+        address: 'Main Street',
+        phone: '',
+        birthDate: '',
+        profilePhotoUrl: 'https://media.smartbiometrics.org/company/profile.jpg',
+        documentType: 'CC',
+        documentNumber: '12345678',
+        caseNumber: '',
+        processNumber: '',
+        formId: '',
+        nativeCountry: '',
+        sex: '',
+        validFrom: '',
+        cardExpires: '',
+        migratoryStatus: '',
+        receivedDate: '',
+        deadline: '',
+      },
+      params: { id: 'user-id' },
+    })).resolves.toMatchObject({
+      body: {
+        email: 'updated@example.com',
+        phone: undefined,
+        profilePhotoUrl: 'https://media.smartbiometrics.org/company/profile.jpg',
       },
     });
   });

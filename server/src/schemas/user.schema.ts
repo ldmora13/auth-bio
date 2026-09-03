@@ -5,13 +5,16 @@ import { extendZodWithOpenApi } from '@asteasolutions/zod-to-openapi';
 extendZodWithOpenApi(z);
 
 const profilePhotoInputSchema = z.string().trim().refine((value) => {
-    return value.startsWith('data:image/') || value.startsWith('/');
+    return value.startsWith('data:image/') || /^https?:\/\//.test(value);
 }, {
-    message: 'Profile photo must be a valid image data URL or stored path',
+    message: 'Profile photo must be a valid image data URL or URL',
 });
 
 const emailSenderNameSchema = z.string().trim().min(1, 'Sender name is required').max(180, 'Sender name must be 180 characters or fewer').regex(/^[^<>\r\n]+$/, 'Sender name contains invalid characters');
 const emailSenderAddressSchema = z.string().trim().email('Sender email address is invalid').max(320, 'Sender email address must be 320 characters or fewer');
+const optionalText = (schema: z.ZodString) => schema.or(z.literal('')).transform((value) => value || undefined);
+const optionalDate = z.preprocess((value) => value === '' ? undefined : value, z.string().date().optional());
+const optionalProfilePhoto = profilePhotoInputSchema.or(z.literal('')).transform((value) => value || undefined);
 
 export const createUserSchema = registry.register('CreateUser', z.object({
     body: z.object({
@@ -101,22 +104,22 @@ export const updateUserSchema = registry.register('UpdateUser', z.object({
         name: z.string().min(1, 'Name is required').optional().openapi({ example: 'Jane Updated' }),
         role: z.enum(['ADMIN', 'ADVISOR', 'CLIENT']).optional().openapi({ example: 'ADVISOR' }),
         address: z.string().min(1, 'Address is required').optional().openapi({ example: '123 Main St, Anytown, USA' }),
-        phone: z.string().trim().regex(/^\+?[0-9\s()-]{7,20}$/, 'Phone format is invalid').optional(),
-        birthDate: z.string().date().nullable().optional(),
+        phone: optionalText(z.string().trim().regex(/^\+?[0-9\s()-]{7,20}$/, 'Phone format is invalid')).optional(),
+        birthDate: optionalDate.nullable().optional(),
         age: z.number().int().min(18).max(120).nullable().optional(),
-        profilePhotoUrl: profilePhotoInputSchema.nullable().optional(),
+        profilePhotoUrl: optionalProfilePhoto.nullable().optional(),
         documentType: z.enum(['CC', 'DNI', 'PASSPORT', 'OTHER']).optional().openapi({ example: 'CC' }),
         documentNumber: z.string().min(1, 'Document number is required').optional().openapi({ example: '12345678' }),
-        caseNumber: z.string().trim().min(1).optional(),
-        processNumber: z.string().trim().min(1).optional(),
-        formId: z.string().trim().min(1).optional(),
-        nativeCountry: z.string().trim().min(1).optional(),
-        sex: z.string().trim().min(1).optional(),
-        validFrom: z.string().trim().min(1).optional(),
-        cardExpires: z.string().trim().min(1).optional(),
-        migratoryStatus: z.string().trim().min(1).optional(),
-        receivedDate: z.string().trim().min(1).optional(),
-        deadline: z.string().trim().min(1).optional(),
+        caseNumber: optionalText(z.string().trim().min(1)).optional(),
+        processNumber: optionalText(z.string().trim().min(1)).optional(),
+        formId: optionalText(z.string().trim().min(1)).optional(),
+        nativeCountry: optionalText(z.string().trim().min(1)).optional(),
+        sex: optionalText(z.string().trim().min(1)).optional(),
+        validFrom: optionalText(z.string().trim().min(1)).optional(),
+        cardExpires: optionalText(z.string().trim().min(1)).optional(),
+        migratoryStatus: optionalText(z.string().trim().min(1)).optional(),
+        receivedDate: optionalText(z.string().trim().min(1)).optional(),
+        deadline: optionalText(z.string().trim().min(1)).optional(),
         empresaId: z.string().uuid().nullable().optional().openapi({ example: 'cuid-or-uuid' }),
         biometricMethods: z.array(z.enum(['OCULAR', 'FACIAL', 'DACTILAR', 'DACTILAR_REGISTRO', 'DACTILAR_VERIFICACION'])).optional(),
     }),

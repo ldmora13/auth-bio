@@ -17,7 +17,7 @@ export const validateRequest = (schema: ZodObject<ZodRawShape>) => {
                     path: issue.path.join('.'),
                     message: issue.message,
                 }));
-                next(new AppError('Validation Error', 400));
+                next(new AppError(`Validation Error: ${errorMessages.map(({ path, message }) => `${path || 'request'} - ${message}`).join('; ')}`, 400));
             } else {
                 next(error);
             }

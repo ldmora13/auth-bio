@@ -24,6 +24,7 @@ export async function persistImageDataUrl(input: {
     dataUrl: string;
     companyName: string;
     filePrefix: string;
+    requireRemoteStorage?: boolean;
 }): Promise<string> {
     const match = input.dataUrl.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/);
     if (!match) {
@@ -40,10 +41,6 @@ export async function persistImageDataUrl(input: {
 
     const companyFolder = sanitizeFolderName(input.companyName);
     const fileName = `${input.filePrefix}-${Date.now()}-${randomUUID().slice(0, 8)}.${extension}`;
-    const publicRoot = process.env.CLIENT_PUBLIC_DIR
-        ? path.resolve(process.env.CLIENT_PUBLIC_DIR)
-        : path.resolve(process.cwd(), '..', 'client', 'public');
-
     const buffer = Buffer.from(base64Data, 'base64');
     const r2 = getR2Config();
     if (r2) {
@@ -60,12 +57,16 @@ export async function persistImageDataUrl(input: {
         return `${r2.publicUrl}/${objectKey.split('/').map(encodeURIComponent).join('/')}`;
     }
 
+    if (input.requireRemoteStorage) {
+        throw new AppError('Remote image storage is not configured', 503);
+    }
+
+    const publicRoot = process.env.CLIENT_PUBLIC_DIR
+        ? path.resolve(process.env.CLIENT_PUBLIC_DIR)
+        : path.resolve(process.cwd(), '..', 'client', 'public');
     const targetFolder = path.join(publicRoot, companyFolder);
     await mkdir(targetFolder, { recursive: true });
-
-    const filePath = path.join(targetFolder, fileName);
-
-    await writeFile(filePath, buffer);
+    await writeFile(path.join(targetFolder, fileName), buffer);
 
     return `/${companyFolder}/${fileName}`;
 }

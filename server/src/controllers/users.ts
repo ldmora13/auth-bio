@@ -158,6 +158,7 @@ export const updateUser = catchAsync(async (req: Request, res: Response) => {
             dataUrl: profilePhotoUrl,
             companyName: targetUser.empresa.nombre,
             filePrefix: 'profile',
+            requireRemoteStorage: true,
         });
     }
 
