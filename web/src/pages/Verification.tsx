@@ -136,7 +136,6 @@ export default function Verification() {
         selectedFingers: nextSelectedFingers,
       });
 
-      localStorage.removeItem('biometricEnrollmentToken');
       setEnrollmentDone(true);
     } catch (error) {
       const status = axios.isAxiosError(error) ? error.response?.status : undefined;
@@ -164,7 +163,6 @@ export default function Verification() {
             selectedFingers: nextSelectedFingers,
           });
 
-          localStorage.removeItem('biometricEnrollmentToken');
           setEnrollmentDone(true);
           return;
         } catch (retryError) {

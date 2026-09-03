@@ -275,7 +275,7 @@ export class UserService {
             include: { empresa: true },
         });
 
-        if (!user || !user.biometricEnrollmentRequired) {
+        if (!user || !user.biometricEnrollmentTokenHash) {
             throw new AppError('This biometric access link is invalid or has already been used', 404);
         }
 
@@ -299,7 +299,6 @@ export class UserService {
                 id: user.id,
                 biometricEnrollmentTokenHash: hashEnrollmentToken(token),
                 biometricEnrollmentAttempts: user.biometricEnrollmentAttempts,
-                biometricEnrollmentRequired: true,
             },
             data: { biometricEnrollmentAttempts: { increment: 1 } },
         });
@@ -343,7 +342,6 @@ export class UserService {
             biometricEnrollmentRequired: false,
             biometricEnrollmentCompletedAt: new Date(),
             biometricEnrollmentRequestedAt: null,
-            biometricEnrollmentTokenHash: null,
         });
     }
 
