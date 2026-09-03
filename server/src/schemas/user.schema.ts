@@ -131,6 +131,7 @@ export const completeBiometricEnrollmentSchema = registry.register('CompleteBiom
         documentType: z.enum(['CC', 'DNI', 'PASSPORT', 'OTHER']).optional(),
         documentNumber: z.string().trim().min(1).optional(),
         clientId: z.string().uuid().optional(),
+        enrollmentToken: z.string().min(1).max(256).optional(),
         selectedFingers: z.array(z.object({
             hand: z.enum(['left', 'right']),
             finger: z.enum(['thumb', 'index', 'middle', 'ring', 'pinky']),
@@ -157,7 +158,16 @@ export const requestBiometricEnrollmentSchema = registry.register('RequestBiomet
     }),
     body: z.object({
         biometricMethods: z.array(z.enum(['OCULAR', 'FACIAL', 'DACTILAR', 'DACTILAR_REGISTRO', 'DACTILAR_VERIFICACION'])).min(1, 'At least one biometric method is required'),
+        maxAttempts: z.number().int().min(1, 'The maximum attempts must be at least 1').max(100, 'The maximum attempts cannot exceed 100').nullable().optional(),
     }),
+}));
+
+export const biometricEnrollmentTokenSchema = registry.register('BiometricEnrollmentToken', z.object({
+    params: z.object({ token: z.string().min(1).max(256) }),
+}));
+
+export const startBiometricEnrollmentAttemptSchema = registry.register('StartBiometricEnrollmentAttempt', z.object({
+    body: z.object({ enrollmentToken: z.string().min(1).max(256) }),
 }));
 
 export const getUsersSchema = registry.register('GetUsers', z.object({

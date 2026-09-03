@@ -191,6 +191,7 @@ export default function CompanyManagementPage() {
     const [biometricModalOpen, setBiometricModalOpen] = useState(false);
     const [biometricRequesting, setBiometricRequesting] = useState(false);
     const [biometricRequestMethods, setBiometricRequestMethods] = useState<BiometricMethod[]>(['DACTILAR_REGISTRO']);
+    const [biometricMaxAttempts, setBiometricMaxAttempts] = useState('');
     const [clientSearch, setClientSearch] = useState('');
     const [clientSort, setClientSort] = useState<ClientSort>('newest');
     const [clientPage, setClientPage] = useState(1);
@@ -709,6 +710,7 @@ export default function CompanyManagementPage() {
             ...(fingerprintFlow ? [fingerprintFlow] : []),
             ...methodsWithoutFingerprint,
         ] as BiometricMethod[]);
+        setBiometricMaxAttempts('');
         setBiometricModalOpen(true);
     }
 
@@ -811,6 +813,12 @@ export default function CompanyManagementPage() {
     async function handleSendBiometricRequest() {
         if (!selectedClient || biometricRequestMethods.length === 0) return;
 
+        const maxAttempts = biometricMaxAttempts.trim() === '' ? null : Number(biometricMaxAttempts);
+        if (maxAttempts !== null && (!Number.isInteger(maxAttempts) || maxAttempts < 1 || maxAttempts > 100)) {
+            toast.error('El límite de intentos debe ser un número entero entre 1 y 100');
+            return;
+        }
+
         const selectedFingerprintFlows = biometricRequestMethods.filter((method) => FINGERPRINT_FLOW_METHODS.includes(method));
         if (selectedFingerprintFlows.length > 1) {
             toast.error('Selecciona registro dactilar o verificación dactilar, no ambos');
@@ -819,7 +827,7 @@ export default function CompanyManagementPage() {
 
         setBiometricRequesting(true);
         try {
-            await UserService.requestBiometricEnrollment(selectedClient.id, biometricRequestMethods);
+            await UserService.requestBiometricEnrollment(selectedClient.id, biometricRequestMethods, maxAttempts);
             toast.success('Notificación biométrica enviada');
             setBiometricModalOpen(false);
             setSelectedClient(null);
@@ -1868,6 +1876,22 @@ export default function CompanyManagementPage() {
                                                     </label>
                                                 ))}
                                             </div>
+                                        </div>
+
+                                        <div>
+                                            <label htmlFor="biometric-max-attempts" className="mb-2 block text-sm text-slate-300">Límite de intentos <span className="text-slate-500">(opcional)</span></label>
+                                            <input
+                                                id="biometric-max-attempts"
+                                                type="number"
+                                                min="1"
+                                                max="100"
+                                                step="1"
+                                                value={biometricMaxAttempts}
+                                                onChange={(event) => setBiometricMaxAttempts(event.target.value)}
+                                                placeholder="Sin límite"
+                                                className="h-11 w-full rounded-xl border border-white/10 bg-white/5 px-4 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-teal-400/60 focus:ring-2 focus:ring-teal-400/20"
+                                            />
+                                            <p className="mt-2 text-xs leading-5 text-slate-400">Si lo defines, cada inicio de verificación desde el enlace consume un intento. Déjalo vacío para no limitarlo.</p>
                                         </div>
 
                                         <div className="rounded-2xl border border-teal-400/20 bg-teal-500/10 px-4 py-3 text-sm text-teal-100">

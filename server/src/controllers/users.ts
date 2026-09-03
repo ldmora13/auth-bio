@@ -244,10 +244,10 @@ export const resetBiometricEnrollment = catchAsync(async (req: Request, res: Res
 
 export const requestBiometricEnrollment = catchAsync(async (req: Request, res: Response) => {
     const { id } = req.params;
-    const { biometricMethods } = req.body;
+    const { biometricMethods, maxAttempts } = req.body;
     const currentUser = res.locals.user;
 
-    const user = await userService.requestBiometricEnrollment(id, biometricMethods, {
+    const { user, enrollmentToken } = await userService.requestBiometricEnrollment(id, biometricMethods, maxAttempts, {
         id: currentUser.id,
         role: currentUser.role,
         empresaId: currentUser.empresaId,
@@ -264,6 +264,8 @@ export const requestBiometricEnrollment = catchAsync(async (req: Request, res: R
         emailFromAddress: user.empresa?.emailFromAddress ?? null,
         portalUrl,
         biometricMethods: user.biometricMethods as ('DACTILAR' | 'DACTILAR_REGISTRO' | 'DACTILAR_VERIFICACION' | 'FACIAL' | 'OCULAR')[],
+        enrollmentToken,
+        maxAttempts: user.biometricEnrollmentMaxAttempts,
     });
 
     if (!emailResult) {
@@ -279,6 +281,7 @@ export const requestBiometricEnrollment = catchAsync(async (req: Request, res: R
             affectedUserId: user.id,
             affectedUserEmail: user.email,
             biometricMethods,
+            maxAttempts: user.biometricEnrollmentMaxAttempts,
         },
     });
 

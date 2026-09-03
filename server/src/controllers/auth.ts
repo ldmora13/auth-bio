@@ -110,15 +110,43 @@ export const getClientById = catchAsync(async (req: Request, res: Response) => {
     res.status(200).json({ user: userWithoutPassword });
 });
 
+export const accessBiometricEnrollment = catchAsync(async (req: Request, res: Response) => {
+    const user = await userService.accessBiometricEnrollment(req.params.token);
+    const { password: _, ...userWithoutPassword } = user;
+    const attemptsRemaining = user.biometricEnrollmentMaxAttempts === null
+        ? null
+        : Math.max(user.biometricEnrollmentMaxAttempts - user.biometricEnrollmentAttempts, 0);
+
+    res.status(200).json({ user: userWithoutPassword, attemptsRemaining });
+});
+
+export const startBiometricEnrollmentAttempt = catchAsync(async (req: Request, res: Response) => {
+    const user = await userService.startBiometricEnrollmentAttempt(req.body.enrollmentToken);
+    const { password: _, ...userWithoutPassword } = user;
+    const attemptsRemaining = user.biometricEnrollmentMaxAttempts === null
+        ? null
+        : Math.max(user.biometricEnrollmentMaxAttempts - user.biometricEnrollmentAttempts, 0);
+
+    res.status(200).json({ user: userWithoutPassword, attemptsRemaining });
+});
+
 export const completeBiometricEnrollment = catchAsync(async (req: Request, res: Response) => {
-    const { completedMethods, documentType, documentNumber, clientId, selectedFingers } = req.body;
+    const { completedMethods, documentType, documentNumber, clientId, selectedFingers, enrollmentToken } = req.body;
     const bearerSessionId = lucia.readBearerToken(req.headers.authorization ?? "");
     const cookieSessionId = req.cookies.auth_session as string | undefined;
 
     let currentUserId: string | null = null;
     let resolvedVia: 'bearer' | 'document' | 'clientId' | 'cookie' | null = null;
 
-    if (clientId) {
+    if (enrollmentToken) {
+        const user = await userService.resolveBiometricEnrollmentToken(enrollmentToken).catch(() => null);
+        if (user) {
+            currentUserId = user.id;
+            resolvedVia = 'bearer';
+        }
+    }
+
+    if (!currentUserId && clientId) {
         const user = await userService.getUserById(clientId).catch(() => null);
         if (user && user.role === 'CLIENT') {
             currentUserId = user.id;
@@ -159,7 +187,7 @@ export const completeBiometricEnrollment = catchAsync(async (req: Request, res: 
         throw new AppError('Unauthorized', 401);
     }
 
-    const user = await userService.completeBiometricEnrollment(currentUserId, completedMethods);
+    const user = await userService.completeBiometricEnrollment(currentUserId, completedMethods, enrollmentToken);
 
     await AuditLogService.log({
         action: 'BIOMETRIC_ENROLLMENT_COMPLETED',

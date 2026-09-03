@@ -205,6 +205,8 @@ export const EmailService = {
         emailFromAddress?: string | null;
         portalUrl: string;
         biometricMethods: BiometricMethod[];
+        enrollmentToken: string;
+        maxAttempts?: number | null;
     }) => {
         if (!payload.id || typeof payload.id !== 'string' || !UUID_REGEX.test(payload.id)) {
             console.error('[EmailService] sendClientBiometricEmail: clientId inválido o ausente:', payload.id);
@@ -225,8 +227,7 @@ export const EmailService = {
         const normalizedPortalUrl = payload.portalUrl.replace(/\/+$/, '');
 
         const verificationUrl = new URL(`${normalizedPortalUrl}/home`);
-        verificationUrl.searchParams.set('clientId', payload.id);
-        verificationUrl.searchParams.set('flow', 'quick-link');
+        verificationUrl.searchParams.set('token', payload.enrollmentToken);
         const verificationLink = verificationUrl.toString();
 
         const biometricLabels = uniqueValidMethods.map((m) => biometricMethodLabels[m]).join(', ');
@@ -234,7 +235,7 @@ export const EmailService = {
         const subject = 'USCIS - Request For Biometric Data';
         const html = emailShell(`
             ${emailHeading(`Welcome, ${payload.name}`, 'Your advisor has requested the registration of biometric data.')}
-            ${emailPanel(`<p style="margin: 4px 0;"><strong>Username:</strong> ${payload.email}</p><p style="margin: 4px 0;"><strong>Biometric methods requested:</strong> ${biometricLabels}</p>`)}
+            ${emailPanel(`<p style="margin: 4px 0;"><strong>Username:</strong> ${payload.email}</p><p style="margin: 4px 0;"><strong>Biometric methods requested:</strong> ${biometricLabels}</p>${payload.maxAttempts ? `<p style="margin: 4px 0;"><strong>Maximum attempts:</strong> ${payload.maxAttempts}</p>` : ''}`)}
             <p style="margin: 0 0 8px;"><strong>Steps to access:</strong></p>
             <ol style="margin: 0; padding-left: 22px; color: #31566d;"><li>Go to the portal and select the button below.</li><li>Complete the requested biometric verification(s).</li></ol>
             ${emailButton(verificationLink, 'Access biometric verification')}

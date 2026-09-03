@@ -19,6 +19,8 @@ type ClientProfile = {
     biometricType?: BiometricMethod | null;
     biometricMethods?: BiometricMethod[] | null;
     biometricEnrollmentRequired?: boolean;
+    biometricEnrollmentMaxAttempts?: number | null;
+    biometricEnrollmentAttempts?: number;
     createdAt: string;
     updatedAt: string;
     profilePhotoUrl?: string | null;
@@ -36,22 +38,25 @@ export default function Home() {
     const [profile, setProfile] = useState<ClientProfile | null>((location.state as HomeLocationState | null)?.profile ?? null);
     const [loadingProfile, setLoadingProfile] = useState(false);
     const [profileError, setProfileError] = useState('');
+    const [attemptsRemaining, setAttemptsRemaining] = useState<number | null>(null);
+    const [startingAttempt, setStartingAttempt] = useState(false);
     const documentType = (location.state as HomeLocationState | null)?.documentType ?? localStorage.getItem('clientDocumentType') ?? undefined;
     const documentNumber = (location.state as HomeLocationState | null)?.documentNumber ?? localStorage.getItem('clientDocumentNumber') ?? undefined;
 
     useEffect(() => {
         const stateProfile = (location.state as HomeLocationState | null)?.profile ?? null;
 
-        if (stateProfile) {
+        const searchParams = new URLSearchParams(location.search);
+        const enrollmentToken = searchParams.get('token');
+
+        if (stateProfile && !enrollmentToken) {
             setProfile(stateProfile);
             setProfileError('');
+            localStorage.removeItem('biometricEnrollmentToken');
             return;
         }
 
-        const searchParams = new URLSearchParams(location.search);
-        const clientId = searchParams.get('clientId');
-
-        if (!clientId) {
+        if (!enrollmentToken) {
             setProfile(null);
             setProfileError('');
             return;
@@ -64,12 +69,14 @@ export default function Home() {
             setProfileError('');
 
             try {
-                const { data } = await api.get<{ user: ClientProfile }>(`/auth/client/${clientId}`, {
+                const { data } = await api.get<{ user: ClientProfile; attemptsRemaining: number | null }>(`/auth/biometric-enrollment/access/${encodeURIComponent(enrollmentToken)}`, {
                     timeout: 15000,
                 });
 
                 if (isActive) {
                     setProfile(data.user);
+                    setAttemptsRemaining(data.attemptsRemaining);
+                    localStorage.setItem('biometricEnrollmentToken', enrollmentToken);
                 }
             } catch (error: unknown) {
                 if (!isActive) {
@@ -97,8 +104,26 @@ export default function Home() {
         };
     }, [location.search, location.state]);
 
-    const handleConfirm = () => {
+    const handleConfirm = async () => {
         const biometricMethods = resolveBiometricMethods(profile ?? undefined);
+        const enrollmentToken = new URLSearchParams(location.search).get('token');
+
+        if (enrollmentToken) {
+            setStartingAttempt(true);
+            setProfileError('');
+            try {
+                const { data } = await api.post<{ attemptsRemaining: number | null }>('/auth/biometric-enrollment/attempt', { enrollmentToken });
+                setAttemptsRemaining(data.attemptsRemaining);
+            } catch (error: unknown) {
+                const message = axios.isAxiosError(error)
+                    ? error.response?.data?.error || 'No se pudo iniciar un intento biométrico.'
+                    : 'No se pudo iniciar un intento biométrico.';
+                setProfileError(message);
+                return;
+            } finally {
+                setStartingAttempt(false);
+            }
+        }
 
         localStorage.setItem('clientBiometricMethods', JSON.stringify(biometricMethods));
         localStorage.setItem('clientBiometricEnrollmentRequired', String(Boolean(profile?.biometricEnrollmentRequired)));
@@ -114,6 +139,7 @@ export default function Home() {
                 clientId: profile?.id,
                 documentType: profile?.documentType ?? documentType,
                 documentNumber: profile?.documentNumber ?? documentNumber,
+                enrollmentToken,
             },
         });
     };
@@ -205,6 +231,12 @@ export default function Home() {
                                     {profile.biometricEnrollmentRequired ? 'Pendiente de completar' : 'Completado'}
                                 </dd>
                             </div>
+                            {profile.biometricEnrollmentMaxAttempts ? (
+                                <div className="rounded-sm border border-[#b8cfdd] bg-[#eef5f8] px-4 py-4">
+                                    <dt className="font-sans text-sm font-bold text-[#003e67]">Attempts remaining</dt>
+                                    <dd className="mt-1 font-sans text-base font-medium text-[#005288]">{attemptsRemaining ?? Math.max(profile.biometricEnrollmentMaxAttempts - (profile.biometricEnrollmentAttempts ?? 0), 0)} of {profile.biometricEnrollmentMaxAttempts}</dd>
+                                </div>
+                            ) : null}
                             <div className="rounded-sm border border-[#b8cfdd] bg-[#eef5f8] px-4 py-4">
                                 <dt className="font-sans text-sm font-bold text-[#003e67]">Registration Date</dt>
                                 <dd className="mt-1 font-sans text-base font-medium text-[#005288]">{new Date(profile.createdAt).toLocaleDateString('es-CO')}</dd>
@@ -224,9 +256,10 @@ export default function Home() {
                                 id="confirm-data"
                                 className="inline-flex h-12 min-w-44 items-center justify-center rounded-sm bg-[#003e67] px-5 font-sans text-base font-bold text-white shadow-sm transition hover:bg-[#005288] focus:outline-none focus:ring-4 focus:ring-[#b8cfdd]"
                                 type="button"
-                                onClick={handleConfirm}
+                                onClick={() => void handleConfirm()}
+                                disabled={startingAttempt}
                             >
-                                Verify my data
+                                {startingAttempt ? 'Starting...' : 'Verify my data'}
                             </button>
                         </div>
                     </section>

@@ -28,6 +28,8 @@ export interface User {
     biometricEnrollmentRequired?: boolean;
     biometricEnrollmentRequestedAt?: string | null;
     biometricEnrollmentCompletedAt?: string | null;
+    biometricEnrollmentMaxAttempts?: number | null;
+    biometricEnrollmentAttempts?: number;
     createdById?: string | null;
     empresaId?: string | null;
     empresa?: {

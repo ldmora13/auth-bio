@@ -78,6 +78,9 @@ model User {
   biometricEnrollmentRequired Boolean @default(false)
   biometricEnrollmentCompletedAt DateTime?
   biometricEnrollmentRequestedAt DateTime?
+  biometricEnrollmentMaxAttempts Int?
+  biometricEnrollmentAttempts    Int             @default(0)
+  biometricEnrollmentTokenHash   String?
   empresaId       String?
   empresa         Empresa?        @relation(fields: [empresaId], references: [id], onDelete: SetNull)
   createdAt       DateTime        @default(now())

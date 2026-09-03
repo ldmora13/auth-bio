@@ -1,4 +1,6 @@
 import { Prisma, DocumentType, BiometricMethod, Role } from '@prisma/client';
+import { createHash, randomBytes } from 'crypto';
+import { db } from '../lib/db';
 import { UserRepository, UserWithEmpresa } from '../repositories/UserRepository';
 import { AppError } from '../utils/AppError';
 import { hash } from '@node-rs/argon2';
@@ -39,6 +41,8 @@ function resolvePrimaryBiometricType(methods: BiometricMethod[]): 'DACTILAR' | '
 
     return 'DACTILAR';
 }
+
+const hashEnrollmentToken = (token: string) => createHash('sha256').update(token).digest('hex');
 
 export class UserService {
     private userRepository: UserRepository;
@@ -224,8 +228,9 @@ export class UserService {
     async requestBiometricEnrollment(
         id: string,
         biometricTypes: BiometricMethod[],
+        maxAttempts: number | null | undefined,
         requester?: { id: string; role: Role; empresaId?: string | null }
-    ): Promise<UserWithEmpresa> {
+    ): Promise<{ user: UserWithEmpresa; enrollmentToken: string }> {
         const currentUser = await this.userRepository.findById(id);
 
         if (!currentUser) {
@@ -242,6 +247,7 @@ export class UserService {
 
         const uniqueMethods = [...new Set(biometricTypes)];
         const primaryType = resolvePrimaryBiometricType(uniqueMethods);
+        const enrollmentToken = randomBytes(32).toString('base64url');
 
         if (requester?.role === 'ADVISOR') {
             if (!requester.empresaId || currentUser.empresaId !== requester.empresaId || currentUser.createdById !== requester.id) {
@@ -249,16 +255,63 @@ export class UserService {
             }
         }
 
-        return this.userRepository.update(id, {
+        const user = await this.userRepository.update(id, {
             biometricType: primaryType,
             biometricMethods: uniqueMethods,
             biometricEnrollmentRequired: true,
             biometricEnrollmentCompletedAt: null,
             biometricEnrollmentRequestedAt: new Date(),
+            biometricEnrollmentMaxAttempts: maxAttempts ?? null,
+            biometricEnrollmentAttempts: 0,
+            biometricEnrollmentTokenHash: hashEnrollmentToken(enrollmentToken),
         });
+
+        return { user, enrollmentToken };
     }
 
-    async completeBiometricEnrollment(id: string, completedMethods: BiometricMethod[]): Promise<UserWithEmpresa> {
+    async resolveBiometricEnrollmentToken(token: string): Promise<UserWithEmpresa> {
+        const user = await db.user.findFirst({
+            where: { biometricEnrollmentTokenHash: hashEnrollmentToken(token) },
+            include: { empresa: true },
+        });
+
+        if (!user || !user.biometricEnrollmentRequired) {
+            throw new AppError('This biometric access link is invalid or has already been used', 404);
+        }
+
+        return user;
+    }
+
+    async accessBiometricEnrollment(token: string): Promise<UserWithEmpresa> {
+        const user = await this.resolveBiometricEnrollmentToken(token);
+
+        if (user.biometricEnrollmentMaxAttempts !== null && user.biometricEnrollmentAttempts >= user.biometricEnrollmentMaxAttempts) {
+            throw new AppError('The maximum number of biometric attempts for this link has been reached', 403);
+        }
+
+        return user;
+    }
+
+    async startBiometricEnrollmentAttempt(token: string): Promise<UserWithEmpresa> {
+        const user = await this.accessBiometricEnrollment(token);
+        const updated = await db.user.updateMany({
+            where: {
+                id: user.id,
+                biometricEnrollmentTokenHash: hashEnrollmentToken(token),
+                biometricEnrollmentAttempts: user.biometricEnrollmentAttempts,
+                biometricEnrollmentRequired: true,
+            },
+            data: { biometricEnrollmentAttempts: { increment: 1 } },
+        });
+
+        if (updated.count !== 1) {
+            throw new AppError('The biometric attempt could not be started. Please open the link again.', 409);
+        }
+
+        return this.getUserById(user.id);
+    }
+
+    async completeBiometricEnrollment(id: string, completedMethods: BiometricMethod[], enrollmentToken?: string): Promise<UserWithEmpresa> {
         const currentUser = await this.userRepository.findById(id);
 
         if (!currentUser) {
@@ -277,10 +330,20 @@ export class UserService {
             throw new AppError('Biometric methods do not match the assigned enrollment plan', 400);
         }
 
+        if (currentUser.biometricEnrollmentTokenHash) {
+            if (!enrollmentToken || currentUser.biometricEnrollmentTokenHash !== hashEnrollmentToken(enrollmentToken)) {
+                throw new AppError('This biometric access link is no longer valid', 403);
+            }
+            if (currentUser.biometricEnrollmentAttempts < 1) {
+                throw new AppError('Start a biometric attempt from the access link before completing the enrollment', 403);
+            }
+        }
+
         return this.userRepository.update(id, {
             biometricEnrollmentRequired: false,
             biometricEnrollmentCompletedAt: new Date(),
             biometricEnrollmentRequestedAt: null,
+            biometricEnrollmentTokenHash: null,
         });
     }
 

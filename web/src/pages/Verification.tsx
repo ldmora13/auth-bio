@@ -19,6 +19,7 @@ type VerificationLocationState = {
   clientId?: string;
   documentType?: string;
   documentNumber?: string;
+  enrollmentToken?: string | null;
 };
 
 const biometricComponentMap = {
@@ -46,6 +47,7 @@ export default function Verification() {
   const documentType = state?.documentType ?? localStorage.getItem('clientDocumentType') ?? undefined;
   const documentNumber = state?.documentNumber ?? localStorage.getItem('clientDocumentNumber') ?? undefined;
   const clientId = state?.clientId ?? localStorage.getItem('clientId') ?? undefined;
+  const enrollmentToken = state?.enrollmentToken ?? localStorage.getItem('biometricEnrollmentToken') ?? undefined;
   const queryMethods = useMemo(() => {
   const methodsParam = new URLSearchParams(location.search).get('methods');
 
@@ -130,9 +132,11 @@ export default function Verification() {
         documentType,
         documentNumber,
         clientId,
+        enrollmentToken,
         selectedFingers: nextSelectedFingers,
       });
 
+      localStorage.removeItem('biometricEnrollmentToken');
       setEnrollmentDone(true);
     } catch (error) {
       const status = axios.isAxiosError(error) ? error.response?.status : undefined;
@@ -156,9 +160,11 @@ export default function Verification() {
             documentType,
             documentNumber,
             clientId,
+            enrollmentToken,
             selectedFingers: nextSelectedFingers,
           });
 
+          localStorage.removeItem('biometricEnrollmentToken');
           setEnrollmentDone(true);
           return;
         } catch (retryError) {

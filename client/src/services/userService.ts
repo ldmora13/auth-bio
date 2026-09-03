@@ -89,8 +89,8 @@ export const UserService = {
         return data.user;
     },
 
-    requestBiometricEnrollment: async (id: string, biometricMethods: BiometricMethod[]) => {
-        const { data } = await api.post<{ user: User }>(`/users/${id}/biometric-request`, { biometricMethods });
+    requestBiometricEnrollment: async (id: string, biometricMethods: BiometricMethod[], maxAttempts?: number | null) => {
+        const { data } = await api.post<{ user: User }>(`/users/${id}/biometric-request`, { biometricMethods, maxAttempts: maxAttempts ?? null });
         return data.user;
     },
 
