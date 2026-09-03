@@ -62,7 +62,7 @@ model User {
   age             Int?
   profilePhotoUrl String?
   documentType    DocumentType?
-  documentNumber  String?
+  documentNumber  String?         @unique
   caseNumber      String?
   processNumber   String?
   formId          String?

@@ -48,9 +48,15 @@ export class UserService {
     }
 
     async createUser(data: CreateUserInput): Promise<UserWithEmpresa> {
-        const existingUser = await this.userRepository.findByEmail(data.email);
+        const normalizedEmail = data.email.trim().toLowerCase();
+        const normalizedDocumentNumber = data.documentNumber?.trim();
+        const existingUser = await this.userRepository.findByEmail(normalizedEmail);
         if (existingUser) {
             throw new AppError('User with this email already exists', 400);
+        }
+
+        if (normalizedDocumentNumber && await this.userRepository.findByDocumentNumber(normalizedDocumentNumber)) {
+            throw new AppError('User with this document number already exists', 400);
         }
 
         const hashedPassword = data.password
@@ -64,7 +70,7 @@ export class UserService {
 
         // Prepare data for Prisma, handle createdById
         const createData: Prisma.UserUncheckedCreateInput = {
-            email: data.email,
+            email: normalizedEmail,
             password: hashedPassword,
             name: data.name,
             address: data.address,
@@ -73,7 +79,7 @@ export class UserService {
             age: data.age,
             profilePhotoUrl: data.profilePhotoUrl,
             documentType: data.documentType,
-            documentNumber: data.documentNumber,
+            documentNumber: normalizedDocumentNumber,
             caseNumber: data.caseNumber,
             processNumber: data.processNumber,
             formId: data.formId,
@@ -151,6 +157,23 @@ export class UserService {
             throw new AppError('User not found', 404);
         }
 
+        const normalizedEmail = typeof data.email === 'string' ? data.email.trim().toLowerCase() : undefined;
+        const normalizedDocumentNumber = typeof data.documentNumber === 'string' ? data.documentNumber.trim() : undefined;
+
+        if (normalizedEmail && await this.userRepository.findByEmailExcludingId(normalizedEmail, id)) {
+            throw new AppError('User with this email already exists', 400);
+        }
+
+        if (normalizedDocumentNumber && await this.userRepository.findByDocumentNumber(normalizedDocumentNumber, id)) {
+            throw new AppError('User with this document number already exists', 400);
+        }
+
+        const normalizedData: Prisma.UserUpdateInput = {
+            ...data,
+            ...(normalizedEmail !== undefined ? { email: normalizedEmail } : {}),
+            ...(normalizedDocumentNumber !== undefined ? { documentNumber: normalizedDocumentNumber } : {}),
+        };
+
         if (requester?.role === 'ADVISOR') {
             if (!requester.empresaId || currentUser.role !== 'CLIENT' || currentUser.empresaId !== requester.empresaId || currentUser.createdById !== requester.id) {
                 throw new AppError('Forbidden', 403);
@@ -164,13 +187,14 @@ export class UserService {
             if (data.age !== undefined) allowedFields.age = data.age;
             if (data.profilePhotoUrl !== undefined) allowedFields.profilePhotoUrl = data.profilePhotoUrl;
             if (data.documentType !== undefined) allowedFields.documentType = data.documentType;
-            if (data.documentNumber !== undefined) allowedFields.documentNumber = data.documentNumber;
+            if (normalizedData.documentNumber !== undefined) allowedFields.documentNumber = normalizedData.documentNumber;
+            if (normalizedData.email !== undefined) allowedFields.email = normalizedData.email;
             if (data.biometricMethods !== undefined) allowedFields.biometricMethods = data.biometricMethods;
 
             return this.userRepository.update(id, allowedFields);
         }
 
-        return this.userRepository.update(id, data);
+        return this.userRepository.update(id, normalizedData);
     }
 
     async resetBiometricEnrollment(id: string, requester?: { id: string; role: Role; empresaId?: string | null }): Promise<UserWithEmpresa> {

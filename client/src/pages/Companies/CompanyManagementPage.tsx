@@ -30,6 +30,7 @@ type CompanyStatusFilter = 'all' | 'active' | 'empty';
 type AdvisorSort = 'newest' | 'oldest' | 'name-asc' | 'name-desc';
 type ClientSort = 'newest' | 'oldest' | 'name-asc' | 'name-desc';
 type ClientDraft = {
+    email: string;
     name: string;
     address: string;
     phone: string;
@@ -197,6 +198,7 @@ export default function CompanyManagementPage() {
     const [advisorSort, setAdvisorSort] = useState<AdvisorSort>('newest');
     const [advisorPage, setAdvisorPage] = useState(1);
     const [clientDraft, setClientDraft] = useState<ClientDraft>({
+        email: '',
         name: '',
         address: '',
         phone: '',
@@ -668,6 +670,7 @@ export default function CompanyManagementPage() {
     function openClientEditor(client: User) {
         setSelectedClient(client);
         setClientDraft({
+            email: client.email ?? '',
             name: client.name ?? '',
             address: client.address ?? '',
             phone: client.phone ?? '',
@@ -712,6 +715,8 @@ export default function CompanyManagementPage() {
     function validateClientDraft(draft: ClientDraft) {
         const nextErrors: Partial<Record<keyof ClientDraft, string>> = {};
 
+        if (!draft.email.trim()) nextErrors.email = 'El correo es obligatorio';
+        else if (!/^\S+@\S+\.\S+$/.test(draft.email.trim())) nextErrors.email = 'El formato del correo no es válido';
         if (!draft.name.trim()) nextErrors.name = 'El nombre es obligatorio';
         if (!draft.address.trim()) nextErrors.address = 'La dirección es obligatoria';
         if (!draft.documentNumber.trim()) nextErrors.documentNumber = 'El documento es obligatorio';
@@ -771,6 +776,7 @@ export default function CompanyManagementPage() {
         setClientSaving(true);
         try {
             await UserService.update(selectedClient.id, {
+                email: clientDraft.email.trim().toLowerCase(),
                 name: clientDraft.name.trim(),
                 address: clientDraft.address.trim(),
                 phone: clientDraft.phone.trim(),
@@ -1693,6 +1699,10 @@ export default function CompanyManagementPage() {
                                     </div>
 
                                     <div className="grid gap-4 md:grid-cols-2">
+                                        <div className="md:col-span-2">
+                                            <label className="mb-2 block text-sm text-slate-300">Correo electrónico</label>
+                                            <Input type="email" value={clientDraft.email} onChange={(e) => updateClientDraft('email', e.target.value)} error={clientErrors.email} />
+                                        </div>
                                         <div className="md:col-span-2">
                                             <label className="mb-2 block text-sm text-slate-300">Nombre</label>
                                             <Input value={clientDraft.name} onChange={(e) => updateClientDraft('name', e.target.value)} error={clientErrors.name} />

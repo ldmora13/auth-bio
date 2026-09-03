@@ -139,7 +139,7 @@ export const createUser = catchAsync(async (req: Request, res: Response) => {
 
 export const updateUser = catchAsync(async (req: Request, res: Response) => {
     const { id } = req.params;
-    const { name, role, address, phone, birthDate, age, profilePhotoUrl, documentType, documentNumber, caseNumber, processNumber, formId, nativeCountry, sex, validFrom, cardExpires, migratoryStatus, receivedDate, deadline, empresaId, biometricMethods } = req.body;
+    const { email, name, role, address, phone, birthDate, age, profilePhotoUrl, documentType, documentNumber, caseNumber, processNumber, formId, nativeCountry, sex, validFrom, cardExpires, migratoryStatus, receivedDate, deadline, empresaId, biometricMethods } = req.body;
     const currentUser = res.locals.user;
 
     let resolvedProfilePhotoUrl = profilePhotoUrl;
@@ -162,6 +162,7 @@ export const updateUser = catchAsync(async (req: Request, res: Response) => {
     }
 
     const updateData: Prisma.UserUpdateInput = {
+        email,
         name,
         role,
         address,

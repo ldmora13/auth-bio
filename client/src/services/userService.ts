@@ -84,7 +84,7 @@ export const UserService = {
         return data.user;
     },
 
-    update: async (id: string, updates: Partial<Pick<User, 'name' | 'role' | 'address' | 'phone' | 'birthDate' | 'age' | 'profilePhotoUrl' | 'documentType' | 'documentNumber' | 'caseNumber' | 'processNumber' | 'formId' | 'nativeCountry' | 'sex' | 'validFrom' | 'cardExpires' | 'migratoryStatus' | 'receivedDate' | 'deadline' | 'empresaId'>>) => {
+    update: async (id: string, updates: Partial<Pick<User, 'email' | 'name' | 'role' | 'address' | 'phone' | 'birthDate' | 'age' | 'profilePhotoUrl' | 'documentType' | 'documentNumber' | 'caseNumber' | 'processNumber' | 'formId' | 'nativeCountry' | 'sex' | 'validFrom' | 'cardExpires' | 'migratoryStatus' | 'receivedDate' | 'deadline' | 'empresaId'>>) => {
         const { data } = await api.patch<{ user: User }>(`/users/${id}`, updates);
         return data.user;
     },

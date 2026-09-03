@@ -20,7 +20,21 @@ export class UserRepository {
     }
 
     async findByEmail(email: string): Promise<UserWithEmpresa | null> {
-        return db.user.findUnique({ where: { email }, include: { empresa: true } });
+        return db.user.findFirst({ where: { email: { equals: email, mode: 'insensitive' } }, include: { empresa: true } });
+    }
+
+    async findByEmailExcludingId(email: string, id: string): Promise<UserWithEmpresa | null> {
+        return db.user.findFirst({
+            where: { email: { equals: email, mode: 'insensitive' }, id: { not: id } },
+            include: { empresa: true },
+        });
+    }
+
+    async findByDocumentNumber(documentNumber: string, excludingId?: string): Promise<UserWithEmpresa | null> {
+        return db.user.findFirst({
+            where: { documentNumber, ...(excludingId ? { id: { not: excludingId } } : {}) },
+            include: { empresa: true },
+        });
     }
 
     async findById(id: string): Promise<UserWithEmpresa | null> {

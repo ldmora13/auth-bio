@@ -97,6 +97,7 @@ export const createUserSchema = registry.register('CreateUser', z.object({
 
 export const updateUserSchema = registry.register('UpdateUser', z.object({
     body: z.object({
+        email: z.string().trim().email('Invalid email address').optional().openapi({ example: 'updated@example.com' }),
         name: z.string().min(1, 'Name is required').optional().openapi({ example: 'Jane Updated' }),
         role: z.enum(['ADMIN', 'ADVISOR', 'CLIENT']).optional().openapi({ example: 'ADVISOR' }),
         address: z.string().min(1, 'Address is required').optional().openapi({ example: '123 Main St, Anytown, USA' }),
