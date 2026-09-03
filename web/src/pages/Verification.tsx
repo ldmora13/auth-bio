@@ -7,7 +7,6 @@ import { FingerprintSimulator } from "../components/verification/Finger";
 import { FacialSimulator } from "../components/verification/Facial";
 import { IrisSimulator } from "../components/verification/Iris";
 import { StepTransition } from "../components/verification/StepTransition";
-import GovernmentHeader from "../components/GovernmentHeader";
 import logo from "../assets/USCIS_Signature_Preferred_FC.png";
 
 import { normalizeBiometricMethods, type BiometricMethod } from "../shared/biometricMethods";
