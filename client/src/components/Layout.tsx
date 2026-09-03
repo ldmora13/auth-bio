@@ -128,9 +128,6 @@ export default function Layout({ children }: { children: ReactNode }) {
                   <div className="flex flex-col items-start min-w-0 ml-2">
                     <span className="text-sm font-medium text-slate-200 truncate max-w-30">{user.name}</span>
                     <span className="text-xs text-slate-500">{user.role}</span>
-                    {user.role === 'ADVISOR' && user.empresa?.nombre && (
-                      <span className="text-[11px] text-teal-400 truncate max-w-30">{user.empresa.nombre}</span>
-                    )}
                   </div>
                 )}
               </HMenu.Button>

@@ -849,27 +849,30 @@ export default function CompanyManagementPage() {
     const detailSection = currentCompany ? (
         <div className="space-y-6 rounded-3xl border border-white/10 bg-white/5 p-6 md:p-8">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                <div>
-                    <p className="text-xs uppercase tracking-[0.3em] text-teal-300/80">{isAdvisor ? '' : 'Detalle de empresa'}</p>
-                    <div className="flex flex-row items-center gap-x-10">
-                        <div className="flex flex-col">
-                            <h2 className="mt-2 text-3xl font-semibold text-white">{currentCompany.nombre}</h2>
-                            <p className="mt-2 text-sm text-slate-300"><span className="font-medium text-slate-200">NIT:</span> {currentCompany.nit || 'N/D'}</p>
+                    {isAdmin && (
+                    <div>
+                        <p className="text-xs uppercase tracking-[0.3em] text-teal-300/80">Detalle de empresa</p>
+                        <div className="flex flex-row items-center gap-x-10">
+                            <div className="flex flex-col">
+                                <h2 className="mt-2 text-3xl font-semibold text-white">{currentCompany.nombre}</h2>
+                                <p className="mt-2 text-sm text-slate-300"><span className="font-medium text-slate-200">NIT:</span> {currentCompany.nit || 'N/D'}</p>
+                            </div>
+                            {currentCompany.logoUrl ? (
+                                <img src={currentCompany.logoUrl} alt={`Logo de ${currentCompany.nombre}`} className="mt-3 h-20 w-auto max-w-52 rounded-xl border border-white/20 bg-white/90 object-contain p-2" />
+                            ) : (
+                                <p className="mt-2 text-sm text-slate-500">No hay logo registrado.</p>
+                            )}
                         </div>
-                        {currentCompany.logoUrl ? (
-                            <img src={currentCompany.logoUrl} alt={`Logo de ${currentCompany.nombre}`} className="mt-3 h-20 w-auto max-w-52 rounded-xl border border-white/20 bg-white/90 object-contain p-2" />
-                        ) : (
-                            <p className="mt-2 text-sm text-slate-500">No hay logo registrado.</p>
-                        )}
+                        
+                        <p className="mt-2 max-w-xl text-sm text-slate-400">{currentCompany.description || 'Sin descripcion registrada.'}</p>
+                        <div className="mt-4 flex flex-wrap gap-2 text-xs">
+                            <span className="rounded-full bg-emerald-500/10 px-3 py-1 text-emerald-300">{getCompanyActivity(currentCompany)}</span>
+                            <span className="rounded-full bg-slate-500/10 px-3 py-1 text-slate-300">{currentCompany.advisorCount ?? currentCompany.advisors?.length ?? 0} advisors</span>
+                            <span className="rounded-full bg-slate-500/10 px-3 py-1 text-slate-300">{currentCompany.clientCount ?? currentCompany.clients?.length ?? 0} clientes</span>
+                        </div>
                     </div>
+                    )}
                     
-                    <p className="mt-2 max-w-xl text-sm text-slate-400">{currentCompany.description || 'Sin descripcion registrada.'}</p>
-                    <div className="mt-4 flex flex-wrap gap-2 text-xs">
-                        <span className="rounded-full bg-emerald-500/10 px-3 py-1 text-emerald-300">{getCompanyActivity(currentCompany)}</span>
-                        <span className="rounded-full bg-slate-500/10 px-3 py-1 text-slate-300">{currentCompany.advisorCount ?? currentCompany.advisors?.length ?? 0} advisors</span>
-                        <span className="rounded-full bg-slate-500/10 px-3 py-1 text-slate-300">{currentCompany.clientCount ?? currentCompany.clients?.length ?? 0} clientes</span>
-                    </div>
-                </div>
 
                 <div className="flex flex-wrap gap-2">
                     {isAdmin && (

@@ -56,12 +56,7 @@ export default function Dashboard() {
                         {t('dashboard.welcome')}
                     </h1>
                     <p className="text-slate-400 mt-1">
-                        {user?.name} · {user?.role}
-                        {user?.role === 'ADVISOR' && user?.empresa?.nombre && (
-                            <span className="ml-2 px-3 py-1 bg-teal-500/10 text-teal-400 rounded-full text-sm">
-                                {user.empresa.nombre}
-                            </span>
-                        )}
+                        {user?.name}
                     </p>
                 </motion.div>
 
