@@ -153,6 +153,17 @@ export default function CompanyManagementPage() {
     const [companyNitError, setCompanyNitError] = useState('');
     const [companyDescriptionError, setCompanyDescriptionError] = useState('');
     const [companyLogoError, setCompanyLogoError] = useState('');
+    const [editingCompany, setEditingCompany] = useState<Empresa | null>(null);
+    const [editCompanyName, setEditCompanyName] = useState('');
+    const [editCompanyNit, setEditCompanyNit] = useState('');
+    const [editCompanyDescription, setEditCompanyDescription] = useState('');
+    const [editCompanyLogoUrl, setEditCompanyLogoUrl] = useState('');
+    const [editCompanyNameError, setEditCompanyNameError] = useState('');
+    const [editCompanyNitError, setEditCompanyNitError] = useState('');
+    const [editCompanyDescriptionError, setEditCompanyDescriptionError] = useState('');
+    const [editCompanyLogoError, setEditCompanyLogoError] = useState('');
+    const [isEditCompanyModalOpen, setIsEditCompanyModalOpen] = useState(false);
+    const [companySaving, setCompanySaving] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [companySort, setCompanySort] = useState<CompanySort>('newest');
     const [companyStatusFilter, setCompanyStatusFilter] = useState<CompanyStatusFilter>('all');
@@ -350,6 +361,72 @@ export default function CompanyManagementPage() {
         return true;
     }
 
+    function openEditCompanyModal(company: Empresa) {
+        setEditingCompany(company);
+        setEditCompanyName(company.nombre);
+        setEditCompanyNit(company.nit ?? '');
+        setEditCompanyDescription(company.description ?? '');
+        setEditCompanyLogoUrl('');
+        setEditCompanyNameError('');
+        setEditCompanyNitError('');
+        setEditCompanyDescriptionError('');
+        setEditCompanyLogoError('');
+        setIsEditCompanyModalOpen(true);
+    }
+
+    function validateEditCompanyName(name: string) {
+        if (!name.trim()) {
+            setEditCompanyNameError('El nombre de la empresa es obligatorio');
+            return false;
+        }
+
+        const duplicatedName = companies.some((company) => company.id !== editingCompany?.id && company.nombre.toLowerCase() === name.trim().toLowerCase());
+        if (duplicatedName) {
+            setEditCompanyNameError('Ya existe una empresa con ese nombre legal');
+            return false;
+        }
+
+        setEditCompanyNameError('');
+        return true;
+    }
+
+    function validateEditCompanyNit(nit: string) {
+        const normalized = nit.trim();
+        if (!normalized) {
+            setEditCompanyNitError('El NIT es obligatorio');
+            return false;
+        }
+
+        if (!/^[0-9]{8,15}(-[0-9])?$/.test(normalized)) {
+            setEditCompanyNitError('Formato de NIT invalido');
+            return false;
+        }
+
+        const duplicatedNit = companies.some((company) => company.id !== editingCompany?.id && company.nit?.trim() === normalized);
+        if (duplicatedNit) {
+            setEditCompanyNitError('Ya existe una empresa con ese NIT');
+            return false;
+        }
+
+        setEditCompanyNitError('');
+        return true;
+    }
+
+    function validateEditCompanyDescription(description: string) {
+        if (!description.trim()) {
+            setEditCompanyDescriptionError('La descripcion es obligatoria');
+            return false;
+        }
+
+        if (description.trim().length > 1000) {
+            setEditCompanyDescriptionError('La descripcion no puede superar 1000 caracteres');
+            return false;
+        }
+
+        setEditCompanyDescriptionError('');
+        return true;
+    }
+
     async function handleLogoChange(e: React.ChangeEvent<HTMLInputElement>) {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -370,6 +447,28 @@ export default function CompanyManagementPage() {
             setCompanyLogoError('');
         } catch {
             setCompanyLogoError('No se pudo cargar el logotipo');
+        }
+    }
+
+    async function handleEditLogoChange(e: React.ChangeEvent<HTMLInputElement>) {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) {
+            setEditCompanyLogoError('Solo se permiten archivos PNG, JPG o WEBP');
+            return;
+        }
+
+        if (file.size > MAX_LOGO_FILE_SIZE) {
+            setEditCompanyLogoError('El logotipo supera el limite de 5MB');
+            return;
+        }
+
+        try {
+            setEditCompanyLogoUrl(await fileToDataUrl(file));
+            setEditCompanyLogoError('');
+        } catch {
+            setEditCompanyLogoError('No se pudo cargar el logotipo');
         }
     }
 
@@ -406,6 +505,51 @@ export default function CompanyManagementPage() {
             await loadData();
         } catch (operationError: unknown) {
             toast.error(getErrorMessage(operationError, 'No se pudo crear la empresa'));
+        }
+    }
+
+    async function handleUpdateCompany(e: React.FormEvent) {
+        e.preventDefault();
+        if (!editingCompany) return;
+
+        const validName = validateEditCompanyName(editCompanyName);
+        const validNit = validateEditCompanyNit(editCompanyNit);
+        const validDescription = validateEditCompanyDescription(editCompanyDescription);
+        if (!validName || !validNit || !validDescription) return;
+
+        setCompanySaving(true);
+        try {
+            await UserService.updateCompany(editingCompany.id, {
+                nombre: editCompanyName.trim(),
+                nit: editCompanyNit.trim(),
+                ...(editCompanyLogoUrl ? { logoUrl: editCompanyLogoUrl } : {}),
+                description: editCompanyDescription.trim(),
+            });
+            setIsEditCompanyModalOpen(false);
+            setEditingCompany(null);
+            toast.success('Empresa actualizada');
+            await loadData();
+        } catch (operationError: unknown) {
+            toast.error(getErrorMessage(operationError, 'No se pudo actualizar la empresa'));
+        } finally {
+            setCompanySaving(false);
+        }
+    }
+
+    async function handleDeleteCompany(company: Empresa) {
+        if (!window.confirm(`¿Eliminar ${company.nombre}? Los usuarios quedaran sin una empresa asignada.`)) return;
+
+        try {
+            await UserService.deleteCompany(company.id);
+            toast.success('Empresa eliminada');
+            if (routeCompanyId) {
+                navigate('/companies', { replace: true });
+            } else {
+                setSelectedCompanyId('');
+                await loadData();
+            }
+        } catch (operationError: unknown) {
+            toast.error(getErrorMessage(operationError, 'No se pudo eliminar la empresa'));
         }
     }
 
@@ -876,13 +1020,23 @@ export default function CompanyManagementPage() {
 
                 <div className="flex flex-wrap gap-2">
                     {isAdmin && (
-                        <Button className="w-auto px-4" onClick={() => navigate(`/companies/${currentCompany.id}/users/create`, { state: { empresaId: currentCompany.id } })}>
-                            <UserPlus className="h-4 w-4" />
-                            Crear asesor
-                        </Button>
+                        <>
+                            <Button variant='outline' className="w-auto px-4 text-blue-200 hover:border-blue-400/40 hover:bg-blue-500/10" onClick={() => navigate(`/companies/${currentCompany.id}/users/create`, { state: { empresaId: currentCompany.id } })}>
+                                <UserPlus className="h-4 w-4" />
+                                Crear asesor
+                            </Button>
+                            <Button variant="outline" className="w-auto px-4" onClick={() => openEditCompanyModal(currentCompany)}>
+                                <Info className="h-4 w-4" />
+                                Editar empresa
+                            </Button>
+                            <Button variant="outline" className="w-auto px-4 text-red-200 hover:border-red-400/40 hover:bg-red-500/10" onClick={() => void handleDeleteCompany(currentCompany)}>
+                                <Trash className="h-4 w-4" />
+                                Eliminar empresa
+                            </Button>
+                        </>
                     )}
                     {isAdvisor && (
-                        <Button className="w-auto px-4" onClick={() => navigate(`/companies/${currentCompany.id}/users/create`, { state: { empresaId: currentCompany.id } })}>
+                        <Button variant='outline' className="w-auto px-4 text-blue-200 hover:border-blue-400/40 hover:bg-blue-500/10" onClick={() => navigate(`/companies/${currentCompany.id}/users/create`, { state: { empresaId: currentCompany.id } })}>
                             <UserPlus className="h-4 w-4" />
                             Nuevo cliente
                         </Button>
@@ -1230,6 +1384,54 @@ export default function CompanyManagementPage() {
                                                 Cancelar
                                             </Button>
                                             <Button type="submit" className="sm:w-auto">Crear empresa</Button>
+                                        </div>
+                                    </form>
+                                </Dialog.Panel>
+                            </Transition.Child>
+                        </div>
+                    </div>
+                </Dialog>
+            </Transition>
+
+            <Transition appear show={isEditCompanyModalOpen} as={Fragment}>
+                <Dialog as="div" className="relative z-50" onClose={() => setIsEditCompanyModalOpen(false)}>
+                    <Transition.Child as={Fragment} enter="ease-out duration-200" enterFrom="opacity-0" enterTo="opacity-100" leave="ease-in duration-150" leaveFrom="opacity-100" leaveTo="opacity-0">
+                        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm" />
+                    </Transition.Child>
+
+                    <div className="fixed inset-0 overflow-y-auto">
+                        <div className="flex min-h-full items-center justify-center p-4">
+                            <Transition.Child as={Fragment} enter="ease-out duration-200" enterFrom="opacity-0 scale-95" enterTo="opacity-100 scale-100" leave="ease-in duration-150" leaveFrom="opacity-100 scale-100" leaveTo="opacity-0 scale-95">
+                                <Dialog.Panel className="w-full max-w-2xl rounded-3xl border border-white/10 bg-[#0f172a] p-6 shadow-2xl">
+                                    <div className="mb-5 flex items-start justify-between gap-4">
+                                        <div>
+                                            <Dialog.Title className="text-2xl font-semibold text-white">Editar empresa</Dialog.Title>
+                                            <p className="mt-1 text-sm text-slate-400">Actualiza la información visible de la empresa.</p>
+                                        </div>
+                                        <button type="button" onClick={() => setIsEditCompanyModalOpen(false)} className="rounded-xl border border-white/10 p-2 text-slate-300 hover:bg-white/10" aria-label="Cerrar modal de edicion de empresa">
+                                            <X className="h-5 w-5" />
+                                        </button>
+                                    </div>
+
+                                    <form onSubmit={handleUpdateCompany} className="space-y-3">
+                                        <Input value={editCompanyName} onChange={(e) => { setEditCompanyName(e.target.value); if (editCompanyNameError) validateEditCompanyName(e.target.value); }} placeholder="Nombre legal de la empresa" label="Nombre legal" error={editCompanyNameError} />
+                                        <Input value={editCompanyNit} onChange={(e) => { setEditCompanyNit(e.target.value); if (editCompanyNitError) validateEditCompanyNit(e.target.value); }} placeholder="900123456-7" label="NIT" error={editCompanyNitError} />
+                                        <div>
+                                            <label className="mb-2 block text-sm font-medium text-slate-300">Logotipo</label>
+                                            <Input type="file" accept="image/png,image/jpeg,image/webp" onChange={handleEditLogoChange} error={editCompanyLogoError} />
+                                            {(editCompanyLogoUrl || editingCompany?.logoUrl) && <img src={editCompanyLogoUrl || editingCompany?.logoUrl} alt="Vista previa logo" className="mt-2 h-16 w-16 rounded-xl border border-white/20 object-contain bg-white/90 p-1" />}
+                                        </div>
+                                        <div>
+                                            <label className="mb-2 block text-sm font-medium text-slate-300">Descripcion (max 1000)</label>
+                                            <textarea value={editCompanyDescription} onChange={(e) => { setEditCompanyDescription(e.target.value); if (editCompanyDescriptionError) validateEditCompanyDescription(e.target.value); }} maxLength={1000} className="min-h-24 w-full rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-teal-500/50" />
+                                            <div className="mt-1 flex items-center justify-between text-xs text-slate-500">
+                                                <span>{editCompanyDescriptionError || 'Describe actividad, alcance y enfoque de la empresa.'}</span>
+                                                <span>{editCompanyDescription.length}/1000</span>
+                                            </div>
+                                        </div>
+                                        <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end">
+                                            <Button variant="outline" className="sm:w-auto" onClick={() => setIsEditCompanyModalOpen(false)} type="button">Cancelar</Button>
+                                            <Button type="submit" className="sm:w-auto" isLoading={companySaving}>Guardar cambios</Button>
                                         </div>
                                     </form>
                                 </Dialog.Panel>

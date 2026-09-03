@@ -181,6 +181,31 @@ export class CompanyRepository {
         });
     }
 
+    async update(id: string, data: { nombre?: string; nit?: string; logoUrl?: string | null; description?: string }): Promise<CompanyWithAdvisors | null> {
+        return db.empresa.update({
+            where: { id },
+            data,
+            include: {
+                users: {
+                    where: { role: 'ADVISOR' },
+                    select: {
+                        id: true,
+                        email: true,
+                        name: true,
+                        role: true,
+                        empresaId: true,
+                        createdAt: true,
+                        createdById: true,
+                    },
+                },
+            },
+        });
+    }
+
+    async delete(id: string) {
+        return db.empresa.delete({ where: { id } });
+    }
+
     async listAvailableAdvisors() {
         return db.user.findMany({
             where: {

@@ -36,6 +36,8 @@ export interface CreateCompanyData {
     description: string;
 }
 
+export type UpdateCompanyData = Partial<CreateCompanyData>;
+
 export interface CompanyListResponse {
     companies: Empresa[];
 }
@@ -113,6 +115,15 @@ export const UserService = {
     createCompany: async (companyData: CreateCompanyData) => {
         const { data } = await api.post<{ company: Empresa }>('/companies', companyData);
         return data.company;
+    },
+
+    updateCompany: async (companyId: string, companyData: UpdateCompanyData) => {
+        const { data } = await api.patch<{ company: Empresa }>(`/companies/${companyId}`, companyData);
+        return data.company;
+    },
+
+    deleteCompany: async (companyId: string) => {
+        await api.delete(`/companies/${companyId}`);
     },
 
     getAvailableAdvisors: async () => {

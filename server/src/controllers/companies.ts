@@ -166,3 +166,32 @@ export const unassignAdvisor = catchAsync(async (req: Request, res: Response) =>
 
     res.json({ advisor });
 });
+
+export const updateCompany = catchAsync(async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const company = await companyService.updateCompany(id, req.body);
+
+    await AuditLogService.log({
+        action: 'UPDATE',
+        entity: 'Company',
+        entityId: company.id,
+        userId: res.locals.user?.id,
+        details: { fields: Object.keys(req.body) },
+    });
+
+    res.json({ company });
+});
+
+export const deleteCompany = catchAsync(async (req: Request, res: Response) => {
+    const { id } = req.params;
+    await companyService.deleteCompany(id);
+
+    await AuditLogService.log({
+        action: 'DELETE',
+        entity: 'Company',
+        entityId: id,
+        userId: res.locals.user?.id,
+    });
+
+    res.status(204).send();
+});

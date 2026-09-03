@@ -180,6 +180,23 @@ export const createCompanySchema = registry.register('CreateCompany', z.object({
     }),
 }));
 
+export const updateCompanySchema = registry.register('UpdateCompany', z.object({
+    params: z.object({
+        id: z.string().openapi({ example: 'cuid-or-uuid' }),
+    }),
+    body: z.object({
+        nombre: z.string().min(1, 'Company legal name is required').max(180).optional(),
+        nit: z.string().trim().regex(/^[0-9]{8,15}(-[0-9])?$/, 'NIT format is invalid').optional(),
+        logoUrl: z.string().trim().startsWith('data:image/', 'Logo must be a valid image data URL').nullable().optional(),
+        description: z.string().trim().min(1, 'Description is required').max(1000).optional(),
+    }).refine((data) => Object.keys(data).length > 0, {
+        message: 'At least one company field is required',
+    }).refine((data) => !data.logoUrl || data.logoUrl.length <= 7_000_000, {
+        message: 'Logo exceeds 5MB limit',
+        path: ['logoUrl'],
+    }),
+}));
+
 export const assignAdvisorSchema = registry.register('AssignAdvisor', z.object({
     params: z.object({
         id: z.string().openapi({ example: 'cuid-or-uuid' }),

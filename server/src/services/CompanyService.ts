@@ -52,6 +52,53 @@ export class CompanyService {
         });
     }
 
+    async updateCompany(id: string, input: { nombre?: string; nit?: string; logoUrl?: string | null; description?: string }): Promise<CompanyWithAdvisors> {
+        const company = await this.getCompany(id);
+        const nombre = input.nombre?.trim();
+        const nit = input.nit?.trim();
+
+        if (nombre && nombre.toLowerCase() !== company.nombre.toLowerCase()) {
+            const existing = await this.companyRepository.findByName(nombre);
+            if (existing && existing.id !== id) {
+                throw new AppError('Company name already exists', 400);
+            }
+        }
+
+        if (nit && nit !== company.nit) {
+            const existingNit = await this.companyRepository.findByNit(nit);
+            if (existingNit && existingNit.id !== id) {
+                throw new AppError('Company NIT already exists', 400);
+            }
+        }
+
+        let persistedLogoUrl = input.logoUrl;
+        if (input.logoUrl?.startsWith('data:image/')) {
+            persistedLogoUrl = await persistImageDataUrl({
+                dataUrl: input.logoUrl,
+                companyName: nombre ?? company.nombre,
+                filePrefix: 'logo',
+            });
+        }
+
+        const updated = await this.companyRepository.update(id, {
+            ...(nombre ? { nombre } : {}),
+            ...(nit ? { nit } : {}),
+            ...(input.logoUrl !== undefined ? { logoUrl: persistedLogoUrl } : {}),
+            ...(input.description !== undefined ? { description: input.description.trim() } : {}),
+        });
+
+        if (!updated) {
+            throw new AppError('Company not found', 404);
+        }
+
+        return updated;
+    }
+
+    async deleteCompany(id: string) {
+        await this.getCompany(id);
+        return this.companyRepository.delete(id);
+    }
+
     async getAvailableAdvisors() {
         return this.companyRepository.listAvailableAdvisors();
     }
