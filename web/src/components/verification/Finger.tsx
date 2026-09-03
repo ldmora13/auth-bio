@@ -277,7 +277,6 @@ export function FingerprintSimulator({
   const scanStartRef = useRef<number>(0);
   const totalStartRef = useRef<number | null>(null);
   const lastResultRef = useRef<BiometricResult | null>(null);
-  const resultRef = useRef<BiometricResult | null>(null);
   const phaseRef = useRef<BiometricPhase>("idle");
   const activeIndexRef = useRef(0);
   const retriesRef = useRef(0);
@@ -319,12 +318,8 @@ export function FingerprintSimulator({
   }, [justCompletedHand]);
 
   useEffect(() => {
-    if (!justCompletedHand) {
-      setHandCountdown(null);
-      return;
-    }
+    if (!justCompletedHand) return;
 
-    setHandCountdown(Math.ceil(HAND_COMPLETE_HOLD_MS / 1000));
     const interval = window.setInterval(() => {
       setHandCountdown((current) => (current !== null && current > 1 ? current - 1 : current));
     }, 1000);
@@ -354,14 +349,12 @@ export function FingerprintSimulator({
     setCanContinue(false);
     totalStartRef.current = null;
     lastResultRef.current = null;
-    resultRef.current = null;
     retriesRef.current = 0;
     completedRef.current = [];
     fingerOnPadRef.current = false;
     canContinueRef.current = false;
     setCompletedHands(new Set());
     setJustCompletedHand(null);
-    setHandCountdown(null);
   }, [clearTimers, flowMode]);
 
 const advanceAfterFingerRemoval = useCallback(() => {
@@ -384,9 +377,12 @@ const advanceAfterFingerRemoval = useCallback(() => {
           : Math.round(SCAN_DURATION_MS * fingerSequence.length),
         selectedFingers: fingerSequence.map(({ hand, finger }) => ({ hand, finger })),
       };
-    resultRef.current = finalResult;
     setCanContinue(true);
     setPhase("success");
+      const completionTimeout = window.setTimeout(() => {
+        onComplete(finalResult);
+      }, RESULT_HOLD_MS);
+      timeoutsRef.current.push(completionTimeout);
     return;
   }
 
@@ -396,17 +392,18 @@ const advanceAfterFingerRemoval = useCallback(() => {
 
   lastResultRef.current = null;
   retriesRef.current = 0;
-  resultRef.current = null;
   setCanContinue(false);
   setProgress(0);
 
   if (handSwitch) {
     setCompletedHands((prev) => new Set(prev).add(currentHand));
+    setHandCountdown(Math.ceil(HAND_COMPLETE_HOLD_MS / 1000));
     setJustCompletedHand(currentHand);
     setPhase("idle");
 
     const holdTimeout = window.setTimeout(() => {
       setJustCompletedHand(null);
+      setHandCountdown(null);
       setHandTransitioning(true);
       const fadeOutTimeout = window.setTimeout(() => {
         setActiveIndex(nextIndex);
@@ -422,22 +419,15 @@ const advanceAfterFingerRemoval = useCallback(() => {
     setActiveIndex(nextIndex);
     setPhase("idle");
   }
-}, [clearTimers, fingerSequence]);
+}, [clearTimers, fingerSequence, onComplete]);
 
   const resetCurrentStep = useCallback(() => {
     clearTimers();
     lastResultRef.current = null;
-    resultRef.current = null;
     setCanContinue(false);
     setProgress(0);
     setPhase("idle");
   }, [clearTimers]);
-
-  const handleContinue = useCallback(() => {
-    if (!resultRef.current) return;
-
-    onComplete(resultRef.current);
-  }, [onComplete]);
 
   const startScan = useCallback(() => {
     if (disabled) return;
@@ -715,11 +705,6 @@ const advanceAfterFingerRemoval = useCallback(() => {
         </div>
       </div>
 
-      {canContinue && (
-        <button type="button" className={styles.continue} onClick={handleContinue}>
-          Continue
-        </button>
-      )}
     </div>
   );
 }
