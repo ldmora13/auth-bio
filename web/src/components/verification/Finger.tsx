@@ -187,9 +187,9 @@ function playPhaseSound(phase: BiometricPhase) {
 
     oscillator.start(start);
     oscillator.stop(end);
-  };
+    };
 
-  if (phase === "success") {
+    if (phase === "success") {
 
     playTone({
       frequency: 659.25, // E5
@@ -217,43 +217,43 @@ function playPhaseSound(phase: BiometricPhase) {
       pitchEnd: 1000,
     });
 
-  } else {
-    playTone({
-      frequency: 392.0, // G4
-      duration: 0.18,
-      volume: 0.09,
-      type: "triangle",
-      pitchEnd: 375,
-    });
+    } else {
+      playTone({
+        frequency: 392.0, // G4
+        duration: 0.18,
+        volume: 0.09,
+        type: "triangle",
+        pitchEnd: 375,
+      });
 
-    playTone({
-      frequency: 261.63, // C4
-      duration: 0.26,
-      volume: 0.075,
-      type: "triangle",
-      delay: 0.10,
-      pitchEnd: 245,
-    });
+      playTone({
+        frequency: 261.63, // C4
+        duration: 0.26,
+        volume: 0.075,
+        type: "triangle",
+        delay: 0.10,
+        pitchEnd: 245,
+      });
+    }
+
+    // Fade out general
+    masterGain.gain.setValueAtTime(0.0001, now);
+    masterGain.gain.exponentialRampToValueAtTime(
+      1,
+      now + 0.01
+    );
+
+    masterGain.gain.exponentialRampToValueAtTime(
+      0.0001,
+      now + (phase === "success" ? 0.48 : 0.38)
+    );
+
+    const totalDuration = phase === "success" ? 0.55 : 0.45;
+
+    window.setTimeout(() => {
+      void audioContext.close();
+    }, totalDuration * 1000);
   }
-
-  // Fade out general
-  masterGain.gain.setValueAtTime(0.0001, now);
-  masterGain.gain.exponentialRampToValueAtTime(
-    1,
-    now + 0.01
-  );
-
-  masterGain.gain.exponentialRampToValueAtTime(
-    0.0001,
-    now + (phase === "success" ? 0.48 : 0.38)
-  );
-
-  const totalDuration = phase === "success" ? 0.55 : 0.45;
-
-  window.setTimeout(() => {
-    void audioContext.close();
-  }, totalDuration * 1000);
-}
 
 export type FingerprintSimulatorProps = BaseBiometricProps & {
   flowMode?: FingerFlowMode;
@@ -288,6 +288,7 @@ export function FingerprintSimulator({
 
   const [completedHands, setCompletedHands] = useState<Set<"left" | "right">>(new Set());
   const [justCompletedHand, setJustCompletedHand] = useState<"left" | "right" | null>(null);
+  const justCompletedHandRef = useRef<"left" | "right" | null>(null);
 
   const fingerSequence = flowMode === "quick-verification"
     ? verificationSequenceRef.current
@@ -299,15 +300,22 @@ export function FingerprintSimulator({
     }
     phaseRef.current = phase;
   }, [phase]);
+
   useEffect(() => {
     activeIndexRef.current = activeIndex;
   }, [activeIndex]);
+
   useEffect(() => {
     completedRef.current = completed;
   }, [completed]);
+
   useEffect(() => {
     canContinueRef.current = canContinue;
   }, [canContinue]);
+
+  useEffect(() => {
+    justCompletedHandRef.current = justCompletedHand;
+  }, [justCompletedHand]);
 
   const clearTimers = useCallback(() => {
     if (rafRef.current !== null) {
@@ -419,6 +427,7 @@ const advanceAfterFingerRemoval = useCallback(() => {
     if (disabled) return;
     if (phaseRef.current === "scanning" || phaseRef.current === "success") return;
     if (handTransitioning) return;
+    if (justCompletedHandRef.current) return;
 
     clearTimers();
     if (totalStartRef.current === null) totalStartRef.current = performance.now();
@@ -477,7 +486,7 @@ const advanceAfterFingerRemoval = useCallback(() => {
   }, [advanceAfterFingerRemoval, disabled, handTransitioning, resetCurrentStep, successRate]);
 
   const handleFingerOnPad = useCallback(() => {
-    if (disabled || handTransitioning) return;
+    if (disabled || handTransitioning || justCompletedHandRef.current) return;
     fingerOnPadRef.current = true;
 
     if (phaseRef.current === "idle" || phaseRef.current === "error") {
@@ -626,7 +635,7 @@ const advanceAfterFingerRemoval = useCallback(() => {
           data-phase={phase}
           role="button"
           tabIndex={disabled ? -1 : 0}
-          aria-disabled={disabled || handTransitioning}
+          aria-disabled={disabled || handTransitioning || !!justCompletedHand}
           aria-label="Panel de lectura de huella dactilar"
           onMouseEnter={handleFingerOnPad}
           onMouseLeave={handleFingerOffPad}
