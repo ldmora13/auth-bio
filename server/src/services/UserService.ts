@@ -293,7 +293,16 @@ export class UserService {
     }
 
     async startBiometricEnrollmentAttempt(token: string): Promise<UserWithEmpresa> {
-        const user = await this.accessBiometricEnrollment(token);
+        return this.accessBiometricEnrollment(token);
+    }
+
+    async consumeBiometricEnrollmentAttempt(token: string): Promise<UserWithEmpresa> {
+        const user = await this.resolveBiometricEnrollmentToken(token);
+
+        if (user.biometricEnrollmentMaxAttempts !== null && user.biometricEnrollmentAttempts >= user.biometricEnrollmentMaxAttempts) {
+            throw new AppError('The maximum number of biometric attempts for this link has been reached', 403);
+        }
+
         const updated = await db.user.updateMany({
             where: {
                 id: user.id,
@@ -304,7 +313,7 @@ export class UserService {
         });
 
         if (updated.count !== 1) {
-            throw new AppError('The biometric attempt could not be started. Please open the link again.', 409);
+            throw new AppError('The biometric attempt could not be completed. Please try again.', 409);
         }
 
         return this.getUserById(user.id);
@@ -332,9 +341,6 @@ export class UserService {
         if (currentUser.biometricEnrollmentTokenHash) {
             if (!enrollmentToken || currentUser.biometricEnrollmentTokenHash !== hashEnrollmentToken(enrollmentToken)) {
                 throw new AppError('This biometric access link is no longer valid', 403);
-            }
-            if (currentUser.biometricEnrollmentAttempts < 1) {
-                throw new AppError('Start a biometric attempt from the access link before completing the enrollment', 403);
             }
         }
 

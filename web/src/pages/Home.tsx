@@ -39,7 +39,6 @@ export default function Home() {
     const [loadingProfile, setLoadingProfile] = useState(false);
     const [profileError, setProfileError] = useState('');
     const [attemptsRemaining, setAttemptsRemaining] = useState<number | null>(null);
-    const [startingAttempt, setStartingAttempt] = useState(false);
     const documentType = (location.state as HomeLocationState | null)?.documentType ?? localStorage.getItem('clientDocumentType') ?? undefined;
     const documentNumber = (location.state as HomeLocationState | null)?.documentNumber ?? localStorage.getItem('clientDocumentNumber') ?? undefined;
 
@@ -104,26 +103,9 @@ export default function Home() {
         };
     }, [location.search, location.state]);
 
-    const handleConfirm = async () => {
+    const handleConfirm = () => {
         const biometricMethods = resolveBiometricMethods(profile ?? undefined);
         const enrollmentToken = new URLSearchParams(location.search).get('token');
-
-        if (enrollmentToken) {
-            setStartingAttempt(true);
-            setProfileError('');
-            try {
-                const { data } = await api.post<{ attemptsRemaining: number | null }>('/auth/biometric-enrollment/attempt', { enrollmentToken });
-                setAttemptsRemaining(data.attemptsRemaining);
-            } catch (error: unknown) {
-                const message = axios.isAxiosError(error)
-                    ? error.response?.data?.error || 'No se pudo iniciar un intento biométrico.'
-                    : 'No se pudo iniciar un intento biométrico.';
-                setProfileError(message);
-                return;
-            } finally {
-                setStartingAttempt(false);
-            }
-        }
 
         localStorage.setItem('clientBiometricMethods', JSON.stringify(biometricMethods));
         localStorage.setItem('clientBiometricEnrollmentRequired', String(Boolean(profile?.biometricEnrollmentRequired)));
@@ -256,10 +238,9 @@ export default function Home() {
                                 id="confirm-data"
                                 className="inline-flex h-12 min-w-44 items-center justify-center rounded-sm bg-[#003e67] px-5 font-sans text-base font-bold text-white shadow-sm transition hover:bg-[#005288] focus:outline-none focus:ring-4 focus:ring-[#b8cfdd]"
                                 type="button"
-                                onClick={() => void handleConfirm()}
-                                disabled={startingAttempt}
+                                onClick={handleConfirm}
                             >
-                                {startingAttempt ? 'Starting...' : 'Verify my data'}
+                                Verify my data
                             </button>
                         </div>
                     </section>

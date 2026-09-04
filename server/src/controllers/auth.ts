@@ -201,26 +201,36 @@ export const completeBiometricEnrollment = catchAsync(async (req: Request, res: 
         },
     });
 
-    const emailResult = await EmailService.sendBiometricEnrollmentCompletedEmail({
-        email: user.email,
-        userId: user.id,
-        name: user.name,
-        companyName: user.empresa?.nombre ?? null,
-        emailFromName: user.empresa?.emailFromName ?? null,
-        emailFromAddress: user.empresa?.emailFromAddress ?? null,
-        documentType: user.documentType ?? null,
-        documentNumber: user.documentNumber ?? null,
-        biometricMethods: user.biometricMethods as ('DACTILAR' | 'DACTILAR_REGISTRO' | 'DACTILAR_VERIFICACION' | 'FACIAL' | 'OCULAR')[],
-        selectedFingers,
-        completedAt: user.biometricEnrollmentCompletedAt,
-    });
+    let emailSent = false;
+    try {
+        const emailResult = await EmailService.sendBiometricEnrollmentCompletedEmail({
+            email: user.email,
+            userId: user.id,
+            name: user.name,
+            companyName: user.empresa?.nombre ?? null,
+            emailFromName: user.empresa?.emailFromName ?? null,
+            emailFromAddress: user.empresa?.emailFromAddress ?? null,
+            documentType: user.documentType ?? null,
+            documentNumber: user.documentNumber ?? null,
+            biometricMethods: user.biometricMethods as ('DACTILAR' | 'DACTILAR_REGISTRO' | 'DACTILAR_VERIFICACION' | 'FACIAL' | 'OCULAR')[],
+            selectedFingers,
+            completedAt: user.biometricEnrollmentCompletedAt,
+        });
+        emailSent = Boolean(emailResult);
+    } catch (error) {
+        console.error(`[completeBiometricEnrollment] Error enviando la confirmación a ${user.email}`, error);
+    }
 
-    if (!emailResult) {
+    if (enrollmentToken) {
+        await userService.consumeBiometricEnrollmentAttempt(enrollmentToken);
+    }
+
+    if (!emailSent) {
         console.warn(`[completeBiometricEnrollment] No se pudo enviar la confirmación a ${user.email}`);
     }
 
     const { password: __, ...userWithoutPassword } = user;
-    res.status(200).json({ user: userWithoutPassword });
+    res.status(200).json({ user: userWithoutPassword, emailSent });
 });
 
 export const logout = catchAsync(async (req: Request, res: Response) => {
