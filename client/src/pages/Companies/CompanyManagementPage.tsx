@@ -79,6 +79,7 @@ const BIOMETRIC_REQUEST_OPTIONS: Array<{ value: BiometricMethod; label: string; 
     },
 ];
 const FINGERPRINT_FLOW_METHODS: BiometricMethod[] = ['DACTILAR_REGISTRO', 'DACTILAR_VERIFICACION'];
+const DEFAULT_BIOMETRIC_REQUEST_METHODS: BiometricMethod[] = ['DACTILAR_REGISTRO', 'FACIAL', 'OCULAR'];
 
 async function fileToDataUrl(file: File): Promise<string> {
     return new Promise((resolve, reject) => {
@@ -190,8 +191,8 @@ export default function CompanyManagementPage() {
     const [clientSaving, setClientSaving] = useState(false);
     const [biometricModalOpen, setBiometricModalOpen] = useState(false);
     const [biometricRequesting, setBiometricRequesting] = useState(false);
-    const [biometricRequestMethods, setBiometricRequestMethods] = useState<BiometricMethod[]>(['DACTILAR_REGISTRO']);
-    const [biometricMaxAttempts, setBiometricMaxAttempts] = useState('');
+    const [biometricRequestMethods, setBiometricRequestMethods] = useState<BiometricMethod[]>(DEFAULT_BIOMETRIC_REQUEST_METHODS);
+    const [biometricMaxAttempts, setBiometricMaxAttempts] = useState('2');
     const [clientSearch, setClientSearch] = useState('');
     const [clientSort, setClientSort] = useState<ClientSort>('newest');
     const [clientPage, setClientPage] = useState(1);
@@ -697,20 +698,8 @@ export default function CompanyManagementPage() {
 
     function openBiometricRequestModal(client: User) {
         setSelectedClient(client);
-        const preferredMethods = client.biometricMethods?.length
-            ? client.biometricMethods
-            : client.biometricType
-                ? [client.biometricType]
-                : ['DACTILAR_REGISTRO'];
-
-        const normalizedMethods = preferredMethods.map((method) => method === 'DACTILAR' ? 'DACTILAR_REGISTRO' : method);
-        const fingerprintFlow = normalizedMethods.find((method) => FINGERPRINT_FLOW_METHODS.includes(method as BiometricMethod));
-        const methodsWithoutFingerprint = normalizedMethods.filter((method) => !FINGERPRINT_FLOW_METHODS.includes(method as BiometricMethod));
-        setBiometricRequestMethods([
-            ...(fingerprintFlow ? [fingerprintFlow] : []),
-            ...methodsWithoutFingerprint,
-        ] as BiometricMethod[]);
-        setBiometricMaxAttempts('');
+        setBiometricRequestMethods(DEFAULT_BIOMETRIC_REQUEST_METHODS);
+        setBiometricMaxAttempts('2');
         setBiometricModalOpen(true);
     }
 
