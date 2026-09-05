@@ -22,7 +22,7 @@ export class CompanyService {
         return company;
     }
 
-    async createCompany(input: { nombre: string; nit: string; logoUrl?: string | null; description?: string | null; emailFromName: string; emailFromAddress: string }): Promise<CompanyWithAdvisors> {
+    async createCompany(input: { nombre: string; nit?: string | null; logoUrl?: string | null; description?: string | null; emailFromName: string; emailFromAddress: string }): Promise<CompanyWithAdvisors> {
         const { nombre, nit, logoUrl, description, emailFromName, emailFromAddress } = input;
 
         const existing = await this.companyRepository.findByName(nombre);
@@ -30,7 +30,7 @@ export class CompanyService {
             throw new AppError('Company name already exists', 400);
         }
 
-        const existingNit = await this.companyRepository.findByNit(nit);
+        const existingNit = nit ? await this.companyRepository.findByNit(nit) : null;
         if (existingNit) {
             throw new AppError('Company NIT already exists', 400);
         }

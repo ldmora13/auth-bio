@@ -7,7 +7,7 @@ export interface CreateUserData {
     email: string;
     password?: string;
     name: string;
-    address: string;
+    address?: string;
     phone?: string;
     birthDate?: string;
     age?: number;
@@ -31,9 +31,9 @@ export interface CreateUserData {
 
 export interface CreateCompanyData {
     nombre: string;
-    nit: string;
-    logoUrl: string;
-    description: string;
+    nit?: string;
+    logoUrl?: string;
+    description?: string;
     emailFromName: string;
     emailFromAddress: string;
 }

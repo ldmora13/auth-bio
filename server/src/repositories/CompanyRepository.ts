@@ -156,7 +156,7 @@ export class CompanyRepository {
         return db.empresa.findUnique({ where: { nit } });
     }
 
-    async create(data: { nombre: string; nit: string; logoUrl?: string | null; description?: string | null; emailFromName?: string | null; emailFromAddress?: string | null }): Promise<CompanyWithAdvisors> {
+    async create(data: { nombre: string; nit?: string | null; logoUrl?: string | null; description?: string | null; emailFromName?: string | null; emailFromAddress?: string | null }): Promise<CompanyWithAdvisors> {
         return db.empresa.create({
             data: {
                 nombre: data.nombre,

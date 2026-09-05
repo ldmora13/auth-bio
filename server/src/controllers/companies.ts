@@ -100,13 +100,9 @@ export const createCompany = catchAsync(async (req: Request, res: Response) => {
         throw new AppError('Company name is required', 400);
     }
 
-    if (!nit?.trim()) {
-        throw new AppError('Company NIT is required', 400);
-    }
-
     const company = await companyService.createCompany({
         nombre: nombre.trim(),
-        nit: nit.trim(),
+        nit: nit?.trim() || null,
         logoUrl: logoUrl?.trim(),
         description: description?.trim(),
         emailFromName: emailFromName?.trim(),

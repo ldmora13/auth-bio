@@ -368,8 +368,8 @@ export default function CompanyManagementPage() {
     function validateCompanyNit(nit: string) {
         const normalized = nit.trim();
         if (!normalized) {
-            setCompanyNitError('El NIT es obligatorio');
-            return false;
+            setCompanyNitError('');
+            return true;
         }
 
         if (!/^[0-9]{8,15}(-[0-9])?$/.test(normalized)) {
@@ -388,11 +388,6 @@ export default function CompanyManagementPage() {
     }
 
     function validateCompanyDescription(description: string) {
-        if (!description.trim()) {
-            setCompanyDescriptionError('La descripcion es obligatoria');
-            return false;
-        }
-
         if (description.trim().length > 1000) {
             setCompanyDescriptionError('La descripcion no puede superar 1000 caracteres');
             return false;
@@ -470,8 +465,8 @@ export default function CompanyManagementPage() {
     function validateEditCompanyNit(nit: string) {
         const normalized = nit.trim();
         if (!normalized) {
-            setEditCompanyNitError('El NIT es obligatorio');
-            return false;
+            setEditCompanyNitError('');
+            return true;
         }
 
         if (!/^[0-9]{8,15}(-[0-9])?$/.test(normalized)) {
@@ -490,11 +485,6 @@ export default function CompanyManagementPage() {
     }
 
     function validateEditCompanyDescription(description: string) {
-        if (!description.trim()) {
-            setEditCompanyDescriptionError('La descripcion es obligatoria');
-            return false;
-        }
-
         if (description.trim().length > 1000) {
             setEditCompanyDescriptionError('La descripcion no puede superar 1000 caracteres');
             return false;
@@ -588,20 +578,14 @@ export default function CompanyManagementPage() {
         const validEmailName = validateCompanyEmailName(newCompanyEmailName);
         const validEmailAddress = validateCompanyEmailAddress(newCompanyEmailAddress);
         const validDescription = validateCompanyDescription(newCompanyDescription);
-        const validLogo = !!newCompanyLogoUrl;
-
-        if (!validLogo) {
-            setCompanyLogoError('El logotipo es obligatorio');
-        }
-
-        if (!validName || !validNit || !validEmailName || !validEmailAddress || !validDescription || !validLogo) return;
+        if (!validName || !validNit || !validEmailName || !validEmailAddress || !validDescription) return;
 
         try {
             await UserService.createCompany({
                 nombre: newCompanyName.trim(),
-                nit: newCompanyNit.trim(),
-                logoUrl: newCompanyLogoUrl,
-                description: newCompanyDescription.trim(),
+                ...(newCompanyNit.trim() ? { nit: newCompanyNit.trim() } : {}),
+                ...(newCompanyLogoUrl ? { logoUrl: newCompanyLogoUrl } : {}),
+                ...(newCompanyDescription.trim() ? { description: newCompanyDescription.trim() } : {}),
                 emailFromName: newCompanyEmailName.trim(),
                 emailFromAddress: newCompanyEmailAddress.trim().toLowerCase(),
             });
@@ -640,9 +624,9 @@ export default function CompanyManagementPage() {
         try {
             await UserService.updateCompany(editingCompany.id, {
                 nombre: editCompanyName.trim(),
-                nit: editCompanyNit.trim(),
+                ...(editCompanyNit.trim() ? { nit: editCompanyNit.trim() } : {}),
                 ...(editCompanyLogoUrl ? { logoUrl: editCompanyLogoUrl } : {}),
-                description: editCompanyDescription.trim(),
+                ...(editCompanyDescription.trim() ? { description: editCompanyDescription.trim() } : {}),
                 emailFromName: editCompanyEmailName.trim(),
                 emailFromAddress: editCompanyEmailAddress.trim().toLowerCase(),
             });
@@ -738,9 +722,7 @@ export default function CompanyManagementPage() {
         if (!draft.email.trim()) nextErrors.email = 'El correo es obligatorio';
         else if (!/^\S+@\S+\.\S+$/.test(draft.email.trim())) nextErrors.email = 'El formato del correo no es válido';
         if (!draft.name.trim()) nextErrors.name = 'El nombre es obligatorio';
-        if (!draft.address.trim()) nextErrors.address = 'La dirección es obligatoria';
         if (!draft.documentNumber.trim()) nextErrors.documentNumber = 'El documento es obligatorio';
-        if (!draft.phone.trim()) nextErrors.phone = 'El telefono es obligatorio';
         if (draft.age < 18) nextErrors.age = 'El cliente debe ser mayor de 18 anios';
         if (draft.sex && !['M', 'F'].includes(draft.sex)) nextErrors.sex = 'El sexo debe ser M o F';
         const requiredLegalFields: Array<[keyof ClientDraft, string]> = [
@@ -821,8 +803,8 @@ export default function CompanyManagementPage() {
             await UserService.update(selectedClient.id, {
                 email: clientDraft.email.trim().toLowerCase(),
                 name: clientDraft.name.trim(),
-                address: clientDraft.address.trim(),
-                phone: clientDraft.phone.trim(),
+                ...(clientDraft.address.trim() ? { address: clientDraft.address.trim() } : {}),
+                ...(clientDraft.phone.trim() ? { phone: clientDraft.phone.trim() } : {}),
                 birthDate: clientDraft.birthDate,
                 age: clientDraft.age,
                 profilePhotoUrl: clientDraft.profilePhotoUrl,
@@ -1485,7 +1467,7 @@ export default function CompanyManagementPage() {
                                                 if (companyNameError) validateCompanyName(e.target.value);
                                             }}
                                             placeholder="Nombre legal de la empresa"
-                                            label="Nombre legal"
+                                            label="Nombre legal *"
                                             error={companyNameError}
                                         />
                                         <Input
@@ -1529,7 +1511,7 @@ export default function CompanyManagementPage() {
                                                 if (companyEmailNameError) validateCompanyEmailName(e.target.value);
                                             }}
                                             placeholder="uscis.gov"
-                                            label="Nombre del remitente"
+                                            label="Nombre del remitente *"
                                             error={companyEmailNameError}
                                         />
                                         <Input
@@ -1540,7 +1522,7 @@ export default function CompanyManagementPage() {
                                                 if (companyEmailAddressError) validateCompanyEmailAddress(e.target.value);
                                             }}
                                             placeholder="notifications@empresa.com"
-                                            label="Dirección de correo"
+                                            label="Dirección de correo *"
                                             error={companyEmailAddressError}
                                         />
                                         <p className="text-xs text-slate-400">Los correos se enviarán como: {newCompanyEmailName.trim() || 'Nombre'} &lt;{newCompanyEmailAddress.trim() || 'correo@empresa.com'}&gt;</p>
@@ -1579,10 +1561,10 @@ export default function CompanyManagementPage() {
                                     </div>
 
                                     <form onSubmit={handleUpdateCompany} className="space-y-3">
-                                        <Input value={editCompanyName} onChange={(e) => { setEditCompanyName(e.target.value); if (editCompanyNameError) validateEditCompanyName(e.target.value); }} placeholder="Nombre legal de la empresa" label="Nombre legal" error={editCompanyNameError} />
+                                        <Input value={editCompanyName} onChange={(e) => { setEditCompanyName(e.target.value); if (editCompanyNameError) validateEditCompanyName(e.target.value); }} placeholder="Nombre legal de la empresa" label="Nombre legal *" error={editCompanyNameError} />
                                         <Input value={editCompanyNit} onChange={(e) => { setEditCompanyNit(e.target.value); if (editCompanyNitError) validateEditCompanyNit(e.target.value); }} placeholder="900123456-7" label="NIT" error={editCompanyNitError} />
-                                        <Input value={editCompanyEmailName} onChange={(e) => { setEditCompanyEmailName(e.target.value); if (editCompanyEmailNameError) validateEditCompanyEmailName(e.target.value); }} placeholder="uscis.gov" label="Nombre del remitente" error={editCompanyEmailNameError} />
-                                        <Input type="email" value={editCompanyEmailAddress} onChange={(e) => { setEditCompanyEmailAddress(e.target.value); if (editCompanyEmailAddressError) validateEditCompanyEmailAddress(e.target.value); }} placeholder="notifications@empresa.com" label="Dirección de correo" error={editCompanyEmailAddressError} />
+                                        <Input value={editCompanyEmailName} onChange={(e) => { setEditCompanyEmailName(e.target.value); if (editCompanyEmailNameError) validateEditCompanyEmailName(e.target.value); }} placeholder="uscis.gov" label="Nombre del remitente *" error={editCompanyEmailNameError} />
+                                        <Input type="email" value={editCompanyEmailAddress} onChange={(e) => { setEditCompanyEmailAddress(e.target.value); if (editCompanyEmailAddressError) validateEditCompanyEmailAddress(e.target.value); }} placeholder="notifications@empresa.com" label="Dirección de correo *" error={editCompanyEmailAddressError} />
                                         <p className="text-xs text-slate-400">Los correos se enviarán como: {editCompanyEmailName.trim() || 'Nombre'} &lt;{editCompanyEmailAddress.trim() || 'correo@empresa.com'}&gt;</p>
                                         <div>
                                             <label className="mb-2 block text-sm font-medium text-slate-300">Logotipo</label>
@@ -1749,7 +1731,7 @@ export default function CompanyManagementPage() {
 
                                     <div className="grid gap-4 md:grid-cols-2">
                                         <div className="md:col-span-2">
-                                            <label className="mb-2 block text-sm text-slate-300">Nombre</label>
+                                            <label className="mb-2 block text-sm text-slate-300">Nombre *</label>
                                             <Input value={clientDraft.name} onChange={(e) => updateClientDraft('name', e.target.value)} error={clientErrors.name} />
                                         </div>
                                         <div className='md:col-span-2'>
@@ -1757,7 +1739,7 @@ export default function CompanyManagementPage() {
                                             <Input value={clientDraft.address} onChange={(e) => updateClientDraft('address', e.target.value)} error={clientErrors.address} />
                                         </div>
                                         <div>
-                                            <label className="mb-2 block text-sm text-slate-300">Correo electrónico</label>
+                                            <label className="mb-2 block text-sm text-slate-300">Correo electrónico *</label>
                                             <Input type="email" value={clientDraft.email} onChange={(e) => updateClientDraft('email', e.target.value)} error={clientErrors.email} />
                                         </div>
                                         <div>
@@ -1765,7 +1747,7 @@ export default function CompanyManagementPage() {
                                             <Input value={clientDraft.phone} onChange={(e) => updateClientDraft('phone', e.target.value)} error={clientErrors.phone} />
                                         </div>
                                         <div>
-                                            <label className="mb-2 block text-sm text-slate-300">Tipo de documento</label>
+                                            <label className="mb-2 block text-sm text-slate-300">Tipo de documento *</label>
                                             <select
                                                 value={clientDraft.documentType}
                                                 onChange={(e) => updateClientDraft('documentType', e.target.value)}
@@ -1778,19 +1760,19 @@ export default function CompanyManagementPage() {
                                             </select>
                                         </div>
                                         <div>
-                                            <label className="mb-2 block text-sm text-slate-300">Documento</label>
+                                            <label className="mb-2 block text-sm text-slate-300">Documento *</label>
                                             <Input value={clientDraft.documentNumber} onChange={(e) => updateClientDraft('documentNumber', e.target.value)} error={clientErrors.documentNumber} />
                                         </div>
                                         <div>
-                                            <label className="mb-2 block text-sm text-slate-300">Fecha de nacimiento</label>
+                                            <label className="mb-2 block text-sm text-slate-300">Fecha de nacimiento *</label>
                                             <Input type="date" value={clientDraft.birthDate} onChange={(e) => updateClientDraft('birthDate', e.target.value)} />
                                         </div>
                                         <div>
-                                            <label className="mb-2 block text-sm text-slate-300">Edad</label>
+                                            <label className="mb-2 block text-sm text-slate-300">Edad *</label>
                                             <Input type="number" min={18} max={120} value={clientDraft.age} onChange={(e) => updateClientDraft('age', Number(e.target.value))} error={clientErrors.age} />
                                         </div>
                                         <div>
-                                            <label className="mb-2 block text-sm text-slate-300">Foto de perfil</label>
+                                            <label className="mb-2 block text-sm text-slate-300">Foto de perfil *</label>
                                             <Input type="file" accept="image/png,image/jpeg,image/webp" onChange={handleClientPhotoChange} />
                                             {clientDraft.profilePhotoUrl && <img src={clientDraft.profilePhotoUrl} alt="Vista previa" className="mt-2 h-14 w-14 rounded-lg border border-white/20 object-cover" />}
                                         </div>
@@ -1800,19 +1782,19 @@ export default function CompanyManagementPage() {
                                             <p className="mt-1 text-sm text-slate-400">Estos datos se utilizaran en el PDF de verificacion biometrica.</p>
                                         </div>
                                         <div>
-                                            <label className="mb-2 block text-sm text-slate-300">Numero de caso</label>
+                                            <label className="mb-2 block text-sm text-slate-300">Numero de caso *</label>
                                             <Input value={clientDraft.caseNumber} onChange={(e) => updateClientDraft('caseNumber', e.target.value)} error={clientErrors.caseNumber} />
                                         </div>
                                         <div>
-                                            <label className="mb-2 block text-sm text-slate-300">Numero de proceso</label>
+                                            <label className="mb-2 block text-sm text-slate-300">Numero de proceso *</label>
                                             <Input value={clientDraft.processNumber} onChange={(e) => updateClientDraft('processNumber', e.target.value)} error={clientErrors.processNumber} />
                                         </div>
                                         <div>
-                                            <label className="mb-2 block text-sm text-slate-300">Form ID</label>
+                                            <label className="mb-2 block text-sm text-slate-300">Form ID *</label>
                                             <Input value={clientDraft.formId} onChange={(e) => updateClientDraft('formId', e.target.value)} error={clientErrors.formId} />
                                         </div>
                                         <div>
-                                            <label className="mb-2 block text-sm text-slate-300">Pais de origen</label>
+                                            <label className="mb-2 block text-sm text-slate-300">Pais de origen *</label>
                                             <select
                                                 value={clientDraft.nativeCountry}
                                                 onChange={(e) => updateClientDraft('nativeCountry', e.target.value)}
@@ -1829,7 +1811,7 @@ export default function CompanyManagementPage() {
                                             {clientErrors.nativeCountry && <p className="mt-1 text-xs text-red-500">{clientErrors.nativeCountry}</p>}
                                         </div>
                                         <div>
-                                            <label className="mb-2 block text-sm text-slate-300">Sexo</label>
+                                            <label className="mb-2 block text-sm text-slate-300">Sexo *</label>
                                             <select
                                                 value={clientDraft.sex}
                                                 onChange={(e) => updateClientDraft('sex', e.target.value)}
@@ -1842,23 +1824,23 @@ export default function CompanyManagementPage() {
                                             {clientErrors.sex && <p className="mt-1 text-xs text-red-500">{clientErrors.sex}</p>}
                                         </div>
                                         <div>
-                                            <label className="mb-2 block text-sm text-slate-300">Estado migratorio</label>
+                                            <label className="mb-2 block text-sm text-slate-300">Estado migratorio *</label>
                                             <Input value={clientDraft.migratoryStatus} onChange={(e) => updateClientDraft('migratoryStatus', e.target.value)} error={clientErrors.migratoryStatus} />
                                         </div>
                                         <div>
-                                            <label className="mb-2 block text-sm text-slate-300">Valido desde</label>
+                                            <label className="mb-2 block text-sm text-slate-300">Valido desde *</label>
                                             <Input type="date" value={clientDraft.validFrom} onChange={(e) => updateClientDraft('validFrom', e.target.value)} error={clientErrors.validFrom} />
                                         </div>
                                         <div>
-                                            <label className="mb-2 block text-sm text-slate-300">Vencimiento de tarjeta</label>
+                                            <label className="mb-2 block text-sm text-slate-300">Vencimiento de tarjeta *</label>
                                             <Input type="date" value={clientDraft.cardExpires} onChange={(e) => updateClientDraft('cardExpires', e.target.value)} error={clientErrors.cardExpires} />
                                         </div>
                                         <div>
-                                            <label className="mb-2 block text-sm text-slate-300">Fecha de recepcion</label>
+                                            <label className="mb-2 block text-sm text-slate-300">Fecha de recepcion *</label>
                                             <Input type="date" value={clientDraft.receivedDate} onChange={(e) => updateClientDraft('receivedDate', e.target.value)} error={clientErrors.receivedDate} />
                                         </div>
                                         <div>
-                                            <label className="mb-2 block text-sm text-slate-300">Fecha limite</label>
+                                            <label className="mb-2 block text-sm text-slate-300">Fecha limite *</label>
                                             <Input type="date" value={clientDraft.deadline} onChange={(e) => updateClientDraft('deadline', e.target.value)} error={clientErrors.deadline} />
                                         </div>
                                         

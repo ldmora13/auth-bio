@@ -36,7 +36,7 @@ enum BiometricMethod {
 model Empresa {
   id               String   @id @default(uuid())
   nombre           String   @unique
-  nit              String   @unique
+  nit              String?  @unique
   logoUrl          String?
   description      String?
   emailFromName    String?

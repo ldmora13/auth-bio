@@ -145,7 +145,6 @@ export default function CreateUserPage() {
 
         if (!formData.name.trim()) nextErrors.name = 'El nombre es obligatorio';
         if (!formData.email.trim()) nextErrors.email = 'El correo es obligatorio';
-        if (!formData.address.trim()) nextErrors.address = 'La direccion es obligatoria';
         if (!formData.documentNumber.trim()) nextErrors.documentNumber = 'El documento es obligatorio';
 
         if (formData.role === 'ADVISOR') {
@@ -158,7 +157,6 @@ export default function CreateUserPage() {
         }
 
         if (formData.role === 'CLIENT') {
-            if (!formData.phone?.trim()) nextErrors.phone = 'El telefono es obligatorio';
             if (!formData.birthDate) nextErrors.birthDate = 'La fecha de nacimiento es obligatoria';
             if (!formData.age || Number(formData.age) < 18) nextErrors.age = 'El cliente debe ser mayor de 18 anios';
             if (!formData.profilePhotoUrl) nextErrors.profilePhotoUrl = 'La foto de perfil es obligatoria';
@@ -263,7 +261,7 @@ export default function CreateUserPage() {
         try {
             const payload: CreateUserData = {
                 ...formData,
-                address: formData.address.trim(),
+                address: formData.address?.trim() || undefined,
                 email: formData.email.trim(),
                 name: formData.name.trim(),
                 documentNumber: formData.documentNumber.trim(),
@@ -321,7 +319,7 @@ export default function CreateUserPage() {
 
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                         <div className="md:col-span-2">
-                            <label className="mb-2 block text-sm font-medium text-slate-300">Nombre completo</label>
+                            <label className="mb-2 block text-sm font-medium text-slate-300">Nombre completo *</label>
                             <Input value={formData.name} onChange={(e) => setField('name', e.target.value)} error={errors.name} />
                         </div>
 
@@ -331,7 +329,7 @@ export default function CreateUserPage() {
                         </div>
 
                         <div>
-                            <label className="mb-2 block text-sm font-medium text-slate-300">Correo electronico</label>
+                            <label className="mb-2 block text-sm font-medium text-slate-300">Correo electronico *</label>
                             <Input type="email" value={formData.email} onChange={(e) => setField('email', e.target.value)} error={errors.email} />
                         </div>
 
@@ -355,7 +353,7 @@ export default function CreateUserPage() {
                                 </div>
 
                                 <div>
-                                    <label className="mb-2 block text-sm font-medium text-slate-300">Clave temporal</label>
+                                    <label className="mb-2 block text-sm font-medium text-slate-300">Clave temporal *</label>
                                     <Input type="password" value={formData.password ?? ''} onChange={(e) => setField('password', e.target.value)} error={errors.password} />
                                 </div>
                             </>
@@ -368,16 +366,16 @@ export default function CreateUserPage() {
                                     <Input value={formData.phone ?? ''} onChange={(e) => setField('phone', e.target.value)} error={errors.phone} />
                                 </div>
                                 <div>
-                                    <label className="mb-2 block text-sm font-medium text-slate-300">Fecha de nacimiento</label>
+                                    <label className="mb-2 block text-sm font-medium text-slate-300">Fecha de nacimiento *</label>
                                     <Input type="date" value={formData.birthDate ?? ''} onChange={(e) => handleBirthDateChange(e.target.value)} error={errors.birthDate} />
                                 </div>
                                 <div>
-                                    <label className="mb-2 block text-sm font-medium text-slate-300">Edad</label>
+                                    <label className="mb-2 block text-sm font-medium text-slate-300">Edad *</label>
                                     <Input type="number" min={18} max={120} value={formData.age ?? ''} onChange={(e) => setField('age', Number(e.target.value))} error={errors.age} />
                                 </div>
                                 <div className="md:col-span-2">
                                     <label className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-300">
-                                        Foto de perfil
+                                        Foto de perfil *
                                         <span title="Formatos permitidos: PNG, JPG y WEBP. Tamano maximo 2MB."><Info className="h-4 w-4 text-slate-400" /></span>
                                     </label>
                                     <Input type="file" accept="image/png,image/jpeg,image/webp" onChange={handlePhotoChange} />
@@ -393,7 +391,7 @@ export default function CreateUserPage() {
 
                         <div className="md:col-span-2 grid grid-cols-1 gap-4 md:grid-cols-2">
                             <div>
-                                <label className="mb-2 block text-sm font-medium text-slate-300">Tipo de documento</label>
+                                <label className="mb-2 block text-sm font-medium text-slate-300">Tipo de documento *</label>
                                 <select
                                     value={formData.documentType}
                                     onChange={(e) => setField('documentType', e.target.value as DocumentType)}
@@ -406,7 +404,7 @@ export default function CreateUserPage() {
                                 </select>
                             </div>
                             <div>
-                                <label className="mb-2 block text-sm font-medium text-slate-300">Numero de documento</label>
+                                <label className="mb-2 block text-sm font-medium text-slate-300">Numero de documento *</label>
                                 <Input value={formData.documentNumber} onChange={(e) => setField('documentNumber', e.target.value)} error={errors.documentNumber} />
                             </div>
                         </div>
@@ -416,19 +414,19 @@ export default function CreateUserPage() {
                                 <h1 className="mb-1 text-xl font-semibold text-white">Datos legales</h1>
                                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                     <div>
-                                        <label className="mb-2 block text-sm font-medium text-slate-300">Numero de caso</label>
+                                        <label className="mb-2 block text-sm font-medium text-slate-300">Numero de caso *</label>
                                         <Input value={formData.caseNumber ?? ''} onChange={(e) => setField('caseNumber', e.target.value)} error={errors.caseNumber} />
                                     </div>
                                     <div>
-                                        <label className="mb-2 block text-sm font-medium text-slate-300">Numero de proceso</label>
+                                        <label className="mb-2 block text-sm font-medium text-slate-300">Numero de proceso *</label>
                                         <Input value={formData.processNumber ?? ''} onChange={(e) => setField('processNumber', e.target.value)} error={errors.processNumber} />
                                     </div>
                                     <div>
-                                        <label className="mb-2 block text-sm font-medium text-slate-300">Form ID</label>
+                                        <label className="mb-2 block text-sm font-medium text-slate-300">Form ID *</label>
                                         <Input value={formData.formId ?? ''} onChange={(e) => setField('formId', e.target.value)} error={errors.formId} />
                                     </div>
                                     <div>
-                                        <label className="mb-2 block text-sm font-medium text-slate-300">Pais de origen</label>
+                                        <label className="mb-2 block text-sm font-medium text-slate-300">Pais de origen *</label>
                                         <select
                                             value={formData.nativeCountry ?? ''}
                                             onChange={(e) => setField('nativeCountry', e.target.value)}
@@ -442,7 +440,7 @@ export default function CreateUserPage() {
                                         {errors.nativeCountry && <p className="mt-1 text-sm text-red-400">{errors.nativeCountry}</p>}
                                     </div>
                                     <div>
-                                        <label className="mb-2 block text-sm font-medium text-slate-300">Sexo</label>
+                                        <label className="mb-2 block text-sm font-medium text-slate-300">Sexo *</label>
                                         <select
                                             value={formData.sex ?? ''}
                                             onChange={(e) => setField('sex', e.target.value)}
@@ -455,23 +453,23 @@ export default function CreateUserPage() {
                                         {errors.sex && <p className="mt-1 text-sm text-red-400">{errors.sex}</p>}
                                     </div>
                                     <div>
-                                        <label className="mb-2 block text-sm font-medium text-slate-300">Estado migratorio</label>
+                                        <label className="mb-2 block text-sm font-medium text-slate-300">Estado migratorio *</label>
                                         <Input value={formData.migratoryStatus ?? ''} onChange={(e) => setField('migratoryStatus', e.target.value)} error={errors.migratoryStatus} />
                                     </div>
                                     <div>
-                                        <label className="mb-2 block text-sm font-medium text-slate-300">Valido desde</label>
+                                        <label className="mb-2 block text-sm font-medium text-slate-300">Valido desde *</label>
                                         <Input type="date" value={formData.validFrom ?? ''} onChange={(e) => setField('validFrom', e.target.value)} error={errors.validFrom} />
                                     </div>
                                     <div>
-                                        <label className="mb-2 block text-sm font-medium text-slate-300">Vencimiento de tarjeta</label>
+                                        <label className="mb-2 block text-sm font-medium text-slate-300">Vencimiento de tarjeta *</label>
                                         <Input type="date" value={formData.cardExpires ?? ''} onChange={(e) => setField('cardExpires', e.target.value)} error={errors.cardExpires} />
                                     </div>
                                     <div>
-                                        <label className="mb-2 block text-sm font-medium text-slate-300">Fecha de recepcion</label>
+                                        <label className="mb-2 block text-sm font-medium text-slate-300">Fecha de recepcion *</label>
                                         <Input type="date" value={formData.receivedDate ?? ''} onChange={(e) => setField('receivedDate', e.target.value)} error={errors.receivedDate} />
                                     </div>
                                     <div>
-                                        <label className="mb-2 block text-sm font-medium text-slate-300">Fecha limite</label>
+                                        <label className="mb-2 block text-sm font-medium text-slate-300">Fecha limite *</label>
                                         <Input type="date" value={formData.deadline ?? ''} onChange={(e) => setField('deadline', e.target.value)} error={errors.deadline} />
                                     </div>
                                 </div>
