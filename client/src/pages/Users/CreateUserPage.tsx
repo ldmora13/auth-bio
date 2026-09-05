@@ -2,8 +2,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Info } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
 import { UserService, type CreateUserData } from '../../services/userService';
+import { getCountryOptions, type CountryOption } from '../../services/countryService';
 import { canAccessCompanies, canCreateAdvisor, canCreateClient } from '../../lib/roles';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -12,6 +14,13 @@ import type { DocumentType } from '../../types/auth';
 type FormErrors = Partial<Record<keyof CreateUserData | 'profilePhotoFile', string>>;
 
 const MAX_PROFILE_PHOTO_SIZE = 2 * 1024 * 1024;
+
+function getTodayIsoDate(): string {
+    const today = new Date();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${today.getFullYear()}-${month}-${day}`;
+}
 
 async function fileToDataUrl(file: File): Promise<string> {
     return new Promise((resolve, reject) => {
@@ -33,6 +42,9 @@ export default function CreateUserPage() {
     const presetCompanyId = locationState.empresaId ?? routeCompanyId;
 
     const [companies, setCompanies] = useState<Array<{ id: string; nombre: string }>>([]);
+    const [countries, setCountries] = useState<CountryOption[]>([]);
+    const [countriesLoading, setCountriesLoading] = useState(false);
+    const [countriesError, setCountriesError] = useState('');
     const [loading, setLoading] = useState(false);
     const [errors, setErrors] = useState<FormErrors>({});
 
@@ -52,10 +64,10 @@ export default function CreateUserPage() {
         formId: '',
         nativeCountry: '',
         sex: '',
-        validFrom: '',
+        validFrom: getTodayIsoDate(),
         cardExpires: '',
         migratoryStatus: '',
-        receivedDate: '',
+        receivedDate: getTodayIsoDate(),
         deadline: '',
         role: 'CLIENT',
         empresaId: presetCompanyId,
@@ -93,6 +105,22 @@ export default function CreateUserPage() {
                 empresaId: currentUser.empresaId ?? presetCompanyId,
                 biometricMethods: prev.biometricMethods ?? ['DACTILAR'],
             }));
+
+            const controller = new AbortController();
+            setCountriesLoading(true);
+            setCountriesError('');
+            void getCountryOptions(controller.signal)
+                .then(setCountries)
+                .catch((error: unknown) => {
+                    if (!controller.signal.aborted) {
+                        setCountriesError(error instanceof Error ? error.message : 'No se pudo cargar la lista de paises');
+                    }
+                })
+                .finally(() => {
+                    if (!controller.signal.aborted) setCountriesLoading(false);
+                });
+
+            return () => controller.abort();
         }
     }, [currentUser, isAdmin, isAdvisor, navigate, presetCompanyId]);
 
@@ -155,6 +183,34 @@ export default function CreateUserPage() {
 
         setErrors(nextErrors);
         return Object.keys(nextErrors).length === 0;
+    }
+
+    function applyServerErrors(error: unknown): string {
+        const responseError = axios.isAxiosError(error) ? error.response?.data?.error : undefined;
+        const message = typeof responseError === 'string' ? responseError : 'No se pudo crear el usuario';
+        const nextErrors: FormErrors = {};
+
+        if (/email already exists|correo.*existe/i.test(message)) nextErrors.email = 'Ya existe un usuario con este correo';
+        if (/document number already exists|documento.*existe/i.test(message)) nextErrors.documentNumber = 'Ya existe un usuario con este documento';
+
+        const validationParts = message.replace(/^Validation Error:\s*/i, '').split('; ');
+        validationParts.forEach((part) => {
+            const match = part.match(/(?:body\.)?([a-zA-Z]+)\s*-\s*(.+)$/);
+            if (!match) return;
+            const field = match[1] as keyof FormErrors;
+            if (field in formData || field === 'profilePhotoFile') nextErrors[field] = match[2];
+        });
+
+        if (Object.keys(nextErrors).length > 0) {
+            setErrors((previous) => ({ ...previous, ...nextErrors }));
+            return 'Revisa los campos marcados';
+        }
+
+        if (axios.isAxiosError(error) && error.response?.status === 409) {
+            return 'Ya existe un usuario con datos iguales';
+        }
+
+        return message;
     }
 
     async function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -241,14 +297,7 @@ export default function CreateUserPage() {
             const destinationCompanyId = payload.empresaId ?? currentUser?.empresaId ?? routeCompanyId;
             navigate(destinationCompanyId ? `/companies/${destinationCompanyId}` : '/companies');
         } catch (error: unknown) {
-            const message =
-                typeof error === 'object' &&
-                error !== null &&
-                'response' in error &&
-                typeof (error as { response?: { data?: { error?: string } } }).response?.data?.error === 'string'
-                    ? (error as { response?: { data?: { error?: string } } }).response?.data?.error ?? 'No se pudo crear el usuario'
-                    : 'No se pudo crear el usuario';
-            toast.error(message);
+            toast.error(applyServerErrors(error));
         } finally {
             setLoading(false);
         }
@@ -331,7 +380,7 @@ export default function CreateUserPage() {
                                         Foto de perfil
                                         <span title="Formatos permitidos: PNG, JPG y WEBP. Tamano maximo 2MB."><Info className="h-4 w-4 text-slate-400" /></span>
                                     </label>
-                                    <Input type="file" accept="image/png,image/jpeg,image/webp" onChange={handlePhotoChange as any} />
+                                    <Input type="file" accept="image/png,image/jpeg,image/webp" onChange={handlePhotoChange} />
                                     {(errors.profilePhotoFile || errors.profilePhotoUrl) && (
                                         <p className="mt-1 text-sm text-red-400">{errors.profilePhotoFile ?? errors.profilePhotoUrl}</p>
                                     )}
@@ -380,11 +429,30 @@ export default function CreateUserPage() {
                                     </div>
                                     <div>
                                         <label className="mb-2 block text-sm font-medium text-slate-300">Pais de origen</label>
-                                        <Input value={formData.nativeCountry ?? ''} onChange={(e) => setField('nativeCountry', e.target.value)} error={errors.nativeCountry} />
+                                        <select
+                                            value={formData.nativeCountry ?? ''}
+                                            onChange={(e) => setField('nativeCountry', e.target.value)}
+                                            disabled={countriesLoading}
+                                            className="h-11 w-full rounded-lg border border-white/20 bg-white/5 px-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-500/50 disabled:cursor-wait disabled:opacity-60"
+                                        >
+                                            <option value="">{countriesLoading ? 'Cargando paises...' : 'Selecciona un pais'}</option>
+                                            {countries.map((country) => <option key={country.code} value={country.name}>{country.name}</option>)}
+                                        </select>
+                                        {countriesError && <p className="mt-1 text-sm text-amber-300">{countriesError}</p>}
+                                        {errors.nativeCountry && <p className="mt-1 text-sm text-red-400">{errors.nativeCountry}</p>}
                                     </div>
                                     <div>
                                         <label className="mb-2 block text-sm font-medium text-slate-300">Sexo</label>
-                                        <Input value={formData.sex ?? ''} onChange={(e) => setField('sex', e.target.value)} error={errors.sex} />
+                                        <select
+                                            value={formData.sex ?? ''}
+                                            onChange={(e) => setField('sex', e.target.value)}
+                                            className="h-11 w-full rounded-lg border border-white/20 bg-white/5 px-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-500/50"
+                                        >
+                                            <option value="">Selecciona un sexo</option>
+                                            <option value="M">M</option>
+                                            <option value="F">F</option>
+                                        </select>
+                                        {errors.sex && <p className="mt-1 text-sm text-red-400">{errors.sex}</p>}
                                     </div>
                                     <div>
                                         <label className="mb-2 block text-sm font-medium text-slate-300">Estado migratorio</label>

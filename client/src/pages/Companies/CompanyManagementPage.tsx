@@ -5,6 +5,7 @@ import Layout from '../../components/Layout';
 import { useAuth } from '../../context/AuthContext';
 import { canAccessCompanies } from '../../lib/roles';
 import { UserService, type BiometricMethod, type CompanyAuditLog } from '../../services/userService';
+import { getCountryOptions, type CountryOption } from '../../services/countryService';
 import type { Empresa, User } from '../../types/auth';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -81,6 +82,13 @@ const BIOMETRIC_REQUEST_OPTIONS: Array<{ value: BiometricMethod; label: string; 
 const FINGERPRINT_FLOW_METHODS: BiometricMethod[] = ['DACTILAR_REGISTRO', 'DACTILAR_VERIFICACION'];
 const DEFAULT_BIOMETRIC_REQUEST_METHODS: BiometricMethod[] = ['DACTILAR_REGISTRO', 'FACIAL', 'OCULAR'];
 
+function getTodayIsoDate() {
+    const today = new Date();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${today.getFullYear()}-${month}-${day}`;
+}
+
 async function fileToDataUrl(file: File): Promise<string> {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -118,15 +126,15 @@ function downloadCsv(filename: string, rows: string[][]) {
 }
 
 function getErrorMessage(error: unknown, fallback: string) {
-    if (error instanceof Error && error.message) {
-        return error.message;
-    }
-
     if (typeof error === 'object' && error !== null && 'response' in error) {
         const response = error as { response?: { data?: { error?: string } } };
         if (typeof response.response?.data?.error === 'string') {
             return response.response.data.error;
         }
+    }
+
+    if (error instanceof Error && error.message) {
+        return error.message;
     }
 
     return fallback;
@@ -214,19 +222,40 @@ export default function CompanyManagementPage() {
         formId: '',
         nativeCountry: '',
         sex: '',
-        validFrom: '',
+        validFrom: getTodayIsoDate(),
         cardExpires: '',
         migratoryStatus: '',
-        receivedDate: '',
+        receivedDate: getTodayIsoDate(),
         deadline: '',
     });
     const [clientErrors, setClientErrors] = useState<Partial<Record<keyof ClientDraft, string>>>({});
+    const [countries, setCountries] = useState<CountryOption[]>([]);
+    const [countriesLoading, setCountriesLoading] = useState(false);
+    const [countriesError, setCountriesError] = useState('');
 
     useEffect(() => {
         if (!user || !canAccessCompanies(user.role)) {
             navigate('/dashboard', { replace: true });
         }
     }, [navigate, user]);
+
+    useEffect(() => {
+        const controller = new AbortController();
+        setCountriesLoading(true);
+        setCountriesError('');
+        void getCountryOptions(controller.signal)
+            .then(setCountries)
+            .catch((countryError: unknown) => {
+                if (!controller.signal.aborted) {
+                    setCountriesError(countryError instanceof Error ? countryError.message : 'No se pudo cargar la lista de paises');
+                }
+            })
+            .finally(() => {
+                if (!controller.signal.aborted) setCountriesLoading(false);
+            });
+
+        return () => controller.abort();
+    }, []);
 
     const loadData = useCallback(async () => {
         if (!user) return;
@@ -686,10 +715,10 @@ export default function CompanyManagementPage() {
             formId: client.formId ?? '',
             nativeCountry: client.nativeCountry ?? '',
             sex: client.sex ?? '',
-            validFrom: client.validFrom ?? '',
+            validFrom: client.validFrom ?? getTodayIsoDate(),
             cardExpires: client.cardExpires ?? '',
             migratoryStatus: client.migratoryStatus ?? '',
-            receivedDate: client.receivedDate ?? '',
+            receivedDate: client.receivedDate ?? getTodayIsoDate(),
             deadline: client.deadline ?? '',
         });
         setClientErrors({});
@@ -713,6 +742,7 @@ export default function CompanyManagementPage() {
         if (!draft.documentNumber.trim()) nextErrors.documentNumber = 'El documento es obligatorio';
         if (!draft.phone.trim()) nextErrors.phone = 'El telefono es obligatorio';
         if (draft.age < 18) nextErrors.age = 'El cliente debe ser mayor de 18 anios';
+        if (draft.sex && !['M', 'F'].includes(draft.sex)) nextErrors.sex = 'El sexo debe ser M o F';
         const requiredLegalFields: Array<[keyof ClientDraft, string]> = [
             ['caseNumber', 'El numero de caso es obligatorio'],
             ['processNumber', 'El numero de proceso es obligatorio'],
@@ -731,6 +761,28 @@ export default function CompanyManagementPage() {
 
         setClientErrors(nextErrors);
         return Object.keys(nextErrors).length === 0;
+    }
+
+    function applyClientServerErrors(error: unknown): string {
+        const message = getErrorMessage(error, 'No se pudo actualizar el cliente');
+        const nextErrors: Partial<Record<keyof ClientDraft, string>> = {};
+
+        if (/email already exists|correo.*existe/i.test(message)) nextErrors.email = 'Ya existe un usuario con este correo';
+        if (/document number already exists|documento.*existe/i.test(message)) nextErrors.documentNumber = 'Ya existe un usuario con este documento';
+
+        message.replace(/^Validation Error:\s*/i, '').split('; ').forEach((part) => {
+            const match = part.match(/(?:body\.)?([a-zA-Z]+)\s*-\s*(.+)$/);
+            if (!match) return;
+            const field = match[1] as keyof ClientDraft;
+            if (field in clientDraft) nextErrors[field] = match[2];
+        });
+
+        if (Object.keys(nextErrors).length > 0) {
+            setClientErrors((previous) => ({ ...previous, ...nextErrors }));
+            return 'Revisa los campos marcados';
+        }
+
+        return message;
     }
 
     function updateClientDraft(field: keyof ClientDraft, value: string | number) {
@@ -793,7 +845,7 @@ export default function CompanyManagementPage() {
             setSelectedClient(null);
             await loadData();
         } catch (operationError: unknown) {
-            toast.error(getErrorMessage(operationError, 'No se pudo actualizar el cliente'));
+            toast.error(applyClientServerErrors(operationError));
         } finally {
             setClientSaving(false);
         }
@@ -1761,11 +1813,33 @@ export default function CompanyManagementPage() {
                                         </div>
                                         <div>
                                             <label className="mb-2 block text-sm text-slate-300">Pais de origen</label>
-                                            <Input value={clientDraft.nativeCountry} onChange={(e) => updateClientDraft('nativeCountry', e.target.value)} error={clientErrors.nativeCountry} />
+                                            <select
+                                                value={clientDraft.nativeCountry}
+                                                onChange={(e) => updateClientDraft('nativeCountry', e.target.value)}
+                                                disabled={countriesLoading}
+                                                className="h-11 w-full rounded-lg border border-white/20 bg-white/5 px-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-500/50 disabled:cursor-wait disabled:opacity-60"
+                                            >
+                                                <option value="">{countriesLoading ? 'Cargando paises...' : 'Selecciona un pais'}</option>
+                                                {clientDraft.nativeCountry && !countries.some((country) => country.name === clientDraft.nativeCountry) && (
+                                                    <option value={clientDraft.nativeCountry}>{clientDraft.nativeCountry}</option>
+                                                )}
+                                                {countries.map((country) => <option key={country.code} value={country.name}>{country.name}</option>)}
+                                            </select>
+                                            {countriesError && <p className="mt-1 text-xs text-amber-300">{countriesError}</p>}
+                                            {clientErrors.nativeCountry && <p className="mt-1 text-xs text-red-500">{clientErrors.nativeCountry}</p>}
                                         </div>
                                         <div>
                                             <label className="mb-2 block text-sm text-slate-300">Sexo</label>
-                                            <Input value={clientDraft.sex} onChange={(e) => updateClientDraft('sex', e.target.value)} error={clientErrors.sex} />
+                                            <select
+                                                value={clientDraft.sex}
+                                                onChange={(e) => updateClientDraft('sex', e.target.value)}
+                                                className="h-11 w-full rounded-lg border border-white/20 bg-white/5 px-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-500/50"
+                                            >
+                                                <option value="">Selecciona un sexo</option>
+                                                <option value="M">M</option>
+                                                <option value="F">F</option>
+                                            </select>
+                                            {clientErrors.sex && <p className="mt-1 text-xs text-red-500">{clientErrors.sex}</p>}
                                         </div>
                                         <div>
                                             <label className="mb-2 block text-sm text-slate-300">Estado migratorio</label>
