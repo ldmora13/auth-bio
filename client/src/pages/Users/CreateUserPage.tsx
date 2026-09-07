@@ -362,7 +362,7 @@ export default function CreateUserPage() {
                         {formData.role === 'CLIENT' && (
                             <>
                                 <div>
-                                    <label className="mb-2 block text-sm font-medium text-slate-300">Telefono</label>
+                                    <label className="mb-2 block text-sm font-medium text-slate-300">Telefono *</label>
                                     <Input value={formData.phone ?? ''} onChange={(e) => setField('phone', e.target.value)} error={errors.phone} />
                                 </div>
                                 <div>

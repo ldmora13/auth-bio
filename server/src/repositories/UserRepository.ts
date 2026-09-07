@@ -76,10 +76,4 @@ export class UserRepository {
         });
     }
 
-    async delete(id: string): Promise<UserWithEmpresa> {
-        return db.user.delete({
-            where: { id },
-            include: { empresa: true },
-        });
-    }
 }

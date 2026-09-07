@@ -18,6 +18,7 @@ import {
     FileText,
     Search,
     UserPlus,
+    UserMinus,
     Users,
     X,
     Send,
@@ -863,15 +864,15 @@ export default function CompanyManagementPage() {
     }
 
     
-    async function handleDeleteClient(clientId: string) {
-        if (!window.confirm('¿Eliminar este cliente? Esta acción no se puede deshacer.')) return;
+    async function handleUnassignClient(clientId: string) {
+        if (!window.confirm('¿Quitar este cliente de la empresa? El usuario seguirá existiendo en el sistema.')) return;
 
         try {
-            await UserService.remove(clientId);
-            toast.success('Cliente eliminado');
+            await UserService.unassign(clientId);
+            toast.success('Cliente quitado de la empresa');
             await loadData();
         } catch (operationError: unknown) {
-            toast.error(getErrorMessage(operationError, 'No se pudo eliminar el cliente'));
+            toast.error(getErrorMessage(operationError, 'No se pudo quitar el cliente'));
         }
     }
 
@@ -1348,12 +1349,12 @@ export default function CompanyManagementPage() {
                                                 </button>
                                                 <button
                                                     type="button"
-                                                    title="Eliminar cliente"
-                                                    aria-label="Eliminar cliente"
+                                                    title="Quitar cliente de la empresa"
+                                                    aria-label="Quitar cliente de la empresa"
                                                     className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/5 text-slate-400 transition hover:border-red-400/40 hover:bg-red-500/10 hover:text-red-200"
-                                                    onClick={() => handleDeleteClient(client.id)}
+                                                    onClick={() => handleUnassignClient(client.id)}
                                                 >
-                                                    <Trash className="h-4 w-4" />
+                                                    <UserMinus className="h-4 w-4" />
                                                 </button>
                                             </div>
                                         </td>

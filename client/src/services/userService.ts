@@ -94,7 +94,7 @@ export const UserService = {
         return data.user;
     },
 
-    remove: async (id: string) => {
+    unassign: async (id: string) => {
         const { data } = await api.delete<{ user: User }>(`/users/${id}`);
         return data.user;
     },

@@ -370,7 +370,7 @@ export class UserService {
         });
     }
 
-    async deleteUser(id: string, requester?: { id: string; role: Role; empresaId?: string | null }): Promise<UserWithEmpresa> {
+    async unassignUser(id: string, requester?: { id: string; role: Role; empresaId?: string | null }): Promise<UserWithEmpresa> {
         const currentUser = await this.userRepository.findById(id);
 
         if (!currentUser) {
@@ -383,6 +383,8 @@ export class UserService {
             }
         }
 
-        return this.userRepository.delete(id);
+        return this.userRepository.update(id, {
+            empresa: { disconnect: true },
+        });
     }
 }

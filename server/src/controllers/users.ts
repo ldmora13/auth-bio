@@ -304,26 +304,31 @@ export const getUserById = catchAsync(async (req: Request, res: Response) => {
     res.json({ user: userWithoutPassword });
 });
 
-export const deleteUser = catchAsync(async (req: Request, res: Response) => {
+export const unassignUser = catchAsync(async (req: Request, res: Response) => {
     const { id } = req.params;
     const currentUser = res.locals.user;
+    const targetUser = await userService.getUserById(id, {
+        id: currentUser.id,
+        role: currentUser.role,
+        empresaId: currentUser.empresaId,
+    });
 
-    const user = await userService.deleteUser(id, {
+    const user = await userService.unassignUser(id, {
         id: currentUser.id,
         role: currentUser.role,
         empresaId: currentUser.empresaId,
     });
 
     await AuditLogService.log({
-        action: 'USER_DELETE',
+        action: 'USER_UNASSIGN',
         entity: 'USER',
         entityId: user.id,
         userId: currentUser.id,
         details: {
-            deletedUserId: user.id,
-            deletedUserRole: user.role,
-            deletedByRole: currentUser.role,
-            companyId: user.empresaId,
+            unassignedUserId: user.id,
+            unassignedUserRole: user.role,
+            unassignedByRole: currentUser.role,
+            companyId: targetUser.empresaId,
         },
     });
 

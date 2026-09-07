@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getUsers, createUser, updateUser, getUserById, deleteUser, resetBiometricEnrollment, requestBiometricEnrollment } from '../controllers/users';
+import { getUsers, createUser, updateUser, getUserById, unassignUser, resetBiometricEnrollment, requestBiometricEnrollment } from '../controllers/users';
 import { loginAs } from '../controllers/loginAs';
 import { verifyAuth } from '../middlewares/authMiddleware';
 import { requireAdmin, requireAdminOrAdvisor, requireCanCreateUsers } from '../middlewares/roleMiddleware';
@@ -23,7 +23,7 @@ router.patch('/:id/biometric-reset', requireAdminOrAdvisor, validateRequest(rese
 
 router.post('/:id/biometric-request', requireAdminOrAdvisor, validateRequest(requestBiometricEnrollmentSchema), requestBiometricEnrollment);
 
-router.delete('/:id', requireAdminOrAdvisor, validateRequest(userIdParamSchema), deleteUser);
+router.delete('/:id', requireAdminOrAdvisor, validateRequest(userIdParamSchema), unassignUser);
 
 router.post('/:userId/login-as', requireAdmin, loginAs);
 
