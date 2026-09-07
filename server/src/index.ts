@@ -79,8 +79,16 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
 
     // Error de Prisma — violación de constraint única
     if ((err as any).code === 'P2002') {
+        const target = (err as any).meta?.target;
+        const targetStr = Array.isArray(target) ? target.join(',') : String(target ?? '');
+        if (targetStr.includes('email')) {
+            return res.status(409).json({ error: 'Este correo ya existe en la empresa seleccionada' });
+        }
+        if (targetStr.includes('documentNumber')) {
+            return res.status(409).json({ error: 'Este documento ya existe en la empresa seleccionada' });
+        }
         return res.status(409).json({ error: 'A record with this data already exists' });
-    }
+     }
 
     // Error de Prisma — registro no encontrado
     if ((err as any).code === 'P2025') {

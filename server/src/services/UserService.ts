@@ -42,6 +42,14 @@ function resolvePrimaryBiometricType(methods: BiometricMethod[]): 'DACTILAR' | '
     return 'DACTILAR';
 }
 
+function resolveTargetEmpresaId(data: Prisma.UserUpdateInput, currentEmpresaId: string | null): string | null {
+    const empresaInput = data.empresa as { disconnect?: boolean; connect?: { id?: string } } | undefined;
+    if (!empresaInput) return currentEmpresaId;
+    if (empresaInput.disconnect) return null;
+    if (empresaInput.connect?.id) return empresaInput.connect.id;
+    return currentEmpresaId;
+}
+
 const hashEnrollmentToken = (token: string) => createHash('sha256').update(token).digest('hex');
 
 export class UserService {
@@ -54,13 +62,18 @@ export class UserService {
     async createUser(data: CreateUserInput): Promise<UserWithEmpresa> {
         const normalizedEmail = data.email.trim().toLowerCase();
         const normalizedDocumentNumber = data.documentNumber?.trim();
-        const existingUser = await this.userRepository.findByEmail(normalizedEmail);
-        if (existingUser) {
-            throw new AppError('User with this email already exists', 400);
+        const targetEmpresaId = data.empresaId ?? null;
+
+        const existingUserInCompany = await this.userRepository.findByEmailInCompany(normalizedEmail, targetEmpresaId);
+        if (existingUserInCompany) {
+            throw new AppError('Este correo ya existe en la empresa seleccionada', 400);
         }
 
-        if (normalizedDocumentNumber && await this.userRepository.findByDocumentNumber(normalizedDocumentNumber)) {
-            throw new AppError('User with this document number already exists', 400);
+        if (normalizedDocumentNumber) {
+            const existingDocInCompany = await this.userRepository.findByDocumentNumberInCompany(normalizedDocumentNumber, targetEmpresaId);
+            if (existingDocInCompany) {
+                throw new AppError('Este documento ya existe en la empresa seleccionada', 400);
+            }
         }
 
         const hashedPassword = data.password
@@ -72,7 +85,6 @@ export class UserService {
             })
             : null;
 
-        // Prepare data for Prisma, handle createdById
         const createData: Prisma.UserUncheckedCreateInput = {
             email: normalizedEmail,
             password: hashedPassword,
@@ -95,7 +107,7 @@ export class UserService {
             receivedDate: data.receivedDate,
             deadline: data.deadline,
             role: data.role,
-            empresaId: data.empresaId ?? null,
+            empresaId: targetEmpresaId,
             biometricMethods: data.biometricMethods ?? [],
             biometricEnrollmentRequired: data.biometricEnrollmentRequired ?? false,
             biometricEnrollmentCompletedAt: data.biometricEnrollmentRequired ? null : undefined,
@@ -163,13 +175,20 @@ export class UserService {
 
         const normalizedEmail = typeof data.email === 'string' ? data.email.trim().toLowerCase() : undefined;
         const normalizedDocumentNumber = typeof data.documentNumber === 'string' ? data.documentNumber.trim() : undefined;
+        const targetEmpresaId = resolveTargetEmpresaId(data, currentUser.empresaId);
 
-        if (normalizedEmail && await this.userRepository.findByEmailExcludingId(normalizedEmail, id)) {
-            throw new AppError('User with this email already exists', 400);
+        if (normalizedEmail) {
+            const duplicate = await this.userRepository.findByEmailInCompanyExcludingId(normalizedEmail, targetEmpresaId, id);
+            if (duplicate) {
+                throw new AppError('Este correo ya existe en la empresa seleccionada', 400);
+            }
         }
 
-        if (normalizedDocumentNumber && await this.userRepository.findByDocumentNumber(normalizedDocumentNumber, id)) {
-            throw new AppError('User with this document number already exists', 400);
+        if (normalizedDocumentNumber) {
+            const duplicate = await this.userRepository.findByDocumentNumberInCompany(normalizedDocumentNumber, targetEmpresaId, id);
+            if (duplicate) {
+                throw new AppError('Este documento ya existe en la empresa seleccionada', 400);
+            }
         }
 
         const normalizedData: Prisma.UserUpdateInput = {

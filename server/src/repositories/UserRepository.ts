@@ -3,6 +3,7 @@ import { db } from '../lib/db';
 
 export type UserWithEmpresa = Prisma.UserGetPayload<{ include: { empresa: true } }>;
 
+
 export class UserRepository {
     async create(data: Prisma.UserUncheckedCreateInput): Promise<UserWithEmpresa> {
         return db.user.create({ data, include: { empresa: true } });
@@ -23,16 +24,34 @@ export class UserRepository {
         return db.user.findFirst({ where: { email: { equals: email, mode: 'insensitive' } }, include: { empresa: true } });
     }
 
-    async findByEmailExcludingId(email: string, id: string): Promise<UserWithEmpresa | null> {
+    async findByEmailInCompany(email: string, empresaId: string | null): Promise<UserWithEmpresa | null> {
         return db.user.findFirst({
-            where: { email: { equals: email, mode: 'insensitive' }, id: { not: id } },
+            where: {
+                email: { equals: email, mode: 'insensitive' },
+                empresaId,
+            },
             include: { empresa: true },
         });
     }
 
-    async findByDocumentNumber(documentNumber: string, excludingId?: string): Promise<UserWithEmpresa | null> {
+    async findByEmailInCompanyExcludingId(email: string, empresaId: string | null, excludingId: string): Promise<UserWithEmpresa | null> {
         return db.user.findFirst({
-            where: { documentNumber, ...(excludingId ? { id: { not: excludingId } } : {}) },
+            where: {
+                email: { equals: email, mode: 'insensitive' },
+                empresaId,
+                id: { not: excludingId },
+            },
+            include: { empresa: true },
+        });
+    }
+
+    async findByDocumentNumberInCompany(documentNumber: string, empresaId: string | null, excludingId?: string): Promise<UserWithEmpresa | null> {
+        return db.user.findFirst({
+            where: {
+                documentNumber,
+                empresaId,
+                ...(excludingId ? { id: { not: excludingId } } : {}),
+            },
             include: { empresa: true },
         });
     }

@@ -160,7 +160,7 @@ export class CompanyRepository {
         return db.empresa.create({
             data: {
                 nombre: data.nombre,
-                nit: data.nit,
+                nit: data.nit ?? null,
                 logoUrl: data.logoUrl ?? null,
                 description: data.description ?? null,
                 emailFromName: data.emailFromName ?? null,

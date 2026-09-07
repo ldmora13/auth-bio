@@ -52,7 +52,7 @@ model Empresa {
 
 model User {
   id              String          @id @default(uuid())
-  email           String          @unique
+  email           String
   password        String?
   name            String
   role            Role            @default(CLIENT)
@@ -62,7 +62,7 @@ model User {
   age             Int?
   profilePhotoUrl String?
   documentType    DocumentType?
-  documentNumber  String?         @unique
+  documentNumber  String?
   caseNumber      String?
   processNumber   String?
   formId          String?
@@ -98,6 +98,8 @@ model User {
   @@index([createdById])
   @@index([empresaId])
   @@index([role, empresaId])
+  @@index([empresaId, email])
+  @@index([empresaId, documentNumber])
   @@index([role])
 }
 
