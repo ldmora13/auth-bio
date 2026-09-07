@@ -8,9 +8,12 @@ import { EmailService } from '../services/emailService';
 import { AuditLogService } from '../services/AuditLogService';
 import { CompanyService } from '../services/CompanyService';
 import { persistImageDataUrl } from '../utils/imageStorage';
+import { BiometricRequestLogService } from '../services/BiometricRequestLogService';
+
 
 const userService = new UserService();
 const companyService = new CompanyService();
+const biometricRequestLogService = new BiometricRequestLogService();
 
 export const getUsers = catchAsync(async (req: Request, res: Response) => {
     const { role } = req.query;
@@ -269,7 +272,16 @@ export const requestBiometricEnrollment = catchAsync(async (req: Request, res: R
         maxAttempts: user.biometricEnrollmentMaxAttempts,
     });
 
-    if (!emailResult) {
+    await biometricRequestLogService.log({
+        userId: user.id,
+        requestedById: currentUser.id,
+        biometricMethods: user.biometricMethods,
+        emailStatusCode: emailResult.statusCode,
+        emailStatusMessage: emailResult.message,
+        resendEmailId: emailResult.resendEmailId,
+    });
+
+    if (!emailResult.success) {
         throw new AppError('No se pudo enviar la notificación biométrica', 500);
     }
 

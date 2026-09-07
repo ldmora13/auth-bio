@@ -13,6 +13,7 @@ import {
   ChevronRight,
   User,
   Building2,
+  Mail
 } from 'lucide-react';
 import { canAccessCompanies } from '../lib/roles';
 import { clsx } from 'clsx';
@@ -43,8 +44,9 @@ export default function Layout({ children }: { children: ReactNode }) {
   ];
 
   const navItems = [
-    ...baseNavItems,
-    ...(user && canAccessCompanies(user.role) ? [{ label: user.role === 'ADVISOR' ? 'Clientes' : 'Empresas', icon: Building2, path: '/companies' }] : []),
+      ...baseNavItems,
+      ...(user && canAccessCompanies(user.role) ? [{ label: user.role === 'ADVISOR' ? 'Clientes' : 'Empresas', icon: Building2, path: '/companies' }] : []),
+      ...(user?.role === 'ADMIN' ? [{ label: 'Solicitudes biométricas', icon: Mail, path: '/biometric-requests' }] : []),
   ];
 
   return (

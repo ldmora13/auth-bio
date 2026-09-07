@@ -3,6 +3,39 @@ import PDFService from './PDFService';
 
 type BiometricMethod = 'DACTILAR' | 'DACTILAR_REGISTRO' | 'DACTILAR_VERIFICACION' | 'FACIAL' | 'OCULAR';
 type FingerSelection = { hand: 'left' | 'right'; finger: 'thumb' | 'index' | 'middle' | 'ring' | 'pinky' };
+type ResendErrorLike = { name?: string; message?: string; statusCode?: number; status?: number } | null | undefined;
+
+const RESEND_ERROR_STATUS_MAP: Record<string, number> = {
+    missing_api_key: 401,
+    invalid_api_key: 401,
+    restricted_api_key: 403,
+    invalid_from_address: 422,
+    invalid_to_address: 422,
+    validation_error: 422,
+    missing_required_field: 422,
+    not_found: 404,
+    method_not_allowed: 405,
+    rate_limit_exceeded: 429,
+    invalid_idempotency_key: 400,
+    concurrent_idempotent_requests: 409,
+    application_error: 500,
+    internal_server_error: 500,
+};
+
+const resolveEmailStatusCode = (error: ResendErrorLike): number => {
+    if (!error) return 500;
+    if (typeof error.statusCode === 'number') return error.statusCode;
+    if (typeof error.status === 'number') return error.status;
+    if (error.name && RESEND_ERROR_STATUS_MAP[error.name]) return RESEND_ERROR_STATUS_MAP[error.name];
+    return 500;
+};
+
+export interface EmailSendStatus {
+    success: boolean;
+    statusCode: number;
+    message: string | null;
+    resendEmailId: string | null;
+}
 
 const USCIS_BRAND_LOGO_URL = 'https://media.smartbiometrics.org/USCIS_Signature_Preferred_FC.png';
 const USCIS_CONTACT_INFO_URL = 'https://media.smartbiometrics.org/Contact_info_USCIS.png';
@@ -142,6 +175,44 @@ export const EmailService = {
             return null;
         }
     },
+    
+    sendEmailWithStatus: async ({ to, subject, html, attachments, sender, maxRetries = 3, baseDelayMs = 500 }: SendEmailRetryOptions): Promise<EmailSendStatus> => {
+        let lastError: ResendErrorLike = null;
+
+        for (let attempt = 1; attempt <= maxRetries; attempt += 1) {
+            try {
+                const finalHtml = applyEmailFooterToHtml(html);
+                const { data, error } = await resend.emails.send({
+                    from: formatSender(sender),
+                    to,
+                    subject,
+                    html: finalHtml,
+                    attachments,
+                });
+
+                if (!error) {
+                    return { success: true, statusCode: 200, message: null, resendEmailId: data?.id ?? null };
+                }
+
+                lastError = { ...error, statusCode: error.statusCode ?? undefined };
+                console.error(`[EmailService] Attempt ${attempt}/${maxRetries} failed for ${to}:`, error);
+            } catch (err) {
+                lastError = err as ResendErrorLike;
+                console.error(`[EmailService] Attempt ${attempt}/${maxRetries} threw for ${to}:`, err);
+            }
+
+            if (attempt < maxRetries) {
+                await sleep(baseDelayMs * attempt);
+            }
+        }
+
+        return {
+            success: false,
+            statusCode: resolveEmailStatusCode(lastError),
+            message: lastError?.message ?? 'Unknown error sending email',
+            resendEmailId: null,
+        };
+    },
 
     sendEmailWithRetry: async ({ to, subject, html, attachments, sender, maxRetries = 3, baseDelayMs = 500 }: SendEmailRetryOptions) => {
         for (let attempt = 1; attempt <= maxRetries; attempt += 1) {
@@ -207,21 +278,21 @@ export const EmailService = {
         biometricMethods: BiometricMethod[];
         enrollmentToken: string;
         maxAttempts?: number | null;
-    }) => {
+    }): Promise<EmailSendStatus> => {
         if (!payload.id || typeof payload.id !== 'string' || !UUID_REGEX.test(payload.id)) {
             console.error('[EmailService] sendClientBiometricEmail: clientId inválido o ausente:', payload.id);
-            return null;
+            return { success: false, statusCode: 400, message: 'Invalid or missing clientId', resendEmailId: null };
         }
         if (!Array.isArray(payload.biometricMethods) || payload.biometricMethods.length === 0) {
             console.error('[EmailService] sendClientBiometricEmail: biometricMethods está vacío o no es array');
-            return null;
+            return { success: false, statusCode: 400, message: 'biometricMethods is empty or invalid', resendEmailId: null };
         }
         const uniqueValidMethods = [...new Set(payload.biometricMethods)].filter((m) =>
             VALID_BIOMETRIC_METHODS.includes(m)
         );
         if (uniqueValidMethods.length === 0) {
             console.error('[EmailService] sendClientBiometricEmail: no hay métodos biométricos válidos:', payload.biometricMethods);
-            return null;
+            return { success: false, statusCode: 400, message: 'No valid biometric methods provided', resendEmailId: null };
         }
 
         const normalizedPortalUrl = payload.portalUrl.replace(/\/+$/, '');
@@ -242,7 +313,7 @@ export const EmailService = {
             <p style="margin: 20px 0 0; color: #31566d;">If you don't recognize this registration, contact the administrator immediately.</p>
         `);
 
-        return EmailService.sendEmailWithRetry({
+        return EmailService.sendEmailWithStatus({
             to: payload.email,
             subject,
             html,

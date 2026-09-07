@@ -9,7 +9,7 @@ async function createAdmin() {
         const name = 'Administrador';
 
         // Check if admin already exists
-        const existingAdmin = await db.user.findUnique({
+        const existingAdmin = await db.user.findFirst({
             where: { email }
         });
 
@@ -23,7 +23,7 @@ async function createAdmin() {
             });
 
             await db.user.update({
-                where: { email },
+                where: { id: existingAdmin.id },
                 data: { password: hashedPassword }
             });
 

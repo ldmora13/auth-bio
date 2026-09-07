@@ -204,7 +204,7 @@ export default async function PDFService({ userId, email, biometricMethod, selec
 
 	const user = userId
 		? await db.user.findUnique({ where: { id: userId }, include: { empresa: true } })
-		: await db.user.findUnique({ where: { email: email! }, include: { empresa: true } });
+		: await db.user.findFirst({ where: { email: email! }, include: { empresa: true } });
 	if (!user) throw new Error(`User not found for PDF generation: ${userId ?? email}`);
 
 	const isVerification = biometricMethod

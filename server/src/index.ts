@@ -21,6 +21,7 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS
 import authRoutes from './routes/auth';
 import userRoutes from './routes/users';
 import statsRoutes from './routes/stats';
+import biometricRequestRoutes from './routes/biometricRequests';
 import companyRoutes from './routes/companies';
 import countryRoutes from './routes/countries';
 import cookieParser from 'cookie-parser';
@@ -32,6 +33,8 @@ import { generateOpenApiSpec } from './lib/openApi';
 import './docs/auth.docs';
 import './docs/users.docs';
 import './docs/stats.docs';
+import './docs/biometricRequests.docs';
+
 
 app.use(cors({
     origin: allowedOrigins,
@@ -53,6 +56,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/companies', companyRoutes);
 app.use('/api/countries', countryRoutes);
+app.use('/api/biometric-requests', biometricRequestRoutes);
 
 app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(generateOpenApiSpec()));
 

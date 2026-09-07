@@ -9,6 +9,25 @@ const Dashboard = lazy(() => import('./pages/Dashboard'));
 const ProfilePage = lazy(() => import('./pages/Profile/ProfilePage'));
 const CompanyManagementPage = lazy(() => import('./pages/Companies/CompanyManagementPage'));
 const CreateUserPage = lazy(() => import('./pages/Users/CreateUserPage'));
+const BiometricRequestsPage = lazy(() => import('./pages/BiometricRequests/BiometricRequestsPage'));
+
+function AdminOnlyRoute() {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#313e52' }}>
+        <div className="w-8 h-8 border-4 border-teal-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (!user || user.role !== 'ADMIN') {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return <Outlet />;
+}
 
 function RouteLoader() {
   return (
@@ -101,6 +120,10 @@ function AppRoutes() {
 
         <Route element={<CompanyUserCreateRoute />}>
           <Route path="/companies/:id/users/create" element={<CreateUserPage />} />
+        </Route>
+
+        <Route element={<AdminOnlyRoute />}>
+          <Route path="/biometric-requests" element={<BiometricRequestsPage />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
