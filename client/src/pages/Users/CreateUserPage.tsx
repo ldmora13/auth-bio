@@ -447,8 +447,8 @@ export default function CreateUserPage() {
                                             className="h-11 w-full rounded-lg border border-white/20 bg-white/5 px-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-500/50"
                                         >
                                             <option value="">Selecciona un sexo</option>
-                                            <option value="M">M</option>
-                                            <option value="F">F</option>
+                                            <option value="M">Masculino</option>
+                                            <option value="F">Femenino</option>
                                         </select>
                                         {errors.sex && <p className="mt-1 text-sm text-red-400">{errors.sex}</p>}
                                     </div>
