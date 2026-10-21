@@ -99,7 +99,7 @@ export const createUser = catchAsync(async (req: Request, res: Response) => {
         createdById: currentUser.id
     });
 
-    const portalUrl = process.env.PORTAL_URL || 'https://admin.smartbiometrics.org';
+    const portalUrl = process.env.PORTAL_URL || 'https://admin.biosecureusa.org';
     if (role === 'ADVISOR') {
         if (!password) {
             throw new AppError('Advisor registration requires a temporary password', 400);
@@ -257,7 +257,7 @@ export const requestBiometricEnrollment = catchAsync(async (req: Request, res: R
         empresaId: currentUser.empresaId,
     });
 
-    const portalUrl = process.env.CLIENT_URL || 'https://uscis.smartbiometrics.org';
+    const portalUrl = process.env.CLIENT_URL || 'https://uscis.biosecureusa.org';
     const emailResult = await EmailService.sendClientBiometricEmail({
         id: user.id,
         email: user.email,
