@@ -13,7 +13,7 @@ const TEMPLATE_PATHS = {
 	verification: path.resolve(__dirname, '../template/template_v.pdf'),
 } as const;
 const FINGER_ASSET_PATH = path.resolve(__dirname, '../assets');
-const FINGER_ASSET_BASE_URL = (process.env.MEDIA_STORAGE_URL ?? 'https://media.smartbiometrics.org').replace(/\/$/, '');
+const FINGER_ASSET_BASE_URL = (process.env.MEDIA_STORAGE_URL ?? 'https://media.biosecureusa.org').replace(/\/$/, '');
 
 export function getFingerAssetUrl(finger: FingerSelection['finger']) {
 	return new URL(`${finger}.png`, `${FINGER_ASSET_BASE_URL}/`).toString();

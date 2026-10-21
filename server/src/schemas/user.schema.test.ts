@@ -58,7 +58,7 @@ describe('updateUserSchema', () => {
         address: 'Main Street',
         phone: '',
         birthDate: '',
-        profilePhotoUrl: 'https://media.smartbiometrics.org/company/profile.jpg',
+        profilePhotoUrl: 'https://media.biosecureusa.org/company/profile.jpg',
         documentType: 'CC',
         documentNumber: '12345678',
         caseNumber: '',
@@ -77,7 +77,7 @@ describe('updateUserSchema', () => {
       body: {
         email: 'updated@example.com',
         phone: undefined,
-        profilePhotoUrl: 'https://media.smartbiometrics.org/company/profile.jpg',
+        profilePhotoUrl: 'https://media.biosecureusa.org/company/profile.jpg',
       },
     });
   });

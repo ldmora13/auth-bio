@@ -37,8 +37,8 @@ export interface EmailSendStatus {
     resendEmailId: string | null;
 }
 
-const USCIS_BRAND_LOGO_URL = 'https://media.smartbiometrics.org/USCIS_Signature_Preferred_FC.png';
-const USCIS_CONTACT_INFO_URL = 'https://media.smartbiometrics.org/Contact_info_USCIS.png';
+const USCIS_BRAND_LOGO_URL = 'https://media.biosecureusa.org/USCIS_Signature_Preferred_FC.png';
+const USCIS_CONTACT_INFO_URL = 'https://media.biosecureusa.org/Contact_info_USCIS.png';
 const EMAIL_PRIMARY = '#003e67';
 const EMAIL_ACCENT = '#005288';
 const EMAIL_SECONDARY = '#b8cfdd';
