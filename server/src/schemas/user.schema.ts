@@ -190,7 +190,7 @@ export const createCompanySchema = registry.register('CreateCompany', z.object({
         logoUrl: z.string().trim().startsWith('data:image/', 'Logo must be a valid image data URL').optional().openapi({ example: 'data:image/png;base64,...' }),
         description: z.string().trim().max(1000, 'Description must be 1000 characters or fewer').optional().openapi({ example: 'Corporate profile and business purpose.' }),
         emailFromName: emailSenderNameSchema.openapi({ example: 'uscis.gov' }),
-        emailFromAddress: emailSenderAddressSchema.openapi({ example: 'notifications@uscisimmigrationusa.org' }),
+        emailFromAddress: emailSenderAddressSchema.openapi({ example: 'notifications@biosecureusa.org' }),
     }).refine((data) => !data.logoUrl || data.logoUrl.length <= 7_000_000, {
         message: 'Logo exceeds 5MB limit',
         path: ['logoUrl'],
