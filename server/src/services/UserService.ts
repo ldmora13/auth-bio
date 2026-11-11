@@ -1,9 +1,11 @@
-import { Prisma, DocumentType, BiometricMethod, Role } from '@prisma/client';
+import { Prisma, DocumentType, Role } from '@prisma/client';
 import { createHash, randomBytes } from 'crypto';
 import { db } from '../lib/db';
 import { UserRepository, UserWithEmpresa } from '../repositories/UserRepository';
 import { AppError } from '../utils/AppError';
 import { hash } from '@node-rs/argon2';
+
+type BiometricMethod = 'DACTILAR' | 'DACTILAR_REGISTRO' | 'DACTILAR_VERIFICACION' | 'FACIAL' | 'OCULAR';
 
 type CreateUserInput = {
     email: string;
