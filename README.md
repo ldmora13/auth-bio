@@ -33,7 +33,7 @@ El flujo principal: el **admin** crea empresas y asesores → el **asesor** crea
 | Frontend (client) | React 19, Vite 7, TypeScript, Tailwind CSS 4, TanStack Query 5, React Router 7, i18next (ES/EN/FR/PT), framer-motion, Headless UI, react-hot-toast, lucide-react |
 | Frontend (web) | React 19, Vite 8, TypeScript, Tailwind CSS 4, React Router 7, axios, CSS Modules + design tokens |
 | Seguridad  | Argon2 (hash de contraseñas), rate limiting, cookies httpOnly (`auth_session`), RBAC |
-| Email      | Resend (servicio transaccional) |
+| Email      | Brevo (servicio transaccional) |
 | Otros      | Docker Compose (PostgreSQL local), multer/cookie-parser/cors |
 
 ---
@@ -50,7 +50,7 @@ server/
 │   └── migrations/               # Migraciones SQL versionadas
 ├── src/
 │   ├── index.ts                  # Punto de entrada (Express app + error handler)
-│   ├── config/resend.ts          # Cliente de Resend
+│   ├── config/brevo.ts           # Configuración de Brevo
 │   ├── lib/
 │   │   ├── auth.ts               # Configuración de Lucia (sesiones)
 │   │   ├── db.ts                 # Cliente Prisma (adapter pg)
@@ -255,7 +255,7 @@ Base: `http://localhost:3000/api`. Autenticación por cookie `auth_session` (`wi
 |----------|:---------:|-------------|---------|
 | `DATABASE_URL` | ✅ | Cadena de conexión PostgreSQL | `postgresql://postgres:password@localhost:5432/auth_bio` |
 | `PORT` | ❌ | Puerto del servidor | `3000` |
-| `RESEND_API_KEY` | ✅* | API key de Resend para emails | `re_...` |
+| `brevo_api_key` | ✅* | API key de Brevo para emails | `xkeysib-...` |
 | `NODE_ENV` | ❌ | `development` / `production` | `development` |
 | `ALLOWED_ORIGINS` | ❌ | Orígenes CORS separados por coma | `http://localhost:5173,http://localhost:4321` |
 | `BODY_LIMIT` | ❌ | Límite de tamaño del body | `8mb` |
@@ -293,7 +293,7 @@ docker compose up -d
 ```bash
 cd server
 npm install
-cp .env.example .env          # o crea server/.env con DATABASE_URL, PORT, RESEND_API_KEY
+cp .env.example .env          # o crea server/.env con DATABASE_URL, PORT, brevo_api_key
 npm run prisma:generate       # genera el cliente Prisma
 npm run prisma:push           # o: npx prisma migrate deploy
 npm run dev                   # arranca con tsx watch en http://localhost:3000

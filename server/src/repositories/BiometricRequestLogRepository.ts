@@ -7,7 +7,7 @@ export class BiometricRequestLogRepository {
         biometricMethods: string[];
         emailStatusCode: number;
         emailStatusMessage?: string | null;
-        resendEmailId?: string | null;
+        emailMessageId?: string | null;
     }) {
         return db.biometricRequestLog.create({
             data: {
@@ -16,7 +16,7 @@ export class BiometricRequestLogRepository {
                 biometricMethods: data.biometricMethods,
                 emailStatusCode: data.emailStatusCode,
                 emailStatusMessage: data.emailStatusMessage ?? null,
-                resendEmailId: data.resendEmailId ?? null,
+                emailMessageId: data.emailMessageId ?? null,
             },
         });
     }

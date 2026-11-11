@@ -113,7 +113,7 @@ model BiometricRequestLog {
   biometricMethods   String[] @default([])
   emailStatusCode    Int?
   emailStatusMessage String?
-  resendEmailId      String?
+  emailMessageId     String?
   emailSentAt        DateTime @default(now())
 
   @@index([userId])

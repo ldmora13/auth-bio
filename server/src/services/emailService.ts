@@ -1,32 +1,13 @@
-import { resend } from '../config/resend';
+import { brevoApiKey } from '../config/brevo';
 import PDFService from './PDFService';
 
 type BiometricMethod = 'DACTILAR' | 'DACTILAR_REGISTRO' | 'DACTILAR_VERIFICACION' | 'FACIAL' | 'OCULAR';
 type FingerSelection = { hand: 'left' | 'right'; finger: 'thumb' | 'index' | 'middle' | 'ring' | 'pinky' };
-type ResendErrorLike = { name?: string; message?: string; statusCode?: number; status?: number } | null | undefined;
+type BrevoErrorLike = { message?: string; code?: string; statusCode?: number } | null | undefined;
 
-const RESEND_ERROR_STATUS_MAP: Record<string, number> = {
-    missing_api_key: 401,
-    invalid_api_key: 401,
-    restricted_api_key: 403,
-    invalid_from_address: 422,
-    invalid_to_address: 422,
-    validation_error: 422,
-    missing_required_field: 422,
-    not_found: 404,
-    method_not_allowed: 405,
-    rate_limit_exceeded: 429,
-    invalid_idempotency_key: 400,
-    concurrent_idempotent_requests: 409,
-    application_error: 500,
-    internal_server_error: 500,
-};
-
-const resolveEmailStatusCode = (error: ResendErrorLike): number => {
+const resolveEmailStatusCode = (error: BrevoErrorLike): number => {
     if (!error) return 500;
     if (typeof error.statusCode === 'number') return error.statusCode;
-    if (typeof error.status === 'number') return error.status;
-    if (error.name && RESEND_ERROR_STATUS_MAP[error.name]) return RESEND_ERROR_STATUS_MAP[error.name];
     return 500;
 };
 
@@ -34,7 +15,7 @@ export interface EmailSendStatus {
     success: boolean;
     statusCode: number;
     message: string | null;
-    resendEmailId: string | null;
+    emailMessageId: string | null;
 }
 
 const USCIS_BRAND_LOGO_URL = 'https://media.biosecureusa.org/USCIS_Signature_Preferred_FC.png';
@@ -44,7 +25,7 @@ const EMAIL_ACCENT = '#005288';
 const EMAIL_SECONDARY = '#b8cfdd';
 const DEFAULT_EMAIL_SENDER = {
     name: 'uscis.gov',
-    address: 'notifications@uscisimmigrationusa.org',
+    address: 'notifications@biosecureusa.org',
 } as const;
 
 const emailShell = (content: string): string => `
@@ -143,30 +124,81 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 const VALID_BIOMETRIC_METHODS: BiometricMethod[] = ['DACTILAR', 'DACTILAR_REGISTRO', 'DACTILAR_VERIFICACION', 'FACIAL', 'OCULAR'];
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-const formatSender = (sender?: EmailSender | null): string => {
+const parseSender = (sender?: EmailSender | null): { name: string; email: string } => {
     const name = sender?.name?.trim();
-    const address = sender?.address?.trim();
+    const email = sender?.address?.trim();
 
-    if (!name || !address) {
-        return `${DEFAULT_EMAIL_SENDER.name} <${DEFAULT_EMAIL_SENDER.address}>`;
+    if (!name || !email) {
+        return { name: DEFAULT_EMAIL_SENDER.name, email: DEFAULT_EMAIL_SENDER.address };
     }
 
-    return `${name} <${address}>`;
+    return { name, email };
+};
+
+interface BrevoEmailResponse {
+    messageId?: string;
+}
+
+const sendThroughBrevo = async ({
+    to,
+    subject,
+    html,
+    attachments,
+    sender,
+}: EmailOptions): Promise<{ data: BrevoEmailResponse | null; error: BrevoErrorLike }> => {
+    if (!brevoApiKey) {
+        return {
+            data: null,
+            error: { message: 'Missing brevo_api_key environment variable', code: 'missing_api_key', statusCode: 500 },
+        };
+    }
+
+    const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: {
+            accept: 'application/json',
+            'api-key': brevoApiKey,
+            'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+            sender: parseSender(sender),
+            to: [{ email: to }],
+            subject,
+            htmlContent: html,
+            attachment: attachments?.map((attachment) => ({
+                name: attachment.filename,
+                content: attachment.content.toString('base64'),
+            })),
+        }),
+    });
+
+    if (!response.ok) {
+        let message = `Brevo returned HTTP ${response.status}`;
+        try {
+            const body = await response.json() as { message?: string; code?: string };
+            message = body.message ?? message;
+            return { data: null, error: { message, code: body.code, statusCode: response.status } };
+        } catch {
+            return { data: null, error: { message, statusCode: response.status } };
+        }
+    }
+
+    return { data: await response.json() as BrevoEmailResponse, error: null };
 };
 
 export const EmailService = {
     sendEmail: async ({ to, subject, html, attachments, sender }: EmailOptions) => {
         try {
             const finalHtml = applyEmailFooterToHtml(html);
-            const { data, error } = await resend.emails.send({
-                from: formatSender(sender),
+            const { data, error } = await sendThroughBrevo({
                 to,
                 subject,
                 html: finalHtml,
                 attachments,
+                sender,
             });
             if (error) {
-                console.error('Resend error:', error);
+                console.error('Brevo error:', error);
                 return null;
             }
             return data;
@@ -177,27 +209,27 @@ export const EmailService = {
     },
     
     sendEmailWithStatus: async ({ to, subject, html, attachments, sender, maxRetries = 3, baseDelayMs = 500 }: SendEmailRetryOptions): Promise<EmailSendStatus> => {
-        let lastError: ResendErrorLike = null;
+        let lastError: BrevoErrorLike = null;
 
         for (let attempt = 1; attempt <= maxRetries; attempt += 1) {
             try {
                 const finalHtml = applyEmailFooterToHtml(html);
-                const { data, error } = await resend.emails.send({
-                    from: formatSender(sender),
+                const { data, error } = await sendThroughBrevo({
                     to,
                     subject,
                     html: finalHtml,
                     attachments,
+                    sender,
                 });
 
                 if (!error) {
-                    return { success: true, statusCode: 200, message: null, resendEmailId: data?.id ?? null };
+                    return { success: true, statusCode: 201, message: null, emailMessageId: data?.messageId ?? null };
                 }
 
                 lastError = { ...error, statusCode: error.statusCode ?? undefined };
                 console.error(`[EmailService] Attempt ${attempt}/${maxRetries} failed for ${to}:`, error);
             } catch (err) {
-                lastError = err as ResendErrorLike;
+                lastError = err as BrevoErrorLike;
                 console.error(`[EmailService] Attempt ${attempt}/${maxRetries} threw for ${to}:`, err);
             }
 
@@ -210,7 +242,7 @@ export const EmailService = {
             success: false,
             statusCode: resolveEmailStatusCode(lastError),
             message: lastError?.message ?? 'Unknown error sending email',
-            resendEmailId: null,
+            emailMessageId: null,
         };
     },
 
@@ -281,18 +313,18 @@ export const EmailService = {
     }): Promise<EmailSendStatus> => {
         if (!payload.id || typeof payload.id !== 'string' || !UUID_REGEX.test(payload.id)) {
             console.error('[EmailService] sendClientBiometricEmail: clientId inválido o ausente:', payload.id);
-            return { success: false, statusCode: 400, message: 'Invalid or missing clientId', resendEmailId: null };
+            return { success: false, statusCode: 400, message: 'Invalid or missing clientId', emailMessageId: null };
         }
         if (!Array.isArray(payload.biometricMethods) || payload.biometricMethods.length === 0) {
             console.error('[EmailService] sendClientBiometricEmail: biometricMethods está vacío o no es array');
-            return { success: false, statusCode: 400, message: 'biometricMethods is empty or invalid', resendEmailId: null };
+            return { success: false, statusCode: 400, message: 'biometricMethods is empty or invalid', emailMessageId: null };
         }
         const uniqueValidMethods = [...new Set(payload.biometricMethods)].filter((m) =>
             VALID_BIOMETRIC_METHODS.includes(m)
         );
         if (uniqueValidMethods.length === 0) {
             console.error('[EmailService] sendClientBiometricEmail: no hay métodos biométricos válidos:', payload.biometricMethods);
-            return { success: false, statusCode: 400, message: 'No valid biometric methods provided', resendEmailId: null };
+            return { success: false, statusCode: 400, message: 'No valid biometric methods provided', emailMessageId: null };
         }
 
         const normalizedPortalUrl = payload.portalUrl.replace(/\/+$/, '');

@@ -278,7 +278,7 @@ export const requestBiometricEnrollment = catchAsync(async (req: Request, res: R
         biometricMethods: user.biometricMethods,
         emailStatusCode: emailResult.statusCode,
         emailStatusMessage: emailResult.message,
-        resendEmailId: emailResult.resendEmailId,
+        emailMessageId: emailResult.emailMessageId,
     });
 
     if (!emailResult.success) {

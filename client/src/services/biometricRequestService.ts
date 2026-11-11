@@ -5,7 +5,7 @@ export interface BiometricRequestLogItem {
     emailSentAt: string;
     emailStatusCode: number | null;
     emailStatusMessage: string | null;
-    resendEmailId: string | null;
+    emailMessageId: string | null;
     biometricMethods: string[];
     status: 'COMPLETED' | 'PENDING';
     client: { id: string; name: string; email: string; companyName: string | null };

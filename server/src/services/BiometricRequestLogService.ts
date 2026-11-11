@@ -5,7 +5,7 @@ export interface BiometricRequestLogEntry {
     emailSentAt: Date;
     emailStatusCode: number | null;
     emailStatusMessage: string | null;
-    resendEmailId: string | null;
+    emailMessageId: string | null;
     biometricMethods: string[];
     status: 'COMPLETED' | 'PENDING';
     client: { id: string; name: string; email: string; companyName: string | null };
@@ -25,7 +25,7 @@ export class BiometricRequestLogService {
         biometricMethods: string[];
         emailStatusCode: number;
         emailStatusMessage?: string | null;
-        resendEmailId?: string | null;
+        emailMessageId?: string | null;
     }) {
         return this.repository.create(input);
     }
@@ -42,7 +42,7 @@ export class BiometricRequestLogService {
                 emailSentAt: log.emailSentAt,
                 emailStatusCode: log.emailStatusCode,
                 emailStatusMessage: log.emailStatusMessage,
-                resendEmailId: log.resendEmailId,
+                emailMessageId: log.emailMessageId,
                 biometricMethods: log.biometricMethods,
                 status: isCompleted ? 'COMPLETED' : 'PENDING',
                 client: {
