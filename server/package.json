@@ -45,6 +45,7 @@
         "@types/express-rate-limit": "^6.0.2",
         "@types/multer": "^2.0.0",
         "@types/node": "^20.19.33",
+        "@types/nodemailer": "^8.0.2",
         "@types/paypal__checkout-server-sdk": "^1.0.8",
         "@types/swagger-ui-express": "^4.1.8",
         "nodemon": "^3.1.0",

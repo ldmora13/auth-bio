@@ -33,7 +33,7 @@ El flujo principal: el **admin** crea empresas y asesores → el **asesor** crea
 | Frontend (client) | React 19, Vite 7, TypeScript, Tailwind CSS 4, TanStack Query 5, React Router 7, i18next (ES/EN/FR/PT), framer-motion, Headless UI, react-hot-toast, lucide-react |
 | Frontend (web) | React 19, Vite 8, TypeScript, Tailwind CSS 4, React Router 7, axios, CSS Modules + design tokens |
 | Seguridad  | Argon2 (hash de contraseñas), rate limiting, cookies httpOnly (`auth_session`), RBAC |
-| Email      | Brevo (servicio transaccional) |
+| Email      | Nodemailer (SMTP) |
 | Otros      | Docker Compose (PostgreSQL local), multer/cookie-parser/cors |
 
 ---
@@ -50,7 +50,7 @@ server/
 │   └── migrations/               # Migraciones SQL versionadas
 ├── src/
 │   ├── index.ts                  # Punto de entrada (Express app + error handler)
-│   ├── config/brevo.ts           # Configuración de Brevo
+│   ├── config/smtp.ts            # Configuración del servidor SMTP
 │   ├── lib/
 │   │   ├── auth.ts               # Configuración de Lucia (sesiones)
 │   │   ├── db.ts                 # Cliente Prisma (adapter pg)
@@ -255,7 +255,11 @@ Base: `http://localhost:3000/api`. Autenticación por cookie `auth_session` (`wi
 |----------|:---------:|-------------|---------|
 | `DATABASE_URL` | ✅ | Cadena de conexión PostgreSQL | `postgresql://postgres:password@localhost:5432/auth_bio` |
 | `PORT` | ❌ | Puerto del servidor | `3000` |
-| `brevo_api_key` | ✅* | API key de Brevo para emails | `xkeysib-...` |
+| `SMTP_HOST` | ✅* | Host del servidor SMTP | `smtp.example.com` |
+| `SMTP_PORT` | ❌ | Puerto SMTP | `587` |
+| `SMTP_SECURE` | ❌ | Usar TLS directo (`true`) o STARTTLS (`false`) | `false` |
+| `SMTP_USER` | ✅* | Usuario de autenticación SMTP | `notifications@example.com` |
+| `SMTP_PASS` | ✅* | Contraseña del servidor SMTP | `******` |
 | `NODE_ENV` | ❌ | `development` / `production` | `development` |
 | `ALLOWED_ORIGINS` | ❌ | Orígenes CORS separados por coma | `http://localhost:5173,http://localhost:4321` |
 | `BODY_LIMIT` | ❌ | Límite de tamaño del body | `8mb` |
@@ -267,7 +271,7 @@ Base: `http://localhost:3000/api`. Autenticación por cookie `auth_session` (`wi
 | `R2_BUCKET_NAME` | ❌* | Bucket donde se guardan logos y fotos | `smartbiometrics-images` |
 | `R2_PUBLIC_URL` | ❌* | Dominio público del bucket, sin `/` final | `https://images.example.com` |
 
-\* Necesaria para el envío de correos (onboarding de asesores y solicitudes biométricas).
+\* Necesaria para el envío de correos (onboarding de asesores y solicitudes biométricas). `SMTP_PORT` usa `587` por defecto y `SMTP_SECURE` usa `false` por defecto. Si el servidor SMTP no requiere autenticación, `SMTP_USER` y `SMTP_PASS` pueden omitirse.
 Las variables marcadas con `❌*` deben configurarse todas juntas para activar R2. Si se omiten todas, el desarrollo usa `CLIENT_PUBLIC_DIR` como fallback local.
 
 ### Variables del frontend (`client/.env`, `web/.env`)
@@ -293,7 +297,7 @@ docker compose up -d
 ```bash
 cd server
 npm install
-cp .env.example .env          # o crea server/.env con DATABASE_URL, PORT, brevo_api_key
+cp .env.example .env          # o crea server/.env con DATABASE_URL, PORT y las variables SMTP
 npm run prisma:generate       # genera el cliente Prisma
 npm run prisma:push           # o: npx prisma migrate deploy
 npm run dev                   # arranca con tsx watch en http://localhost:3000

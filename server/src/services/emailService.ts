@@ -1,13 +1,15 @@
-import { brevoApiKey } from '../config/brevo';
+import nodemailer from 'nodemailer';
+import { smtpHost, smtpPassword, smtpPort, smtpSecure, smtpUser } from '../config/smtp';
 import PDFService from './PDFService';
 
 type BiometricMethod = 'DACTILAR' | 'DACTILAR_REGISTRO' | 'DACTILAR_VERIFICACION' | 'FACIAL' | 'OCULAR';
 type FingerSelection = { hand: 'left' | 'right'; finger: 'thumb' | 'index' | 'middle' | 'ring' | 'pinky' };
-type BrevoErrorLike = { message?: string; code?: string; statusCode?: number } | null | undefined;
+type EmailTransportError = { message?: string; code?: string; responseCode?: number; statusCode?: number } | null | undefined;
 
-const resolveEmailStatusCode = (error: BrevoErrorLike): number => {
+const resolveEmailStatusCode = (error: EmailTransportError): number => {
     if (!error) return 500;
     if (typeof error.statusCode === 'number') return error.statusCode;
+    if (typeof error.responseCode === 'number') return error.responseCode;
     return 500;
 };
 
@@ -124,73 +126,87 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 const VALID_BIOMETRIC_METHODS: BiometricMethod[] = ['DACTILAR', 'DACTILAR_REGISTRO', 'DACTILAR_VERIFICACION', 'FACIAL', 'OCULAR'];
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-const parseSender = (sender?: EmailSender | null): { name: string; email: string } => {
+const parseSender = (sender?: EmailSender | null): { name: string; address: string } => {
     const name = sender?.name?.trim();
     const email = sender?.address?.trim();
 
     if (!name || !email) {
-        return { name: DEFAULT_EMAIL_SENDER.name, email: DEFAULT_EMAIL_SENDER.address };
+        return { name: DEFAULT_EMAIL_SENDER.name, address: DEFAULT_EMAIL_SENDER.address };
     }
 
-    return { name, email };
+    return { name, address: email };
 };
 
-interface BrevoEmailResponse {
+interface EmailResponse {
     messageId?: string;
 }
 
-const sendThroughBrevo = async ({
+const createTransporter = () => {
+    if (!smtpHost) {
+        throw Object.assign(new Error('Missing SMTP_HOST environment variable'), {
+            code: 'missing_smtp_host',
+            statusCode: 500,
+        });
+    }
+
+    if (!Number.isInteger(smtpPort) || smtpPort <= 0 || smtpPort > 65535) {
+        throw Object.assign(new Error('Invalid SMTP_PORT environment variable'), {
+            code: 'invalid_smtp_port',
+            statusCode: 500,
+        });
+    }
+
+    return nodemailer.createTransport({
+        host: smtpHost,
+        port: smtpPort,
+        secure: smtpSecure,
+        ...(smtpUser
+            ? {
+                auth: {
+                    user: smtpUser,
+                    pass: smtpPassword ?? '',
+                },
+            }
+            : {}),
+    });
+};
+
+const sendThroughSmtp = async ({
     to,
     subject,
     html,
     attachments,
     sender,
-}: EmailOptions): Promise<{ data: BrevoEmailResponse | null; error: BrevoErrorLike }> => {
-    if (!brevoApiKey) {
+}: EmailOptions): Promise<{ data: EmailResponse | null; error: EmailTransportError }> => {
+    try {
+        const info = await createTransporter().sendMail({
+            from: parseSender(sender),
+            to,
+            subject,
+            html,
+            attachments,
+        });
+
+        return { data: { messageId: info.messageId }, error: null };
+    } catch (error) {
+        const transportError = error as EmailTransportError;
         return {
             data: null,
-            error: { message: 'Missing brevo_api_key environment variable', code: 'missing_api_key', statusCode: 500 },
+            error: {
+                message: transportError?.message,
+                code: transportError?.code,
+                statusCode: transportError?.statusCode,
+                responseCode: transportError?.responseCode,
+            },
         };
     }
-
-    const response = await fetch('https://api.brevo.com/v3/smtp/email', {
-        method: 'POST',
-        headers: {
-            accept: 'application/json',
-            'api-key': brevoApiKey,
-            'content-type': 'application/json',
-        },
-        body: JSON.stringify({
-            sender: parseSender(sender),
-            to: [{ email: to }],
-            subject,
-            htmlContent: html,
-            attachment: attachments?.map((attachment) => ({
-                name: attachment.filename,
-                content: attachment.content.toString('base64'),
-            })),
-        }),
-    });
-
-    if (!response.ok) {
-        let message = `Brevo returned HTTP ${response.status}`;
-        try {
-            const body = await response.json() as { message?: string; code?: string };
-            message = body.message ?? message;
-            return { data: null, error: { message, code: body.code, statusCode: response.status } };
-        } catch {
-            return { data: null, error: { message, statusCode: response.status } };
-        }
-    }
-
-    return { data: await response.json() as BrevoEmailResponse, error: null };
 };
 
 export const EmailService = {
     sendEmail: async ({ to, subject, html, attachments, sender }: EmailOptions) => {
         try {
             const finalHtml = applyEmailFooterToHtml(html);
-            const { data, error } = await sendThroughBrevo({
+            const { data, error } = await sendThroughSmtp({
                 to,
                 subject,
                 html: finalHtml,
@@ -198,7 +214,7 @@ export const EmailService = {
                 sender,
             });
             if (error) {
-                console.error('Brevo error:', error);
+                console.error('SMTP error:', error);
                 return null;
             }
             return data;
@@ -209,12 +225,12 @@ export const EmailService = {
     },
     
     sendEmailWithStatus: async ({ to, subject, html, attachments, sender, maxRetries = 3, baseDelayMs = 500 }: SendEmailRetryOptions): Promise<EmailSendStatus> => {
-        let lastError: BrevoErrorLike = null;
+        let lastError: EmailTransportError = null;
 
         for (let attempt = 1; attempt <= maxRetries; attempt += 1) {
             try {
                 const finalHtml = applyEmailFooterToHtml(html);
-                const { data, error } = await sendThroughBrevo({
+                const { data, error } = await sendThroughSmtp({
                     to,
                     subject,
                     html: finalHtml,
@@ -229,7 +245,7 @@ export const EmailService = {
                 lastError = { ...error, statusCode: error.statusCode ?? undefined };
                 console.error(`[EmailService] Attempt ${attempt}/${maxRetries} failed for ${to}:`, error);
             } catch (err) {
-                lastError = err as BrevoErrorLike;
+                lastError = err as EmailTransportError;
                 console.error(`[EmailService] Attempt ${attempt}/${maxRetries} threw for ${to}:`, err);
             }
 
